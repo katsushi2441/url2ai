@@ -1,0 +1,7 @@
+export X_API_KEY=""
+export X_API_KEY_SECRET=""
+export X_API_SECRET=""
+X_BEARER_TOKEN=""
+export X_ACCESS_TOKEN=""
+export X_ACCESS_TOKEN_SECRET=""
+export X_USERNAME=

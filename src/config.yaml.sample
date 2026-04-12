@@ -1,0 +1,19 @@
+# AIGM Ecosystem 設定ファイル
+# このファイルを編集することで各PHPファイルの設定を一元管理できます
+
+ollama:
+  api_url: 
+  default_model: gemma4:e4b
+  # モデル別設定
+  models:
+    fast: gemma4:e4b
+    smart: gemma3:12b
+
+site:
+  base_url: 
+  cookie_domain: 
+  admin: 
+  gtag_id: 
+
+x_api:
+  key_file: 
