@@ -208,7 +208,9 @@ if ($detail_post) {
 <?php endforeach; ?>
 <?php endif; ?>
 <?php endif; ?>
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="<?php echo $BASE_URL; ?>/images/oss.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="<?php echo $BASE_URL; ?>/images/oss.png">
 <meta name="twitter:site" content="@xb_bittensor">
 <meta name="twitter:title" content="<?php echo $page_title; ?>">
 <meta name="twitter:description" content="<?php echo $page_description; ?>">

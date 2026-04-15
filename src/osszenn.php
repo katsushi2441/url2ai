@@ -76,35 +76,218 @@ if (file_exists($DATA_FILE)) {
     if (!$posts) $posts = array();
 }
 
+function osszenn_collect_zenn_users($data_dir) {
+    $zenn_users = array();
+    foreach (glob(rtrim($data_dir, '/') . '/keyword_*.json') as $kf) {
+        $kdata = @json_decode(file_get_contents($kf), true);
+        if (!$kdata) { continue; }
+        $account   = isset($kdata['account']) ? $kdata['account'] : '';
+        $keywords  = isset($kdata['keywords']) && is_array($kdata['keywords']) ? $kdata['keywords'] : array();
+        $sources   = isset($kdata['sources']) && is_array($kdata['sources']) ? $kdata['sources'] : array();
+        $zenn_info = null;
+        if (!isset($sources[0]) && isset($sources['zenn']) && is_array($sources['zenn'])) {
+            $zenn_info = $sources['zenn'];
+        }
+        if (!$account || !$zenn_info || empty($zenn_info['username'])) { continue; }
+        $zenn_users[] = array(
+            'account'       => $account,
+            'zenn_username' => $zenn_info['username'],
+            'keywords'      => $keywords,
+        );
+    }
+    return $zenn_users;
+}
+
+function osszenn_load_rss_cache($zenn_users, $data_dir) {
+    $rss_opts = array('http' => array(
+        'method'        => 'GET',
+        'header'        => "User-Agent: Mozilla/5.0 (compatible; AIKnowledgeBot/1.0)\r\nAccept: application/rss+xml,application/xml,text/xml\r\n",
+        'timeout'       => 8,
+        'ignore_errors' => true,
+    ));
+    $rss_cache = array();
+    foreach ($zenn_users as $zu) {
+        $zun        = $zu['zenn_username'];
+        $cache_file = rtrim($data_dir, '/') . '/zenn_rss_cache_' . preg_replace('/[^a-zA-Z0-9_]/', '', $zun) . '.json';
+        $cache_ttl  = 3600;
+        if (file_exists($cache_file) && (time() - filemtime($cache_file)) < $cache_ttl) {
+            $cached = @json_decode(file_get_contents($cache_file), true);
+            if (is_array($cached)) {
+                $rss_cache[$zun] = $cached;
+                continue;
+            }
+        }
+        $rss_raw  = @file_get_contents('https://zenn.dev/' . rawurlencode($zun) . '/feed', false, stream_context_create($rss_opts));
+        $articles = array();
+        if ($rss_raw) {
+            libxml_use_internal_errors(true);
+            $xml = simplexml_load_string($rss_raw);
+            if ($xml && isset($xml->channel->item)) {
+                foreach ($xml->channel->item as $item) {
+                    $liked = 0;
+                    if (isset($item->children('http://zenn.dev/ns#')->liked_count)) {
+                        $liked = intval($item->children('http://zenn.dev/ns#')->liked_count);
+                    }
+                    $pub = isset($item->pubDate) ? date('Y-m-d', strtotime((string)$item->pubDate)) : '';
+                    $articles[] = array(
+                        'title'   => (string)$item->title,
+                        'link'    => (string)$item->link,
+                        'pubDate' => $pub,
+                        'liked'   => $liked,
+                    );
+                }
+            }
+            @file_put_contents($cache_file, json_encode($articles, JSON_UNESCAPED_UNICODE));
+        } elseif (file_exists($cache_file)) {
+            $cached = @json_decode(file_get_contents($cache_file), true);
+            if (is_array($cached)) { $articles = $cached; }
+        }
+        $rss_cache[$zun] = $articles;
+    }
+    return $rss_cache;
+}
+
+function osszenn_match_posts($posts, $zenn_users, $rss_cache, $limit_per_post) {
+    $result = array();
+    foreach ($posts as $post) {
+        $oss_tags  = !empty($post['tags']) && is_array($post['tags']) ? $post['tags'] : array();
+        $oss_title = isset($post['title']) ? $post['title'] : '';
+        $oss_id    = isset($post['id']) ? $post['id'] : '';
+        if (!$oss_title || !$oss_id) { continue; }
+        $repo_name  = preg_replace('/^.*\//', '', $oss_title);
+        if (mb_strlen($repo_name) < 3) { continue; }
+        $repo_lower = mb_strtolower($repo_name);
+        $matched    = array();
+        foreach ($zenn_users as $zu) {
+            $zun      = $zu['zenn_username'];
+            $articles = isset($rss_cache[$zun]) ? $rss_cache[$zun] : array();
+            foreach ($articles as $art) {
+                $art_lower = mb_strtolower(isset($art['title']) ? $art['title'] : '');
+                if (mb_strpos($art_lower, $repo_lower) === false) { continue; }
+                $score = 10;
+                foreach ($oss_tags as $tag) {
+                    foreach ($zu['keywords'] as $kw) {
+                        if (mb_strtolower($kw) === mb_strtolower($tag)) {
+                            $score += 2;
+                            break;
+                        }
+                    }
+                }
+                $matched[] = array(
+                    'article'       => $art,
+                    'account'       => $zu['account'],
+                    'zenn_username' => $zun,
+                    'score'         => $score,
+                );
+            }
+        }
+        if (empty($matched)) { continue; }
+        usort($matched, function($a, $b) {
+            $pd = strcmp($b['article']['pubDate'], $a['article']['pubDate']);
+            return $pd !== 0 ? $pd : ($b['score'] - $a['score']);
+        });
+        $seen  = array();
+        $dedup = array();
+        foreach ($matched as $ma) {
+            $link = isset($ma['article']['link']) ? $ma['article']['link'] : '';
+            if ($link === '' || isset($seen[$link])) { continue; }
+            $seen[$link] = true;
+            $dedup[] = $ma;
+            if (count($dedup) >= $limit_per_post) { break; }
+        }
+        if (!empty($dedup)) {
+            $result[$oss_id] = $dedup;
+        }
+    }
+    return $result;
+}
+
 /* =========================================================
    RSS フィード出力 (?feed)
 ========================================================= */
 if (isset($_GET['feed'])) {
-    $rss_items = array_slice($posts, 0, 20);
+    $zenn_users = osszenn_collect_zenn_users(__DIR__ . '/data');
+    $rss_cache  = osszenn_load_rss_cache($zenn_users, __DIR__ . '/data');
+    $matched_map = osszenn_match_posts($posts, $zenn_users, $rss_cache, 5);
+    $feed_pool = array();
+    foreach ($posts as $p) {
+        $oss_id = isset($p['id']) ? $p['id'] : '';
+        if ($oss_id === '' || empty($matched_map[$oss_id])) { continue; }
+        foreach ($matched_map[$oss_id] as $ma) {
+            $art  = isset($ma['article']) ? $ma['article'] : array();
+            $link = isset($art['link']) ? $art['link'] : '';
+            if ($link === '') { continue; }
+            $item = array(
+                'title'         => isset($art['title']) ? $art['title'] : '(no title)',
+                'link'          => $link,
+                'pubDate'       => isset($art['pubDate']) ? $art['pubDate'] : '',
+                'liked'         => isset($art['liked']) ? intval($art['liked']) : 0,
+                'account'       => isset($ma['account']) ? $ma['account'] : '',
+                'zenn_username' => isset($ma['zenn_username']) ? $ma['zenn_username'] : '',
+                'score'         => isset($ma['score']) ? intval($ma['score']) : 0,
+                'oss_title'     => isset($p['title']) ? $p['title'] : '',
+                'oss_id'        => $oss_id,
+                'github_url'    => isset($p['github_url']) ? $p['github_url'] : '',
+            );
+            if (!isset($feed_pool[$link])) {
+                $feed_pool[$link] = $item;
+                continue;
+            }
+            $existing = $feed_pool[$link];
+            $replace = false;
+            if ($item['pubDate'] > $existing['pubDate']) {
+                $replace = true;
+            } elseif ($item['pubDate'] === $existing['pubDate'] && $item['score'] > $existing['score']) {
+                $replace = true;
+            }
+            if ($replace) {
+                $feed_pool[$link] = $item;
+            }
+        }
+    }
+    $rss_items = array_values($feed_pool);
+    usort($rss_items, function($a, $b) {
+        $pd = strcmp($b['pubDate'], $a['pubDate']);
+        return $pd !== 0 ? $pd : ($b['score'] - $a['score']);
+    });
+    $rss_items = array_slice($rss_items, 0, 20);
     header('Access-Control-Allow-Origin: https://exbridge.jp');
     header('Content-Type: application/rss+xml; charset=UTF-8');
     echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
     echo '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">' . "\n";
     echo '<channel>' . "\n";
-    echo '<title>AI OSS Timeline | OSSZenn</title>' . "\n";
+    echo '<title>OSSZenn | Zenn RSS Feed</title>' . "\n";
     echo '<link>' . $BASE_URL . '/osszenn.php</link>' . "\n";
-    echo '<description>GitHub厳選AI系OSSプロジェクトの紹介とZenn記事マッチング。毎日更新。</description>' . "\n";
+    echo '<description>OSSZennで収集したZenn RSS由来の記事一覧。関連するOSS情報とあわせて配信。</description>' . "\n";
     echo '<language>ja</language>' . "\n";
     echo '<atom:link href="' . $BASE_URL . '/osszenn.php?feed" rel="self" type="application/rss+xml"/>' . "\n";
     foreach ($rss_items as $p) {
-        $title    = isset($p['title'])      ? $p['title']      : '(no title)';
-        $text     = isset($p['post_text'])  ? $p['post_text']  : '';
-        $id       = isset($p['id'])         ? $p['id']         : '';
-        $date_raw = isset($p['created_at']) ? $p['created_at'] : '';
-        $github   = isset($p['github_url']) ? $p['github_url'] : '';
-        $desc     = mb_substr(strip_tags($text), 0, 200);
-        $link     = $BASE_URL . '/osszenn.php?id=' . urlencode($id);
-        $pub_date = $date_raw ? date('r', strtotime($date_raw)) : date('r');
+        $title    = isset($p['title']) ? $p['title'] : '(no title)';
+        $link     = isset($p['link']) ? $p['link'] : ($BASE_URL . '/osszenn.php');
+        $pub_raw  = isset($p['pubDate']) ? $p['pubDate'] : '';
+        $pub_date = $pub_raw ? date('r', strtotime($pub_raw)) : date('r');
+        $desc_parts = array();
+        if (!empty($p['oss_title'])) {
+            $desc_parts[] = '関連OSS: ' . $p['oss_title'];
+        }
+        if (!empty($p['zenn_username'])) {
+            $desc_parts[] = 'Zenn: ' . $p['zenn_username'];
+        }
+        if (!empty($p['account'])) {
+            $desc_parts[] = 'X: @' . $p['account'];
+        }
+        if (!empty($p['liked'])) {
+            $desc_parts[] = 'Liked: ' . intval($p['liked']);
+        }
+        if (!empty($p['github_url'])) {
+            $desc_parts[] = 'GitHub: ' . $p['github_url'];
+        }
+        $desc = implode("\n", $desc_parts);
         echo '<item>' . "\n";
         echo '<title><![CDATA[' . $title . ']]></title>' . "\n";
         echo '<link>' . htmlspecialchars($link) . '</link>' . "\n";
         echo '<guid isPermaLink="true">' . htmlspecialchars($link) . '</guid>' . "\n";
-        echo '<description><![CDATA[' . $desc . ($github ? "\n\nGitHub: " . $github : '') . ']]></description>' . "\n";
+        echo '<description><![CDATA[' . $desc . ']]></description>' . "\n";
         echo '<pubDate>' . $pub_date . '</pubDate>' . "\n";
         echo '</item>' . "\n";
     }

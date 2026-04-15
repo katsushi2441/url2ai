@@ -184,7 +184,9 @@ $jsonld = $detail_post ? array(
 <meta property="og:url" content="<?php echo $page_url; ?>">
 <meta property="og:site_name" content="<?php echo htmlspecialchars($SITE_NAME); ?>">
 <meta property="og:locale" content="ja_JP">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="<?php echo $BASE_URL; ?>/images/aitech.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="<?php echo $BASE_URL; ?>/images/aitech.png">
 <meta name="twitter:site" content="@xb_bittensor">
 <meta name="twitter:title" content="<?php echo $page_title; ?>">
 <meta name="twitter:description" content="<?php echo $page_description; ?>">

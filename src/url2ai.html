@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>URL2AI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+    background: linear-gradient(180deg, #F8FAFC 0%, #EEF2FF 100%);
+    color: #111827;
+}
+
+header {
+    background: rgba(255,255,255,0.9);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #E5E7EB;
+    padding: 16px 32px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+h1 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.container {
+    max-width: 1100px;
+    margin: auto;
+    padding: 40px 20px;
+}
+
+.hero {
+    text-align: center;
+    margin-bottom: 60px;
+    padding: 32px 24px 10px;
+}
+
+.hero h2 {
+    font-size: 40px;
+    margin-bottom: 16px;
+    letter-spacing: -0.04em;
+}
+
+.hero p {
+    color: #6B7280;
+    font-size: 18px;
+    max-width: 760px;
+    margin: 0 auto;
+    line-height: 1.8;
+}
+
+.section {
+    margin-bottom: 60px;
+}
+
+.section h3 {
+    font-size: 24px;
+    margin-bottom: 16px;
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+}
+
+.card {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 16px;
+    padding: 0;
+    overflow: hidden;
+    transition: 0.15s;
+    box-shadow: 0 14px 30px rgba(148, 163, 184, 0.08);
+}
+
+.card:hover {
+    box-shadow: 0 18px 40px rgba(37, 99, 235, 0.12);
+    transform: translateY(-2px);
+}
+
+.card-visual {
+    position: relative;
+    height: 150px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #0F172A 0%, #334155 100%);
+}
+
+.card-visual img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: scale(1.01);
+    transition: transform 0.25s ease;
+}
+
+.card:hover .card-visual img {
+    transform: scale(1.04);
+}
+
+.card-visual::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.04) 0%, rgba(15, 23, 42, 0.18) 100%);
+}
+
+.card-visual.is-fallback {
+    background:
+        radial-gradient(circle at top right, rgba(255,255,255,0.2), transparent 34%),
+        linear-gradient(135deg, var(--card-accent, #2563EB) 0%, #0F172A 100%);
+}
+
+.card-visual.is-fallback img {
+    display: none;
+}
+
+.card-visual-badge {
+    position: absolute;
+    left: 14px;
+    top: 14px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.86);
+    backdrop-filter: blur(10px);
+    color: #111827;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.card-visual-id {
+    color: #6B7280;
+    font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #3730A3;
+    background: #EEF2FF;
+    border: 1px solid #C7D2FE;
+    padding: 8px 14px;
+    border-radius: 999px;
+    margin-bottom: 18px;
+}
+
+.intro-box {
+    background: rgba(255,255,255,0.9);
+    border: 1px solid #E5E7EB;
+    border-radius: 18px;
+    padding: 24px 26px;
+    line-height: 1.9;
+    color: #374151;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.05);
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-top: 28px;
+}
+
+.github-hero-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 24px;
+    padding: 14px 20px;
+    border-radius: 18px;
+    text-decoration: none;
+    color: #FFFFFF;
+    background: linear-gradient(135deg, #111827 0%, #1F2937 45%, #2563EB 100%);
+    border: 1px solid rgba(255,255,255,0.18);
+    box-shadow: 0 20px 40px rgba(37, 99, 235, 0.22);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+
+.github-hero-link:hover {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 24px 48px rgba(37, 99, 235, 0.28);
+    opacity: 0.98;
+}
+
+.github-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.12);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.github-copy {
+    text-align: left;
+}
+
+.github-copy strong {
+    display: block;
+    font-size: 17px;
+    line-height: 1.2;
+    margin-bottom: 4px;
+}
+
+.github-copy span {
+    display: block;
+    font-size: 13px;
+    color: rgba(255,255,255,0.8);
+    line-height: 1.5;
+}
+
+.stat {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 16px;
+    padding: 18px 20px;
+    text-align: left;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.stat strong {
+    display: block;
+    font-size: 30px;
+    line-height: 1;
+    margin-bottom: 8px;
+    color: #111827;
+}
+
+.stat span {
+    color: #6B7280;
+    font-size: 13px;
+}
+
+.card h4 {
+    margin: 0 0 10px;
+    font-size: 18px;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+.card p {
+    margin: 0;
+    color: #6B7280;
+    line-height: 1.7;
+    font-size: 14px;
+}
+
+.card .pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #1D4ED8;
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    border-radius: 999px;
+    padding: 4px 10px;
+    margin-bottom: 12px;
+}
+
+.button {
+    display: inline-block;
+    background: linear-gradient(135deg, #2563EB 0%, #4F46E5 100%);
+    color: #FFFFFF;
+    padding: 12px 18px;
+    border-radius: 10px;
+    text-decoration: none;
+    margin-top: 20px;
+    font-weight: 700;
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.22);
+}
+
+.flow {
+    background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+    border: 1px solid #E5E7EB;
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    font-family: monospace;
+    font-size: 16px;
+    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.05);
+}
+
+.feature-list {
+    background: rgba(255,255,255,0.92);
+    border: 1px solid #E5E7EB;
+    border-radius: 18px;
+    padding: 22px 26px;
+    line-height: 1.9;
+    color: #374151;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.05);
+}
+
+.feature-list li + li {
+    margin-top: 8px;
+}
+
+@media (max-width: 680px) {
+    header {
+        padding: 14px 18px;
+    }
+
+    .container {
+        padding: 28px 16px 44px;
+    }
+
+    .hero h2 {
+        font-size: 30px;
+    }
+
+    .hero p {
+        font-size: 16px;
+    }
+}
+</style>
+</head>
+<body>
+
+<header>
+    <h1>URL2AI</h1>
+</header>
+
+<div class="container">
+
+    <div class="hero">
+        <div class="eyebrow">URL to AI Ecosystem</div>
+        <h2>Just input a URL. AI generates everything.</h2>
+        <p>URL2AIは、URLをひとつ渡すだけで、AIが読み取り、考察し、再構成し、物語・議論・歌詞・技術リンク・OSS解説・ニュース分析まで展開する生成プラットフォームです。</p>
+        <a class="github-hero-link" href="https://github.com/katsushi2441/url2ai" target="_blank" rel="noopener">
+            <span class="github-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2C6.48 2 2 6.58 2 12.23c0 4.52 2.87 8.35 6.84 9.7.5.1.68-.22.68-.49 0-.24-.01-1.04-.01-1.89-2.78.62-3.37-1.21-3.37-1.21-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.35 1.12 2.92.86.09-.67.35-1.12.63-1.38-2.22-.26-4.55-1.14-4.55-5.08 0-1.12.39-2.03 1.03-2.74-.1-.26-.45-1.31.1-2.72 0 0 .84-.27 2.75 1.05A9.3 9.3 0 0112 6.8c.85 0 1.71.12 2.51.35 1.91-1.32 2.75-1.05 2.75-1.05.55 1.41.2 2.46.1 2.72.64.71 1.03 1.62 1.03 2.74 0 3.95-2.34 4.81-4.58 5.06.36.32.68.95.68 1.92 0 1.39-.01 2.5-.01 2.84 0 .27.18.6.69.49A10.23 10.23 0 0022 12.23C22 6.58 17.52 2 12 2z" fill="white"/>
+                </svg>
+            </span>
+            <span class="github-copy">
+                <strong>View URL2AI on GitHub</strong>
+                <span>ソースコードと全体構成を見る: github.com/katsushi2441/url2ai</span>
+            </span>
+        </a>
+        <div class="stats">
+            <div class="stat">
+                <strong>11</strong>
+                <span>公開システム</span>
+            </div>
+            <div class="stat">
+                <strong>URL</strong>
+                <span>入力の起点はシンプルに 1 つ</span>
+            </div>
+            <div class="stat">
+                <strong>AI</strong>
+                <span>収集・解析・生成・配信まで自動化</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>🚀 What is URL2AI</h3>
+        <div class="intro-box">
+            URL2AIは、記事URL・X投稿URL・GitHub URL などを起点に、AIが情報を取得し、理解し、別の価値ある形式へ変換していく仕組みです。
+            単なる要約ではなく、考察、短編小説、議論、歌詞、構文解析、メディア読解、OSS紹介、Zenn連携、技術リンク集、ニュース解説、そして全体ポータルまでをシリーズとして展開しています。
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>🧠 How it works</h3>
+        <div class="flow">
+            URL → 取得 → AI解析 → コンテンツ生成 → 配信
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>🧩 Products</h3>
+        <div class="card-grid">
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#7C3AED;">
+                    <div class="card-visual-badge">📖 UStory <span class="card-visual-id">01</span></div>
+                    <img src="./images/ustory.png" alt="UStory" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">01</div>
+                    <h4>UStory</h4>
+                    <p>X投稿をもとに、AIが短編小説として再構成します。</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#0891B2;">
+                    <div class="card-visual-badge">🧩 UParse <span class="card-visual-id">02</span></div>
+                    <img src="./images/uparse.png" alt="UParse" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">02</div>
+                    <h4>UParse</h4>
+                    <p>投稿文の構文を解析し、その構文パターンを使った別の例文をいくつか生成します。</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#6D28D9;">
+                    <div class="card-visual-badge">⚔️ UDebate AI <span class="card-visual-id">03</span></div>
+                    <img src="./images/udebate.png" alt="UDebate AI" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">03</div>
+                    <h4>UDebate AI</h4>
+                    <p>肯定・否定の視点をAIが議論し、結論まで整理します。</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#0891B2;">
+                    <div class="card-visual-badge">📸 UMedia <span class="card-visual-id">04</span></div>
+                    <img src="./images/umedia.png" alt="UMedia" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">04</div>
+                    <h4>UMedia</h4>
+                    <p>X投稿の画像や動画も含めて、AIが文脈ごと考察します。</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#2563EB;">
+                    <div class="card-visual-badge">💬 XInsight <span class="card-visual-id">05</span></div>
+                    <img src="./images/xinsight.png" alt="XInsight" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">05</div>
+                    <h4>XInsight</h4>
+                    <p>X投稿に対して、AIが深い洞察と読み解きを返します。</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#6C63FF;">
+                    <div class="card-visual-badge">🦉 OSS Timeline <span class="card-visual-id">06</span></div>
+                    <img src="./images/oss.png" alt="OSS Timeline" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">06</div>
+                    <h4>OSS Timeline</h4>
+                    <p>GitHubのAI系OSSを収集し、解説付きでタイムライン化します。</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#3B82F6;">
+                    <div class="card-visual-badge">📚 OSSZenn <span class="card-visual-id">07</span></div>
+                    <img src="./images/osszenn.png" alt="OSSZenn" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">07</div>
+                    <h4>OSSZenn</h4>
+                    <p>OSSと関連するZenn記事をつなぎ、知識導線を作ります。</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#0EA5E9;">
+                    <div class="card-visual-badge">🔗 AITech Links <span class="card-visual-id">08</span></div>
+                    <img src="./images/aitech.png" alt="AITech Links" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">08</div>
+                    <h4>AITech Links</h4>
+                    <p>技術系サイトのURLをAIが要約し、実用リンク集に整理します。</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#DB2777;">
+                    <div class="card-visual-badge">🎵 USong <span class="card-visual-id">09</span></div>
+                    <img src="./images/usong.png" alt="USong" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">09</div>
+                    <h4>USong</h4>
+                    <p>投稿内容や話題から、AIが歌詞として新しく表現します。</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#E11D48;">
+                    <div class="card-visual-badge">📰 AI News Radar <span class="card-visual-id">10</span></div>
+                    <img src="./images/ainews.png" alt="AI News Radar" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">10</div>
+                    <h4>AI News Radar</h4>
+                    <p>X上のニュース投稿と記事をAIが読み、ニュース考察へ変換します。</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#6366F1;">
+                    <div class="card-visual-badge">🛰️ KnowRader <span class="card-visual-id">11</span></div>
+                    <img src="./images/knowradar.png" alt="KnowRader" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">11</div>
+                    <h4>KnowRader</h4>
+                    <p>URL2AIシリーズ全体を横断して見渡せるエコシステムポータルです。</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>🔥 Features</h3>
+        <ul class="feature-list">
+            <li>URLだけで完結（プロンプト不要）</li>
+            <li>複数コンテンツ同時生成</li>
+            <li>自動収集・解析・配信</li>
+            <li>CMS・RSS・SNS連携</li>
+            <li>同じ入力から、考察・物語・議論・歌詞など複数の表現へ展開</li>
+            <li>シリーズ全体を KnowRader で横断的に把握可能</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h3>🌍 Vision</h3>
+        <p>
+        URL2AIは情報を価値に変換するAIインフラです。  
+        コンテンツは消費されるものではなく、再生成され続ける資産へ。
+        </p>
+    </div>
+
+    <div class="section" style="text-align:center;">
+        <a href="knowradar.php" class="button">Start Using URL2AI</a>
+    </div>
+
+</div>
+
+</body>
+</html>

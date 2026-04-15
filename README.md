@@ -2,6 +2,11 @@
 
 Turn any URL into AI-generated content including stories, debates, lyrics, and insights. URL2AI is a multi-format content engine that analyzes links and transforms them into structured, creative outputs — built as a scalable ecosystem for AI-powered media generation on [aiknowledgecms.exbridge.jp](https://aiknowledgecms.exbridge.jp).
 
+## Live Links
+
+- Overview Page: [url2ai.html](https://aiknowledgecms.exbridge.jp/url2ai.html)
+- Ecosystem Portal: [knowradar.php](https://aiknowledgecms.exbridge.jp/knowradar.php)
+
 ## Overview
 
 URL2AI is an AI engine that transforms X (Twitter) post URLs and web URLs into multiple content formats:
@@ -9,6 +14,7 @@ URL2AI is an AI engine that transforms X (Twitter) post URLs and web URLs into m
 | Module | Format | Description |
 |--------|--------|-------------|
 | 📖 UStory | Short fiction | Generates a short story from an X post |
+| 🧩 UParse | Syntax pattern examples | Analyzes sentence structure and generates example sentences using the same pattern |
 | ⚔️ UDebate | AI debate | Two AIs argue for/against; a judge AI summarizes |
 | 📸 UMedia | Media insight | Downloads images/videos and generates AI analysis |
 | 🎵 USong | Lyrics | Generates vocaloid-style lyrics from an X post |
@@ -16,6 +22,7 @@ URL2AI is an AI engine that transforms X (Twitter) post URLs and web URLs into m
 | 🔗 AITech Links | Tech summaries | Fetches a tech URL and generates an AI summary + tags |
 | 🦉 OSS Timeline | OSS insights | GitHub OSS discovery with AI analysis |
 | 📚 OSSZenn | OSS × Zenn | Matches GitHub OSS with related Zenn articles |
+| 📰 AI News Radar | News analysis | Analyzes X news posts together with linked articles |
 | 🌐 KnowRadar | Portal | Unified portal showing all modules with RSS feeds |
 
 ## Architecture
@@ -34,7 +41,7 @@ X Post URL / Web URL
   data/xinsight_{tweet_id}.json
         ↓
   [display]
-  *v.php viewer files (ustoryv, udebatev, umediav, usongv, xinsightv)
+  *v.php viewer files (ustoryv, uparsev, udebatev, umediav, usongv, xinsightv)
 ```
 
 ## Stack
@@ -54,6 +61,8 @@ src/
 ├── x_api_keys.sh        # X API credentials (excluded from git)
 ├── ustory.php           # UStory generator
 ├── ustoryv.php          # UStory viewer + RSS
+├── uparse.php           # UParse generator
+├── uparsev.php          # UParse viewer + RSS
 ├── udebate.php          # UDebate generator (SSE streaming)
 ├── udebatev.php         # UDebate viewer + RSS
 ├── umedia.php           # UMedia downloader + insight generator
@@ -64,11 +73,14 @@ src/
 ├── xinsightv.php        # XInsight viewer + RSS
 ├── aitech.php           # AITech Links viewer
 ├── saveaitech.php       # AITech Links registration backend
+├── ainews.php           # AI News Radar viewer
+├── saveainews.php       # AI News Radar registration backend
 ├── oss.php              # OSS Timeline viewer
 ├── saveoss.php          # OSS registration + Ollama analysis backend
 ├── osszenn.php          # OSSZenn viewer
 ├── zenn2oss.php         # Zenn × OSS matching backend
 ├── knowradar.php        # Portal (aggregates all modules + RSS)
+├── url2ai.html          # Overview / landing page
 └── data/
     ├── xinsight_*.json  # Per-post AI content storage
     └── aitech_posts.json
@@ -119,6 +131,7 @@ https://x.com/user/status/123456789
 
 Output (stored in `data/xinsight_123456789.json`):
 - 📖 Short story
+- 🧩 Syntax pattern analysis + example sentences
 - ⚔️ AI debate (3 rounds + judge summary)
 - 📸 Media insight (with downloaded video/image)
 - 🎵 Vocaloid-style lyrics

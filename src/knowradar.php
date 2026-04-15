@@ -184,7 +184,21 @@ $services = array(
         'view_url' => $BASE_URL . '/ustoryv.php',
         'edit_url' => $BASE_URL . '/ustory.php',
         'feed_url' => $BASE_URL . '/ustoryv.php?feed',
+        'image_url'=> $BASE_URL . '/images/ustory.png',
         'desc'     => 'X投稿をAIが短編小説に変換',
+    ),
+    array(
+        'id'       => 'uparse',
+        'name'     => 'UParse',
+        'name_ja'  => '構文解析',
+        'emoji'    => '🧩',
+        'color'    => '#0891b2',
+        'bg'       => '#ecfeff',
+        'view_url' => $BASE_URL . '/uparsev.php',
+        'edit_url' => $BASE_URL . '/uparse.php',
+        'feed_url' => $BASE_URL . '/uparsev.php?feed',
+        'image_url'=> $BASE_URL . '/images/uparse.png',
+        'desc'     => 'X投稿をAIが構文解析して例文も生成',
     ),
     array(
         'id'       => 'udebate',
@@ -196,6 +210,7 @@ $services = array(
         'view_url' => $BASE_URL . '/udebatev.php',
         'edit_url' => $BASE_URL . '/udebate.php',
         'feed_url' => $BASE_URL . '/udebatev.php?feed',
+        'image_url'=> $BASE_URL . '/images/udebate.png',
         'desc'     => '肯定・否定AIが議論し司会AIがまとめ',
     ),
     array(
@@ -208,6 +223,7 @@ $services = array(
         'view_url' => $BASE_URL . '/umediav.php',
         'edit_url' => $BASE_URL . '/umedia.php',
         'feed_url' => $BASE_URL . '/umediav.php?feed',
+        'image_url'=> $BASE_URL . '/images/umedia.png',
         'desc'     => 'X投稿の画像・動画をAIが考察',
     ),
     array(
@@ -220,6 +236,7 @@ $services = array(
         'view_url' => $BASE_URL . '/xinsightv.php',
         'edit_url' => $BASE_URL . '/xinsight.php',
         'feed_url' => $BASE_URL . '/xinsightv.php?feed',
+        'image_url'=> $BASE_URL . '/images/xinsight.png',
         'desc'     => 'X投稿についてAIが深く考察',
     ),
     array(
@@ -232,6 +249,7 @@ $services = array(
         'view_url' => $BASE_URL . '/oss.php',
         'edit_url' => $BASE_URL . '/oss.php',
         'feed_url' => $BASE_URL . '/oss.php?feed',
+        'image_url'=> $BASE_URL . '/images/oss.png',
         'desc'     => 'GitHub厳選AI系OSSのAI考察',
     ),
     array(
@@ -244,6 +262,7 @@ $services = array(
         'view_url' => $BASE_URL . '/osszenn.php',
         'edit_url' => $BASE_URL . '/osszenn.php',
         'feed_url' => $BASE_URL . '/osszenn.php?feed',
+        'image_url'=> $BASE_URL . '/images/osszenn.png',
         'desc'     => 'GitHub OSSとZenn記事のマッチング',
     ),
     array(
@@ -256,6 +275,7 @@ $services = array(
         'view_url' => $BASE_URL . '/aitech.php',
         'edit_url' => $BASE_URL . '/aitech.php',
         'feed_url' => $BASE_URL . '/aitech.php?feed',
+        'image_url'=> $BASE_URL . '/images/aitech.png',
         'desc'     => '技術系サイトのAI要約リンク集',
     ),
     array(
@@ -268,20 +288,91 @@ $services = array(
         'view_url' => $BASE_URL . '/usongv.php',
         'edit_url' => $BASE_URL . '/usong.php',
         'feed_url' => $BASE_URL . '/usongv.php?feed',
+        'image_url'=> $BASE_URL . '/images/usong.png',
         'desc'     => 'X投稿からAIが歌詞を生成',
     ),
+    array(
+        'id'       => 'ainews',
+        'name'     => 'AI News Radar',
+        'name_ja'  => 'AIニュース考察',
+        'emoji'    => '📰',
+        'color'    => '#e11d48',
+        'bg'       => '#fff1f2',
+        'view_url' => $BASE_URL . '/ainews.php',
+        'edit_url' => $BASE_URL . '/ainews.php',
+        'feed_url' => $BASE_URL . '/ainews.php?feed',
+        'image_url'=> $BASE_URL . '/images/ainewsradar.png',
+        'desc'     => 'Xのニュース投稿と記事をAIが考察',
+    ),
 );
+
+/* =========================================================
+   アクセスログ集計
+========================================================= */
+function kr_detect_system($url) {
+    if ($url === '') return 'other';
+    $u = strtolower($url);
+    if (strpos($u, 'ainews')    !== false)                                        return 'ainews';
+    if (strpos($u, 'udebate')   !== false)                                        return 'udebate';
+    if (strpos($u, 'umediav')   !== false || strpos($u, 'umedia')   !== false)   return 'umedia';
+    if (strpos($u, 'usongv')    !== false || strpos($u, 'usong')    !== false)   return 'usong';
+    if (strpos($u, 'ustoryv')   !== false || strpos($u, 'ustory')   !== false)   return 'ustory';
+    if (strpos($u, 'uparsev')   !== false || strpos($u, 'uparse')   !== false)   return 'uparse';
+    if (strpos($u, 'xinsightv') !== false || strpos($u, 'xinsight') !== false)  return 'xinsight';
+    if (strpos($u, 'xview')     !== false)                                        return 'xview';
+    if (strpos($u, 'osszenn')   !== false)                                        return 'osszenn';
+    if (strpos($u, 'saveoss')   !== false || strpos($u, '/oss')     !== false)   return 'oss';
+    if (strpos($u, 'aitech')    !== false)                                        return 'aitech';
+    if (strpos($u, 'aitrend')   !== false)                                        return 'aitrend';
+    if (strpos($u, 'newskeyword') !== false)                                      return 'newskeyword';
+    if (strpos($u, 'aiknowledgecms') !== false || strpos($u, 'kw=') !== false)  return 'cms';
+    return 'other';
+}
+
+$logfile    = __DIR__ . '/access.log';
+$today      = date('Y-m-d');
+$pv_today   = array();
+$pv_total   = array();
+
+if ($is_admin) {
+$bot_words  = array('bot','crawler','spider','curl','python','wget','scrapy','headless','phantom','selenium');
+
+if (file_exists($logfile)) {
+    clearstatcache();
+    $log_lines = file($logfile);
+    foreach ($log_lines as $line) {
+        $parts = explode(' | ', trim($line));
+        if (count($parts) < 5) continue;
+        $date = substr($parts[0], 0, 10);
+        $url  = $parts[2];
+        $ua   = isset($parts[4]) ? strtolower($parts[4]) : '';
+        /* bot除外 */
+        $is_bot = false;
+        foreach ($bot_words as $bw) { if (strpos($ua, $bw) !== false) { $is_bot = true; break; } }
+        if ($is_bot) continue;
+        if (strpos($url, 'admin') !== false) continue;
+        $sys = kr_detect_system($url);
+        if ($sys === 'other') continue;
+        if (!isset($pv_total[$sys])) { $pv_total[$sys] = 0; }
+        $pv_total[$sys]++;
+        if ($date === $today) {
+            if (!isset($pv_today[$sys])) { $pv_today[$sys] = 0; }
+            $pv_today[$sys]++;
+        }
+    }
+}
+}
 ?><!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KnowRader — AIGM エコシステムポータル</title>
+<title>KnowRader — URL2AI エコシステムポータル</title>
 <meta name="description" content="AIが自動生成・蓄積するコンテンツのポータルサイト。短編小説・AI議論・メディア考察・技術リンクなどを一覧で閲覧できます。">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="<?php echo h($BASE_URL . '/' . $THIS_FILE); ?>">
 <meta property="og:type" content="website">
-<meta property="og:title" content="KnowRader — AIGM エコシステムポータル">
+<meta property="og:title" content="KnowRader — URL2AI エコシステムポータル">
 <meta property="og:description" content="AIが自動生成・蓄積するコンテンツのポータルサイト。">
 <meta property="og:url" content="<?php echo h($BASE_URL . '/' . $THIS_FILE); ?>">
 <meta property="og:locale" content="ja_JP">
@@ -338,12 +429,31 @@ body{background:#f8fafc;color:#0f172a;font-family:'Inter',-apple-system,sans-ser
 .service-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;transition:box-shadow .2s,transform .2s;}
 .service-card:hover{box-shadow:0 4px 20px rgba(0,0,0,.08);transform:translateY(-2px);}
 
+.card-preview{position:relative;display:block;height:148px;overflow:hidden;background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);}
+.card-preview::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,23,42,.06) 0%,rgba(15,23,42,.18) 100%);}
+.card-preview img{width:100%;height:100%;object-fit:cover;display:block;transform:scale(1.01);transition:transform .35s ease,opacity .2s ease;}
+.service-card:hover .card-preview img{transform:scale(1.04);}
+.card-preview-badge{position:absolute;left:14px;top:12px;z-index:2;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.86);backdrop-filter:blur(8px);color:#0f172a;font-size:11px;font-weight:700;box-shadow:0 8px 20px rgba(15,23,42,.12);}
+.card-preview-id{font-family:'JetBrains Mono',monospace;font-size:10px;color:#475569;font-weight:600;}
+.card-preview.is-fallback{background:
+    radial-gradient(circle at top right, rgba(255,255,255,.18), transparent 38%),
+    linear-gradient(135deg, var(--svc-color, #6366f1) 0%, #0f172a 100%);
+}
+.card-preview.is-fallback img{display:none;}
+
 .card-header{padding:16px 18px 12px;display:flex;align-items:flex-start;gap:12px;border-bottom:1px solid #f1f5f9;}
 .card-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
-.card-title{flex:1;}
+.card-title{flex:1;min-width:0;}
 .card-name{font-size:15px;font-weight:700;color:#0f172a;line-height:1.2;margin-bottom:2px;}
 .card-name-ja{font-size:11px;color:#64748b;letter-spacing:.03em;}
 .card-desc{font-size:11px;color:#94a3b8;margin-top:4px;line-height:1.5;}
+
+/* PVバッジ */
+.card-pv{display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;margin-left:4px;}
+.card-pv .pv-today{font-size:18px;font-weight:700;color:#0f172a;line-height:1;font-family:'JetBrains Mono',monospace;}
+.card-pv .pv-today-label{font-size:9px;color:#94a3b8;letter-spacing:.04em;text-transform:uppercase;}
+.card-pv .pv-total{font-size:11px;font-weight:600;color:#64748b;line-height:1;font-family:'JetBrains Mono',monospace;margin-top:4px;}
+.card-pv .pv-total-label{font-size:9px;color:#cbd5e1;letter-spacing:.04em;text-transform:uppercase;}
 
 .card-links{display:flex;gap:6px;padding:10px 18px;background:#f8fafc;border-bottom:1px solid #f1f5f9;}
 .card-link{font-size:11px;font-weight:500;padding:4px 10px;border-radius:6px;text-decoration:none;border:1px solid;transition:all .15s;}
@@ -378,7 +488,7 @@ body{background:#f8fafc;color:#0f172a;font-family:'Inter',-apple-system,sans-ser
 
 <div class="header">
     <div class="logo">Know<span>Rader</span></div>
-    <div class="tagline">AIGM Ecosystem Portal</div>
+    <div class="tagline">URL2AI Ecosystem Portal</div>
     <div class="userbar">
         <?php if ($logged_in): ?>
         <span>@<strong><?php echo h($username); ?></strong></span>
@@ -390,7 +500,7 @@ body{background:#f8fafc;color:#0f172a;font-family:'Inter',-apple-system,sans-ser
 </div>
 
 <div class="hero">
-    <h2>🤖 AIGM エコシステム</h2>
+    <h2>🤖 URL2AI エコシステム</h2>
     <p>AIが自動生成・蓄積するコンテンツのポータル。短編小説・議論・メディア考察・技術リンクなどを一覧で閲覧できます。</p>
 </div>
 
@@ -399,6 +509,21 @@ body{background:#f8fafc;color:#0f172a;font-family:'Inter',-apple-system,sans-ser
 
     <?php foreach ($services as $svc): ?>
     <div class="service-card">
+
+        <a class="card-preview"
+           href="<?php echo h($svc['view_url']); ?>"
+           target="_blank"
+           style="--svc-color:<?php echo h($svc['color']); ?>;">
+            <div class="card-preview-badge">
+                <span><?php echo $svc['emoji']; ?></span>
+                <span><?php echo h($svc['name']); ?></span>
+                <span class="card-preview-id"><?php echo h($svc['id']); ?></span>
+            </div>
+            <img src="<?php echo h($svc['image_url']); ?>"
+                 alt="<?php echo h($svc['name']); ?> preview"
+                 loading="lazy"
+                 onerror="this.parentNode.className+=' is-fallback';">
+        </a>
 
         <div class="card-header">
             <div class="card-icon" style="background:<?php echo h($svc['bg']); ?>">
@@ -409,6 +534,14 @@ body{background:#f8fafc;color:#0f172a;font-family:'Inter',-apple-system,sans-ser
                 <div class="card-name-ja"><?php echo h($svc['name_ja']); ?></div>
                 <div class="card-desc"><?php echo h($svc['desc']); ?></div>
             </div>
+            <?php if ($is_admin): ?>
+            <div class="card-pv">
+                <div class="pv-today"><?php echo isset($pv_today[$svc['id']]) ? $pv_today[$svc['id']] : 0; ?></div>
+                <div class="pv-today-label">今日</div>
+                <div class="pv-total"><?php echo isset($pv_total[$svc['id']]) ? number_format($pv_total[$svc['id']]) : 0; ?></div>
+                <div class="pv-total-label">累計</div>
+            </div>
+            <?php endif; ?>
         </div>
 
         <div class="card-links">
