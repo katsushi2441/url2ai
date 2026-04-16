@@ -1,0 +1,52 @@
+{
+  "network": "base",
+  "currency": "USDC",
+  "services": {
+    "updf2md": {
+      "price": "0.001",
+      "description": "Convert a publicly reachable PDF into Markdown for AI workflows and MCP tools.",
+      "methods": [
+        "POST"
+      ],
+      "schema": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "pdf_url": {
+              "type": "string",
+              "description": "Publicly reachable HTTP(S) URL of the PDF to convert."
+            },
+            "pages": {
+              "type": "string",
+              "description": "Optional page selection such as '1-3,5'."
+            },
+            "filename": {
+              "type": "string",
+              "description": "Optional filename to send to the backend when the URL has no useful PDF name."
+            }
+          },
+          "required": [
+            "pdf_url"
+          ]
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "markdown": {
+              "type": "string",
+              "description": "Converted Markdown output."
+            },
+            "pdf_type": {
+              "type": "string",
+              "description": "PDF classification such as text_based or scanned."
+            },
+            "processing_time_ms": {
+              "type": "integer",
+              "description": "Time spent in the backend converter in milliseconds."
+            }
+          }
+        }
+      }
+    }
+  }
+}
