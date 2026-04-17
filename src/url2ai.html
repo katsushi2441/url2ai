@@ -175,6 +175,49 @@ h1 {
     margin-top: 28px;
 }
 
+.agent-block {
+    margin-top: 28px;
+    text-align: left;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid #DBEAFE;
+    border-radius: 22px;
+    padding: 22px 24px;
+    box-shadow: 0 18px 40px rgba(37, 99, 235, 0.10);
+}
+
+.agent-block h3 {
+    margin: 0 0 10px;
+    font-size: 20px;
+    letter-spacing: -0.03em;
+}
+
+.agent-block p {
+    margin: 0;
+    color: #475569;
+    font-size: 15px;
+    line-height: 1.85;
+    max-width: none;
+}
+
+.agent-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.agent-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #1D4ED8;
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+}
+
 .github-hero-link {
     display: inline-flex;
     align-items: center;
@@ -312,6 +355,77 @@ h1 {
     margin-top: 8px;
 }
 
+.promo-strip {
+    margin-top: 24px;
+    padding: 20px 22px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(15, 118, 110, 0.10), rgba(37, 99, 235, 0.08));
+    border: 1px solid rgba(15, 118, 110, 0.20);
+    box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
+}
+
+.promo-strip h3 {
+    margin: 0 0 10px;
+    font-size: 22px;
+    letter-spacing: -0.03em;
+}
+
+.promo-strip p {
+    margin: 0;
+    color: #475569;
+    line-height: 1.8;
+}
+
+.promo-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.promo-points {
+    margin: 14px 0 0;
+    padding-left: 18px;
+    color: #334155;
+    line-height: 1.8;
+}
+
+.promo-points li + li {
+    margin-top: 6px;
+}
+
+.promo-endpoint {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(15, 23, 42, 0.92);
+    color: #e2e8f0;
+    font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace;
+    overflow: auto;
+    word-break: break-word;
+}
+
+.promo-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 18px;
+    border-radius: 14px;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.promo-link.primary {
+    background: #0F766E;
+    color: #fff;
+}
+
+.promo-link.secondary {
+    background: #fff;
+    color: #0F172A;
+    border: 1px solid #CBD5E1;
+}
+
 @media (max-width: 680px) {
     header {
         padding: 14px 18px;
@@ -354,9 +468,21 @@ h1 {
                 <span>ソースコードと全体構成を見る: github.com/katsushi2441/url2ai</span>
             </span>
         </a>
+        <div class="agent-block">
+            <h3>URL2AI is an autonomous agent</h3>
+            <p>
+                URL2AI is designed as an autonomous agent that reads URLs, interprets context, and regenerates information into multiple creative and analytical outputs.
+                As the ecosystem grows, its token can represent participation in the URL2AI network, help align the ecosystem around a shared identity, and support ongoing compute and product expansion.
+            </p>
+            <div class="agent-tags">
+                <span class="agent-tag">Autonomous Agent</span>
+                <span class="agent-tag">Ecosystem Token</span>
+                <span class="agent-tag">Compute Support</span>
+            </div>
+        </div>
         <div class="stats">
             <div class="stat">
-                <strong>11</strong>
+                <strong>12</strong>
                 <span>公開システム</span>
             </div>
             <div class="stat">
@@ -382,6 +508,25 @@ h1 {
         <h3>🧠 How it works</h3>
         <div class="flow">
             URL → 取得 → AI解析 → コンテンツ生成 → 配信
+        </div>
+        <div class="promo-strip">
+            <h3>Hosted MCP Server, Paid API, and x402 Endpoint</h3>
+            <p>
+                URL2AI は無料デモだけでなく、AI エージェント向けの hosted MCP server / paid API としても使えます。
+                特に UPDF2MD は PDF to Markdown 変換をそのまま hosted endpoint として公開しており、MCP、agent workflow、document extraction の入口としてそのまま接続できます。
+            </p>
+            <ul class="promo-points">
+                <li>Free Web demo for evaluation and sharing</li>
+                <li>Hosted MCP / paid API for production automation</li>
+                <li>Bankr x402 Cloud deployment for pay-per-request usage</li>
+            </ul>
+            <div class="promo-endpoint">Bankr x402 endpoint:
+https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md</div>
+            <div class="promo-actions">
+                <a class="promo-link primary" href="./updf2md.php">Try UPDF2MD Demo</a>
+                <a class="promo-link secondary" href="https://docs.bankr.bot/" target="_blank" rel="noopener">Start with Bankr Docs</a>
+                <a class="promo-link secondary" href="https://github.com/katsushi2441/url2ai" target="_blank" rel="noopener">View OSS on GitHub</a>
+            </div>
         </div>
     </div>
 
@@ -518,6 +663,19 @@ h1 {
                     <div class="pill">11</div>
                     <h4>KnowRader</h4>
                     <p>URL2AIシリーズ全体を横断して見渡せるエコシステムポータルです。</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#0F766E;">
+                    <div class="card-visual-badge">📄 UPDF2MD <span class="card-visual-id">12</span></div>
+                    <img src="./images/updf2md.png" alt="UPDF2MD" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">12</div>
+                    <h4>UPDF2MD</h4>
+                    <p>PDF to Markdown の hosted MCP / paid API。まず無料デモで試し、その後は Bankr x402 Cloud 経由で MCP や agent workflow に接続できます。</p>
+                    <a class="button" href="./updf2md.php">Open demo</a>
                 </div>
             </div>
 

@@ -6,6 +6,32 @@ Turn any URL into AI-generated content including stories, debates, lyrics, and i
 
 - Overview Page: [url2ai.html](https://aiknowledgecms.exbridge.jp/url2ai.html)
 - Ecosystem Portal: [knowradar.php](https://aiknowledgecms.exbridge.jp/knowradar.php)
+- UPDF2MD Demo: [updf2md.php](https://aiknowledgecms.exbridge.jp/updf2md.php)
+
+## Hosted MCP / Paid API
+
+URL2AI also ships hosted MCP-ready endpoints for agent workflows. The current flagship example is `updf2md`, a PDF-to-Markdown conversion service exposed as a Bankr x402 endpoint.
+
+- Free Web demo: [UPDF2MD Demo](https://aiknowledgecms.exbridge.jp/updf2md.php)
+- Bankr docs: [docs.bankr.bot](https://docs.bankr.bot/)
+- Hosted x402 endpoint: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md`
+
+Use cases:
+
+- Convert a public PDF URL into Markdown
+- Feed document extraction pipelines for AI agents
+- Connect paid PDF parsing into MCP / automation workflows
+
+CLI examples:
+
+```bash
+bankr x402 schema https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md
+
+bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md \
+  -X POST \
+  -H 'content-type: application/json' \
+  -d '{"pdf_url":"https://example.com/document.pdf"}'
+```
 
 ## Overview
 
@@ -24,6 +50,7 @@ URL2AI is an AI engine that transforms X (Twitter) post URLs and web URLs into m
 | 📚 OSSZenn | OSS × Zenn | Matches GitHub OSS with related Zenn articles |
 | 📰 AI News Radar | News analysis | Analyzes X news posts together with linked articles |
 | 🌐 KnowRadar | Portal | Unified portal showing all modules with RSS feeds |
+| 📄 UPDF2MD | PDF to Markdown | Public demo + hosted MCP / paid API for PDF-to-Markdown conversion |
 
 ## Architecture
 

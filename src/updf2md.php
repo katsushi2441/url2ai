@@ -11,6 +11,7 @@ $MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 $RESULT = null;
 $ERROR_MESSAGE = '';
 $DOWNLOAD_URL = '';
+$PDF_URL_INPUT = '';
 
 function udm_escape($value) {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
@@ -173,38 +174,184 @@ function udm_call_api($apiUrl, $tmpFilePath, $originalName, $pages) {
     return $decoded;
 }
 
+function udm_resolve_remote_filename($url, $contentType) {
+    $filename = '';
+    $path = parse_url((string) $url, PHP_URL_PATH);
+    if (is_string($path) && $path !== '') {
+        $filename = basename($path);
+    }
+    $filename = trim((string) $filename);
+    if ($filename === '' || strpos($filename, '.') === false) {
+        $filename = 'remote-document.pdf';
+    }
+    if (strtolower(substr($filename, -4)) !== '.pdf' && stripos((string) $contentType, 'pdf') !== false) {
+        $filename .= '.pdf';
+    }
+    return $filename;
+}
+
+function udm_fetch_remote_pdf($url, $maxBytes) {
+    if (!function_exists('curl_init')) {
+        throw new RuntimeException('cURL extension is not available on this server.');
+    }
+
+    $tmpPath = tempnam(sys_get_temp_dir(), 'updf2md_url_');
+    if ($tmpPath === false) {
+        throw new RuntimeException('Failed to allocate temporary file.');
+    }
+
+    $handle = fopen($tmpPath, 'wb');
+    if ($handle === false) {
+        @unlink($tmpPath);
+        throw new RuntimeException('Failed to open temporary file for remote PDF.');
+    }
+
+    $meta = array(
+        'content_type' => '',
+        'downloaded_bytes' => 0,
+    );
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, array(
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_MAXREDIRS => 5,
+        CURLOPT_CONNECTTIMEOUT => 8,
+        CURLOPT_TIMEOUT => 180,
+        CURLOPT_FILE => $handle,
+        CURLOPT_FAILONERROR => false,
+        CURLOPT_HEADER => false,
+        CURLOPT_USERAGENT => 'UPDF2MD/1.0',
+        CURLOPT_NOPROGRESS => false,
+        CURLOPT_PROGRESSFUNCTION => function ($resource, $downloadSize, $downloaded, $uploadSize, $uploaded) use ($maxBytes) {
+            if ($downloaded > $maxBytes) {
+                return 1;
+            }
+            return 0;
+        },
+        CURLOPT_HEADERFUNCTION => function ($resource, $header) use (&$meta, $maxBytes) {
+            $length = strlen($header);
+            $header = trim($header);
+            if ($header === '') {
+                return $length;
+            }
+            if (stripos($header, 'Content-Type:') === 0) {
+                $meta['content_type'] = trim(substr($header, 13));
+            } elseif (stripos($header, 'Content-Length:') === 0) {
+                $contentLength = (int) trim(substr($header, 15));
+                if ($contentLength > $maxBytes) {
+                    return -1;
+                }
+            }
+            return $length;
+        },
+    ));
+
+    $ok = curl_exec($ch);
+    $curlErr = curl_error($ch);
+    $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    fclose($handle);
+    clearstatcache(true, $tmpPath);
+    $meta['downloaded_bytes'] = is_file($tmpPath) ? (int) filesize($tmpPath) : 0;
+    curl_close($ch);
+
+    if ($ok === false) {
+        @unlink($tmpPath);
+        if ($curlErr === 'Callback aborted') {
+            throw new RuntimeException('Remote PDF exceeds the upload limit of ' . udm_format_bytes($maxBytes) . '.');
+        }
+        throw new RuntimeException('Failed to fetch PDF URL: ' . $curlErr);
+    }
+    if ($httpCode >= 400) {
+        @unlink($tmpPath);
+        throw new RuntimeException('Remote server returned HTTP ' . $httpCode . '.');
+    }
+    if ($meta['downloaded_bytes'] <= 0) {
+        @unlink($tmpPath);
+        throw new RuntimeException('The remote PDF is empty or could not be downloaded.');
+    }
+    if ($meta['downloaded_bytes'] > $maxBytes) {
+        @unlink($tmpPath);
+        throw new RuntimeException('Remote PDF exceeds the upload limit of ' . udm_format_bytes($maxBytes) . '.');
+    }
+
+    $contentType = strtolower((string) $meta['content_type']);
+    $filename = udm_resolve_remote_filename($url, $contentType);
+    if (substr(strtolower($filename), -4) !== '.pdf' && strpos($contentType, 'pdf') === false) {
+        @unlink($tmpPath);
+        throw new RuntimeException('The URL does not appear to point to a PDF file.');
+    }
+
+    return array(
+        'tmp_path' => $tmpPath,
+        'filename' => $filename,
+        'size' => $meta['downloaded_bytes'],
+        'content_type' => $contentType,
+    );
+}
+
 udm_handle_download();
 udm_cleanup_downloads();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pages = isset($_POST['pages']) ? trim((string) $_POST['pages']) : '';
+    $PDF_URL_INPUT = isset($_POST['pdf_url']) ? trim((string) $_POST['pdf_url']) : '';
     if ($pages !== '' && !preg_match('/^[0-9,\-\s]+$/', $pages)) {
         $ERROR_MESSAGE = 'ページ指定は 1,3,5-8 のような形式で入力してください。';
-    } elseif (empty($_FILES['pdf_file']) || !isset($_FILES['pdf_file']['error'])) {
-        $ERROR_MESSAGE = 'PDFファイルを選択してください。';
     } else {
-        $upload = $_FILES['pdf_file'];
-        if ((int) $upload['error'] !== UPLOAD_ERR_OK) {
-            $ERROR_MESSAGE = 'アップロードに失敗しました。';
-        } elseif ((int) $upload['size'] <= 0) {
-            $ERROR_MESSAGE = '空のファイルは処理できません。';
-        } elseif ((int) $upload['size'] > $MAX_UPLOAD_BYTES) {
-            $ERROR_MESSAGE = 'アップロード上限は ' . udm_format_bytes($MAX_UPLOAD_BYTES) . ' です。';
+        $hasUpload = !empty($_FILES['pdf_file']) && isset($_FILES['pdf_file']['error']) && (int) $_FILES['pdf_file']['error'] !== UPLOAD_ERR_NO_FILE;
+        $hasUrl = $PDF_URL_INPUT !== '';
+        if (!$hasUpload && !$hasUrl) {
+            $ERROR_MESSAGE = 'PDFファイルを選択するか、PDF URL を入力してください。';
+        } elseif ($hasUpload && $hasUrl) {
+            $ERROR_MESSAGE = 'PDFファイルか PDF URL のどちらか一方だけを指定してください。';
         } else {
-            $originalName = isset($upload['name']) ? (string) $upload['name'] : 'document.pdf';
-            $lowerName = strtolower($originalName);
-            $mime = isset($upload['type']) ? strtolower((string) $upload['type']) : '';
-            if (substr($lowerName, -4) !== '.pdf' && $mime !== 'application/pdf') {
-                $ERROR_MESSAGE = 'PDFファイルのみアップロードできます。';
+            $tmpPath = null;
+            $originalName = 'document.pdf';
+            $cleanupTmp = false;
+            if ($hasUpload) {
+                $upload = $_FILES['pdf_file'];
+                if ((int) $upload['error'] !== UPLOAD_ERR_OK) {
+                    $ERROR_MESSAGE = 'アップロードに失敗しました。';
+                } elseif ((int) $upload['size'] <= 0) {
+                    $ERROR_MESSAGE = '空のファイルは処理できません。';
+                } elseif ((int) $upload['size'] > $MAX_UPLOAD_BYTES) {
+                    $ERROR_MESSAGE = 'アップロード上限は ' . udm_format_bytes($MAX_UPLOAD_BYTES) . ' です。';
+                } else {
+                    $originalName = isset($upload['name']) ? (string) $upload['name'] : 'document.pdf';
+                    $lowerName = strtolower($originalName);
+                    $mime = isset($upload['type']) ? strtolower((string) $upload['type']) : '';
+                    if (substr($lowerName, -4) !== '.pdf' && $mime !== 'application/pdf') {
+                        $ERROR_MESSAGE = 'PDFファイルのみアップロードできます。';
+                    } else {
+                        $tmpPath = $upload['tmp_name'];
+                    }
+                }
             } else {
                 try {
-                    $RESULT = udm_call_api($API_URL, $upload['tmp_name'], $originalName, $pages);
+                    if (!preg_match('/^https?:\/\//i', $PDF_URL_INPUT)) {
+                        throw new RuntimeException('PDF URL は http:// または https:// で始めてください。');
+                    }
+                    $remotePdf = udm_fetch_remote_pdf($PDF_URL_INPUT, $MAX_UPLOAD_BYTES);
+                    $tmpPath = $remotePdf['tmp_path'];
+                    $originalName = $remotePdf['filename'];
+                    $cleanupTmp = true;
+                } catch (Exception $e) {
+                    $ERROR_MESSAGE = $e->getMessage();
+                }
+            }
+
+            if ($ERROR_MESSAGE === '' && $tmpPath !== null) {
+                try {
+                    $RESULT = udm_call_api($API_URL, $tmpPath, $originalName, $pages);
                     if (!empty($RESULT['markdown'])) {
                         $token = udm_store_markdown_download($originalName, $RESULT['markdown']);
                         $DOWNLOAD_URL = $THIS_FILE . '?download=' . rawurlencode($token);
                     }
                 } catch (Exception $e) {
                     $ERROR_MESSAGE = $e->getMessage();
+                }
+                if ($cleanupTmp && is_file($tmpPath)) {
+                    @unlink($tmpPath);
                 }
             }
         }
@@ -335,6 +482,39 @@ h1 {
     line-height: 1.7;
 }
 .hero-list strong {
+    color: #fff;
+}
+.mcp-promo {
+    margin-top: 22px;
+    padding: 18px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.18);
+}
+.mcp-promo h3 {
+    margin: 0 0 10px;
+    font-size: 18px;
+    letter-spacing: -0.03em;
+}
+.mcp-promo p {
+    margin: 0;
+    color: #e7f2ff;
+    font-size: 14px;
+    line-height: 1.8;
+}
+.mcp-promo ul {
+    margin: 12px 0 0;
+    padding-left: 18px;
+    color: #e7f2ff;
+    font-size: 14px;
+    line-height: 1.8;
+}
+.mcp-promo li + li {
+    margin-top: 6px;
+}
+.mcp-promo code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
     color: #fff;
 }
 .grid {
@@ -491,6 +671,17 @@ h1 {
     white-space: pre-wrap;
     word-break: break-word;
 }
+.endpoint-box {
+    margin-top: 18px;
+    padding: 18px;
+    background: #0b1220;
+    color: #e2e8f0;
+    border-radius: 18px;
+    overflow: auto;
+    font: 13px/1.75 ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
 .chip-row {
     display: flex;
     flex-wrap: wrap;
@@ -513,6 +704,37 @@ h1 {
     color: var(--muted);
     font-size: 12px;
     line-height: 1.7;
+}
+.promo-note {
+    margin-top: 18px;
+    padding: 16px 18px;
+    border-radius: 16px;
+    background: #f5fbff;
+    border: 1px solid #d8eefe;
+    color: #355070;
+    font-size: 13px;
+    line-height: 1.8;
+}
+.promo-steps {
+    margin-top: 18px;
+    padding: 18px;
+    border-radius: 18px;
+    background: #fffaf2;
+    border: 1px solid #fde3ba;
+}
+.promo-steps h3 {
+    margin: 0 0 10px;
+    font-size: 18px;
+    letter-spacing: -0.03em;
+}
+.promo-steps ol {
+    margin: 0;
+    padding-left: 20px;
+    color: #6b4f1d;
+    line-height: 1.85;
+}
+.promo-steps li + li {
+    margin-top: 8px;
 }
 @media (max-width: 960px) {
     .hero, .grid {
@@ -561,6 +783,18 @@ h1 {
                 <li><strong>Download</strong> 生成 Markdown をその場で `.md` として保存</li>
                 <li><strong>MCP Ready</strong> PDF 解析パイプラインの入口として使える構成</li>
             </ul>
+            <div class="mcp-promo">
+                <h3>Hosted MCP / x402 Endpoint</h3>
+                <p>
+                    このページは無料デモですが、UPDF2MD 自体は hosted MCP / paid API としても公開しています。
+                    `pdf_url` を渡すだけで PDF to Markdown 変換ができる x402 endpoint を用意しており、document extraction や agent workflow にそのまま組み込めます。
+                </p>
+                <ul>
+                    <li>Free demo for humans</li>
+                    <li>Hosted endpoint for MCP / agents</li>
+                    <li>Pay-per-request via Bankr x402 Cloud</li>
+                </ul>
+            </div>
         </aside>
     </div>
 
@@ -569,6 +803,7 @@ h1 {
             <h2>アップロード</h2>
             <p class="helper">
                 最大 <?php echo udm_escape(udm_format_bytes($MAX_UPLOAD_BYTES)); ?> までの PDF をアップロードできます。
+                もしくはネット上の PDF URL を指定できます。
                 バックエンドの変換 API を通じて Markdown 化します。
             </p>
 
@@ -581,8 +816,14 @@ h1 {
             <form method="post" enctype="multipart/form-data">
                 <div class="field">
                     <label class="label" for="pdf_file">PDF ファイル</label>
-                    <input class="file-input" id="pdf_file" type="file" name="pdf_file" accept="application/pdf,.pdf" required>
-                    <div class="hint">技術資料、論文、仕様書、ホワイトペーパーなどの PDF を想定しています。</div>
+                    <input class="file-input" id="pdf_file" type="file" name="pdf_file" accept="application/pdf,.pdf">
+                    <div class="hint">技術資料、論文、仕様書、ホワイトペーパーなどの PDF を想定しています。下の URL 入力と同時指定はできません。</div>
+                </div>
+
+                <div class="field">
+                    <label class="label" for="pdf_url">PDF URL</label>
+                    <input class="input" id="pdf_url" type="url" name="pdf_url" placeholder="https://example.com/document.pdf" value="<?php echo udm_escape($PDF_URL_INPUT); ?>">
+                    <div class="hint">公開アクセス可能な PDF URL を指定できます。ファイル upload と同時指定はできません。</div>
                 </div>
 
                 <div class="field">
@@ -599,6 +840,31 @@ h1 {
 
             <div class="footer-note">
                 この公開ページはデモ用途です。Markdown はブラウザセッション単位の一時ファイルとして扱われ、ダウンロード用リンクは一定時間で期限切れになります。
+            </div>
+            <div class="promo-note">
+                Web デモは無料で試せます。継続利用やエージェント連携を行う場合は、URL2AI の hosted MCP / paid API を利用する想定です。
+                MCP 利用者は Bankr docs から x402 Cloud / CLI の導線を確認し、その後 hosted endpoint へ接続してください。
+            </div>
+            <div class="promo-steps">
+                <h3>For MCP Users</h3>
+                <ol>
+                    <li>このページで PDF to Markdown の変換結果を確認する</li>
+                    <li><a href="https://docs.bankr.bot/" target="_blank" rel="noopener">Bankr Docs</a> から x402 Cloud / CLI の流れを確認する</li>
+                    <li>URL2AI の hosted endpoint を MCP サーバーや agent workflow へ接続する</li>
+                </ol>
+            </div>
+            <div class="endpoint-box">Endpoint:
+https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md
+
+CLI:
+bankr x402 schema https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md
+bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md \
+  -X POST \
+  -H 'content-type: application/json' \
+  -d '{"pdf_url":"https://example.com/document.pdf"}'</div>
+            <div class="submit-row" style="margin-top:14px;">
+                <a class="ghost" href="https://docs.bankr.bot/" target="_blank" rel="noopener">Bankr Docs</a>
+                <a class="ghost" href="https://github.com/katsushi2441/url2ai" target="_blank" rel="noopener">URL2AI on GitHub</a>
             </div>
         </section>
 
