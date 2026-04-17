@@ -715,6 +715,27 @@ h1 {
     font-size: 13px;
     line-height: 1.8;
 }
+.pricing-box {
+    margin-top: 18px;
+    padding: 18px;
+    border-radius: 18px;
+    background: #effaf3;
+    border: 1px solid #bfe6cb;
+}
+.pricing-box h3 {
+    margin: 0 0 10px;
+    font-size: 18px;
+    letter-spacing: -0.03em;
+}
+.pricing-box ul {
+    margin: 0;
+    padding-left: 18px;
+    color: #23513a;
+    line-height: 1.85;
+}
+.pricing-box li + li {
+    margin-top: 8px;
+}
 .promo-steps {
     margin-top: 18px;
     padding: 18px;
@@ -845,6 +866,15 @@ h1 {
                 Web デモは無料で試せます。継続利用やエージェント連携を行う場合は、URL2AI の hosted MCP / paid API を利用する想定です。
                 MCP 利用者は Bankr docs から x402 Cloud / CLI の導線を確認し、その後 hosted endpoint へ接続してください。
             </div>
+            <div class="pricing-box">
+                <h3>Pricing</h3>
+                <ul>
+                    <li>Web demo: free</li>
+                    <li>Hosted MCP / x402 endpoint: paid</li>
+                    <li>Current price: 0.001 USDC per request</li>
+                    <li>Billing is handled by Bankr x402 and the client receives a 402 Payment Required challenge before execution</li>
+                </ul>
+            </div>
             <div class="promo-steps">
                 <h3>For MCP Users</h3>
                 <ol>
@@ -855,6 +885,10 @@ h1 {
             </div>
             <div class="endpoint-box">Endpoint:
 https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md
+
+Pricing:
+0.001 USDC / request
+The endpoint returns a 402 Payment Required challenge before paid execution.
 
 CLI:
 bankr x402 schema https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md

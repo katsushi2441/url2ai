@@ -15,6 +15,8 @@ URL2AI also ships hosted MCP-ready endpoints for agent workflows. The current fl
 - Free Web demo: [UPDF2MD Demo](https://aiknowledgecms.exbridge.jp/updf2md.php)
 - Bankr docs: [docs.bankr.bot](https://docs.bankr.bot/)
 - Hosted x402 endpoint: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md`
+- Current price: `0.001 USDC / request`
+- Billing model: Bankr x402 issues a `402 Payment Required` challenge before paid execution
 
 Use cases:
 
