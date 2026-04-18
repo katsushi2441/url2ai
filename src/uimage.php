@@ -238,8 +238,9 @@ function ui_thread_to_text($thread) {
     }
     return implode("\n\n", $lines);
 }
+define('UI_PROMPT_TEMPLATE', "以下はXの投稿スレッドです。この内容をもとに、明るく見やすい1枚絵の画像生成プロンプトを日本語で作成してください。\n\n条件：\n- 説明文や前置きは不要。画像生成用プロンプトだけを出力する\n- 全体はクリーンで明るい、コミカルで親しみやすい、広告ビジュアルやポップなイラスト寄りにする\n- 不気味、ホラー、グロテスク、心霊写真風、流血、過度な肉体表現、過度に生々しい口内表現は避ける\n- 投稿に強い言葉や誇張表現があっても、過激にせずユーモラスで安全な比喩表現に変換する\n- 背景は明るく、色ははっきり、構図は整理され、被写体が分かりやすいこと\n- 人物が出る場合は自然で清潔感のある表情にし、奇形や崩れた顔にしない\n- 実写ホラー風ではなく、イラスト、ポスター、絵本、広告キービジュアルの方向を優先する\n- 投稿の中で最も印象的・象徴的なフレーズや言葉を1〜2語選び、画像内のどこかに大きく読みやすいテキストとして配置するよう指示を含める\n\n---\n{{スレッド本文}}\n---");
 function ui_build_image_prompt($thread_text) {
-    return "以下はXの投稿スレッドです。この内容をもとに、URL2AI の公開デモ向けに、明るく見やすい1枚絵の画像生成プロンプトを日本語で作成してください。\n\n条件：\n- 説明文や前置きは不要。画像生成用プロンプトだけを出力する\n- 全体はクリーンで明るい、コミカルで親しみやすい、広告ビジュアルやポップなイラスト寄りにする\n- 不気味、ホラー、グロテスク、心霊写真風、流血、過度な肉体表現、過度に生々しい口内表現は避ける\n- 投稿に強い言葉や誇張表現があっても、過激にせずユーモラスで安全な比喩表現に変換する\n- 背景は明るく、色ははっきり、構図は整理され、被写体が分かりやすいこと\n- 人物が出る場合は自然で清潔感のある表情にし、奇形や崩れた顔にしない\n- 実写ホラー風ではなく、イラスト、ポスター、絵本、広告キービジュアルの方向を優先する\n\n---\n" . $thread_text . "\n---";
+    return str_replace('{{スレッド本文}}', $thread_text, UI_PROMPT_TEMPLATE);
 }
 function ui_call_image_api($apiUrl, $payload) {
     if (!function_exists('curl_init')) {
@@ -362,7 +363,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'fetch') {
         exit;
     }
     $thread_text = ui_thread_to_text($thread);
-    $image_prompt = ($custom_prompt !== '') ? $custom_prompt : ui_build_image_prompt($thread_text);
+    if ($custom_prompt !== '') {
+        $image_prompt = str_replace('{{スレッド本文}}', $thread_text, $custom_prompt);
+    } else {
+        $image_prompt = ui_build_image_prompt($thread_text);
+    }
     $payload = array(
         'prompt' => $image_prompt,
         'negative_prompt' => 'horror, creepy, ghost photo, grotesque, gore, blood, disturbing mouth, realistic oral cavity, deformed face, extra limbs, bad anatomy, blurry, low quality, dark horror, zombie, uncanny',
@@ -527,9 +532,10 @@ textarea.code-area{width:100%;border:1px solid var(--border2);border-radius:6px;
                 <div class="msg-error"><?php echo h($fetch_error); ?></div>
                 <?php endif; ?>
                 <?php if ($is_admin): ?>
+                <?php $prompt_default = $custom_prompt !== '' ? $custom_prompt : UI_PROMPT_TEMPLATE; ?>
                 <div style="margin-top:.75rem">
-                    <div style="font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:.3rem">🖊 プロンプト（空白=自動生成）</div>
-                    <textarea name="custom_prompt" id="custom_prompt" class="code-area" rows="6" placeholder="空白のままにすると、ツイート内容からプロンプトを自動生成します。&#10;ここに入力するとそのプロンプトで画像生成します。"><?php echo h($custom_prompt); ?></textarea>
+                    <div style="font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:.3rem">🖊 プロンプトテンプレート（<code>{{スレッド本文}}</code> がツイート内容に置換されます）</div>
+                    <textarea name="custom_prompt" id="custom_prompt" class="code-area" rows="12"><?php echo h($prompt_default); ?></textarea>
                 </div>
                 <?php else: ?>
                 <input type="hidden" name="custom_prompt" id="custom_prompt" value="">
