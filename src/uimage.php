@@ -214,8 +214,8 @@ function ui_thread_to_text($thread) {
     }
     return implode("\n\n", $lines);
 }
-function ui_default_prompt_template() {
-    return "以下はXの投稿スレッドです。この内容をもとに、1枚の印象的な画像を生成するためのビジュアル表現を行います。\n\n条件：\n- 日本語でそのまま画像生成モデルに渡せるプロンプトにする\n- X投稿の主題・感情・状況を抽出して、視覚的なシーンに変換する\n- 写実寄りでもイラスト寄りでもよいが、雰囲気・構図・光・色を具体的に入れる\n- 人物が出る場合は年齢感・服装・表情・背景も補う\n- 説明文や前置きは不要。画像生成用プロンプトだけを出力する\n\n---\n{thread}\n---";
+function ui_build_image_prompt($thread_text) {
+    return "以下はXの投稿スレッドです。この内容をもとに、1枚の印象的な画像を生成するためのビジュアル表現を行います。\n\n条件：\n- 日本語でそのまま画像生成モデルに渡せるプロンプトにする\n- X投稿の主題・感情・状況を抽出して、視覚的なシーンに変換する\n- 写実寄りでもイラスト寄りでもよいが、雰囲気・構図・光・色を具体的に入れる\n- 人物が出る場合は年齢感・服装・表情・背景も補う\n- 説明文や前置きは不要。画像生成用プロンプトだけを出力する\n\n---\n" . $thread_text . "\n---";
 }
 function ui_call_image_api($apiUrl, $payload) {
     if (!function_exists('curl_init')) {
@@ -265,14 +265,33 @@ function ui_save_image_binary($tweet_id, $output_format, $image_base64) {
     file_put_contents($path, $binary);
     return 'data/' . $filename;
 }
+function ui_data_file($tweet_id) {
+    global $DATA_DIR;
+    return $DATA_DIR . '/xinsight_' . $tweet_id . '.json';
+}
+function ui_load_saved_post($tweet_id) {
+    $save_file = ui_data_file($tweet_id);
+    if (!file_exists($save_file)) {
+        return null;
+    }
+    $saved = json_decode(file_get_contents($save_file), true);
+    if (!is_array($saved)) {
+        return null;
+    }
+    return $saved;
+}
+function ui_save_post_data($tweet_id, $data) {
+    $save_file = ui_data_file($tweet_id);
+    if (!is_dir(dirname($save_file))) {
+        @mkdir(dirname($save_file), 0775, true);
+    }
+    file_put_contents($save_file, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+}
 
-$default_prompt = ui_default_prompt_template();
 $action = isset($_POST['action']) ? $_POST['action'] : '';
 $tweet_url = isset($_POST['tweet_url']) ? trim($_POST['tweet_url']) : '';
-$thread_text = isset($_POST['thread_text']) ? trim($_POST['thread_text']) : '';
-$image_prompt = isset($_POST['image_prompt']) ? trim($_POST['image_prompt']) : '';
-$negative_prompt = isset($_POST['negative_prompt']) ? trim($_POST['negative_prompt']) : '';
-$generated_image_path = '';
+$detail_id = isset($_GET['id']) ? preg_replace('/[^0-9]/', '', trim($_GET['id'])) : '';
+$detail_post = null;
 $fetch_error = isset($_SESSION['ui_flash_error']) ? $_SESSION['ui_flash_error'] : '';
 if (isset($_SESSION['ui_flash_error'])) {
     unset($_SESSION['ui_flash_error']);
@@ -281,135 +300,101 @@ if (isset($_SESSION['ui_flash_error'])) {
 if ($tweet_url === '' && isset($_GET['tweet_url']) && $_GET['tweet_url'] !== '') {
     $tweet_url = trim($_GET['tweet_url']);
 }
-
-if ($tweet_url !== '') {
-    $tweet_id_get = ui_extract_tweet_id($tweet_url);
-    if ($tweet_id_get !== '') {
-        $save_file_get = $DATA_DIR . '/xinsight_' . $tweet_id_get . '.json';
-        if (file_exists($save_file_get)) {
-            $saved_get = json_decode(file_get_contents($save_file_get), true);
-            if (is_array($saved_get)) {
-                if ($thread_text === '') {
-                    $thread_text = isset($saved_get['thread_text']) ? $saved_get['thread_text'] : '';
-                }
-                if ($image_prompt === '') {
-                    $image_prompt = isset($saved_get['uimage_prompt']) ? $saved_get['uimage_prompt'] : '';
-                }
-                if ($negative_prompt === '') {
-                    $negative_prompt = isset($saved_get['uimage_negative_prompt']) ? $saved_get['uimage_negative_prompt'] : '';
-                }
-                $generated_image_path = isset($saved_get['uimage_path']) ? $saved_get['uimage_path'] : '';
-                $tweet_url = isset($saved_get['tweet_url']) ? $saved_get['tweet_url'] : $tweet_url;
-            }
-        }
+if ($detail_id === '' && $tweet_url !== '') {
+    $detail_id = ui_extract_tweet_id($tweet_url);
+}
+if ($detail_id !== '') {
+    $detail_post = ui_load_saved_post($detail_id);
+    if (is_array($detail_post) && empty($tweet_url) && !empty($detail_post['tweet_url'])) {
+        $tweet_url = $detail_post['tweet_url'];
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin) {
-    if ($action === 'fetch' && $tweet_url !== '') {
-        $tweet_id = ui_extract_tweet_id($tweet_url);
-        if ($tweet_id === '') {
-            $_SESSION['ui_flash_error'] = 'URLからツイートIDを取得できませんでした';
-            header('Location: ' . $x_redirect_uri);
-            exit;
-        }
-        $thread = ui_fetch_thread($tweet_id, 0);
-        if (empty($thread)) {
-            $_SESSION['ui_flash_error'] = 'ツイートを取得できませんでした';
-            header('Location: ' . $x_redirect_uri);
-            exit;
-        }
-        $thread_text = ui_thread_to_text($thread);
-        if (!is_dir($DATA_DIR)) {
-            @mkdir($DATA_DIR, 0775, true);
-        }
-        $save_file = $DATA_DIR . '/xinsight_' . $tweet_id . '.json';
-        $save_data = file_exists($save_file) ? json_decode(file_get_contents($save_file), true) : array();
-        if (!is_array($save_data)) {
-            $save_data = array();
-        }
-        $save_data['tweet_id'] = $tweet_id;
-        $save_data['tweet_url'] = $tweet_url;
-        $save_data['username'] = $username;
-        $save_data['thread_text'] = $thread_text;
-        if (!isset($save_data['uimage_prompt'])) {
-            $save_data['uimage_prompt'] = '';
-        }
-        if (!isset($save_data['uimage_path'])) {
-            $save_data['uimage_path'] = '';
-        }
-        $save_data['saved_at'] = date('Y-m-d H:i:s');
-        file_put_contents($save_file, json_encode($save_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-        header('Location: ' . $x_redirect_uri . '?tweet_url=' . urlencode($tweet_url));
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'fetch') {
+    if (!$is_admin) {
+        $_SESSION['ui_flash_error'] = '現在は管理者のみ画像生成できます';
+        header('Location: ' . $x_redirect_uri);
+        exit;
+    }
+    $tweet_id = ui_extract_tweet_id($tweet_url);
+    if ($tweet_id === '') {
+        $_SESSION['ui_flash_error'] = 'URLからツイートIDを取得できませんでした';
+        header('Location: ' . $x_redirect_uri);
         exit;
     }
 
-    if ($action === 'generate' && $thread_text !== '' && $tweet_url !== '') {
-        $tweet_id = ui_extract_tweet_id($tweet_url);
-        if ($image_prompt === '') {
-            $image_prompt = str_replace('{thread}', $thread_text, $default_prompt);
-        }
-        $payload = array(
-            'prompt' => $image_prompt,
-            'negative_prompt' => $negative_prompt,
-            'width' => 1024,
-            'height' => 1024,
-            'num_inference_steps' => 8,
-            'guidance_scale' => 1.0,
-            'use_pe' => true,
-            'output_format' => 'png',
-        );
-        list($ok, $response) = ui_call_image_api($API_URL, $payload);
-        if (!$ok) {
-            $_SESSION['ui_flash_error'] = $response;
-            header('Location: ' . $x_redirect_uri . '?tweet_url=' . urlencode($tweet_url));
-            exit;
-        }
-        if (empty($response['image_base64'])) {
-            $_SESSION['ui_flash_error'] = '画像データが返ってきませんでした';
-            header('Location: ' . $x_redirect_uri . '?tweet_url=' . urlencode($tweet_url));
-            exit;
-        }
-        $image_path = ui_save_image_binary($tweet_id, isset($response['output_format']) ? $response['output_format'] : 'png', $response['image_base64']);
-        if ($image_path === '') {
-            $_SESSION['ui_flash_error'] = '生成画像の保存に失敗しました';
-            header('Location: ' . $x_redirect_uri . '?tweet_url=' . urlencode($tweet_url));
-            exit;
-        }
-        if (!is_dir($DATA_DIR)) {
-            @mkdir($DATA_DIR, 0775, true);
-        }
-        $save_file = $DATA_DIR . '/xinsight_' . $tweet_id . '.json';
-        $save_data = file_exists($save_file) ? json_decode(file_get_contents($save_file), true) : array();
-        if (!is_array($save_data)) {
-            $save_data = array();
-        }
-        $save_data['tweet_id'] = $tweet_id;
-        $save_data['tweet_url'] = $tweet_url;
-        $save_data['username'] = $username;
-        $save_data['thread_text'] = $thread_text;
-        $save_data['uimage_prompt'] = $image_prompt;
-        $save_data['uimage_negative_prompt'] = $negative_prompt;
-        $save_data['uimage_path'] = $image_path;
-        $save_data['uimage_saved_at'] = date('Y-m-d H:i:s');
-        $save_data['saved_at'] = date('Y-m-d H:i:s');
-        file_put_contents($save_file, json_encode($save_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-        header('Location: ' . $BASE_URL . '/' . $VIEW_FILE . '?id=' . urlencode($tweet_id));
+    $saved = ui_load_saved_post($tweet_id);
+    if (is_array($saved) && !empty($saved['uimage_path']) && !empty($saved['thread_text'])) {
+        header('Location: ' . $x_redirect_uri . '?id=' . urlencode($tweet_id));
         exit;
     }
+
+    $thread = ui_fetch_thread($tweet_id, 0);
+    if (empty($thread)) {
+        $_SESSION['ui_flash_error'] = 'ツイートを取得できませんでした';
+        header('Location: ' . $x_redirect_uri);
+        exit;
+    }
+    $thread_text = ui_thread_to_text($thread);
+    $image_prompt = ui_build_image_prompt($thread_text);
+    $payload = array(
+        'prompt' => $image_prompt,
+        'width' => 1024,
+        'height' => 1024,
+        'num_inference_steps' => 8,
+        'guidance_scale' => 1.0,
+        'use_pe' => true,
+        'output_format' => 'png',
+    );
+    list($ok, $response) = ui_call_image_api($API_URL, $payload);
+    if (!$ok) {
+        $_SESSION['ui_flash_error'] = $response;
+        header('Location: ' . $x_redirect_uri);
+        exit;
+    }
+    if (empty($response['image_base64'])) {
+        $_SESSION['ui_flash_error'] = '画像データが返ってきませんでした';
+        header('Location: ' . $x_redirect_uri);
+        exit;
+    }
+    $image_path = ui_save_image_binary($tweet_id, isset($response['output_format']) ? $response['output_format'] : 'png', $response['image_base64']);
+    if ($image_path === '') {
+        $_SESSION['ui_flash_error'] = '生成画像の保存に失敗しました';
+        header('Location: ' . $x_redirect_uri);
+        exit;
+    }
+
+    $save_data = is_array($saved) ? $saved : array();
+    $save_data['tweet_id'] = $tweet_id;
+    $save_data['tweet_url'] = $tweet_url;
+    $save_data['username'] = $username;
+    $save_data['thread_text'] = $thread_text;
+    $save_data['uimage_prompt'] = $image_prompt;
+    $save_data['uimage_path'] = $image_path;
+    $save_data['uimage_saved_at'] = date('Y-m-d H:i:s');
+    $save_data['saved_at'] = date('Y-m-d H:i:s');
+    ui_save_post_data($tweet_id, $save_data);
+
+    header('Location: ' . $x_redirect_uri . '?id=' . urlencode($tweet_id));
+    exit;
+}
+
+$page_title = $SITE_NAME;
+if ($detail_post && !empty($detail_post['tweet_id'])) {
+    $page_title = $SITE_NAME . ' | ' . $detail_post['tweet_id'];
 }
 ?><!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UImage</title>
+<title><?php echo h($page_title); ?></title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
     --bg:#f8fafc;--surface:#fff;--border:#e2e8f0;--border2:#cbd5e1;
-    --accent:#ec4899;--accent-h:#db2777;--green:#059669;--red:#dc2626;
+    --accent:#2563eb;--accent-h:#1d4ed8;--green:#059669;--red:#dc2626;--amber:#d97706;
     --text:#0f172a;--muted:#64748b;--mono:'JetBrains Mono',monospace;--sans:'Inter',sans-serif;
 }
 body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;font-size:14px}
@@ -422,7 +407,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:.
 .btn-sm:hover{border-color:var(--red);color:var(--red)}
 .container{max-width:1100px;margin:0 auto;padding:1.5rem}
 .section{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;overflow:hidden}
-.section-header{padding:.75rem 1rem;border-bottom:1px solid var(--border);background:#fff7fb;display:flex;align-items:center;justify-content:space-between}
+.section-header{padding:.75rem 1rem;border-bottom:1px solid var(--border);background:#f8fafc;display:flex;align-items:center;justify-content:space-between;gap:.75rem}
 .section-title{font-weight:600;font-size:.85rem;color:var(--text);display:flex;align-items:center;gap:.4rem}
 .step{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:.7rem;font-weight:700}
 .section-body{padding:1rem}
@@ -430,23 +415,23 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:.
 input[type=text]{flex:1;border:1px solid var(--border2);border-radius:6px;padding:.55rem .75rem;font-size:.85rem;font-family:var(--sans);outline:none;transition:border .15s;color:var(--text)}
 input[type=text]:focus{border-color:var(--accent)}
 textarea.code-area{width:100%;border:1px solid var(--border2);border-radius:6px;padding:.75rem;font-family:var(--mono);font-size:.8rem;line-height:1.7;outline:none;resize:vertical;color:var(--text);transition:border .15s;min-height:120px;background:#fff}
-textarea.code-area:focus{border-color:var(--accent)}
-.image-preview{display:block;max-width:100%;height:auto;border-radius:10px;border:1px solid var(--border);background:#fff}
+.thread-area{background:#f8fafc}
+.image-preview{display:block;max-width:100%;height:auto;border-radius:12px;border:1px solid var(--border);background:#fff}
 .btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1.2rem;border-radius:6px;font-size:.82rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;font-family:var(--sans);text-decoration:none}
 .btn-primary{background:var(--accent);color:#fff}
 .btn-primary:hover{background:var(--accent-h)}
 .btn-secondary{background:#f1f5f9;color:var(--text);border:1px solid var(--border2)}
 .btn-secondary:hover{background:#e2e8f0}
-.btn-green{background:var(--green);color:#fff}
-.btn-green:hover{background:#047857}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .msg-error{color:var(--red);font-size:.8rem;margin-top:.4rem}
-.char-count{font-size:.75rem;color:var(--muted);text-align:right;margin-top:.3rem;font-family:var(--mono)}
-.hint{font-size:.8rem;color:var(--muted);line-height:1.8}
+.hint{font-size:.82rem;color:var(--muted);line-height:1.8}
 .spinner{display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading .spinner{display:inline-block}
 .loading .btn-label{display:none}
+.loading-msg{display:none;text-align:center;padding:12px 16px;font-size:.82rem;color:#92400e;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;margin-bottom:1rem;font-weight:600}
+.detail-meta{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted)}
+.detail-actions{display:flex;gap:8px;flex-wrap:wrap}
 @media (max-width: 600px) {
     .row { flex-wrap: wrap; }
     .row input[type=text] { flex: 1 1 100%; min-width: 0; }
@@ -472,7 +457,7 @@ textarea.code-area:focus{border-color:var(--accent)}
 <div class="container">
     <div class="section">
         <div class="section-header">
-            <div class="section-title"><span class="step">1</span> XのURLを入力してスレッドを取得</div>
+            <div class="section-title"><span class="step">1</span> Xの投稿URLから画像を生成</div>
         </div>
         <div class="section-body">
             <form method="POST" id="form-fetch">
@@ -480,91 +465,96 @@ textarea.code-area:focus{border-color:var(--accent)}
                 <div class="row">
                     <input type="text" name="tweet_url" id="tweet_url_input" placeholder="https://x.com/user/status/..." value="<?php echo h($tweet_url); ?>">
                     <button type="button" class="btn btn-primary" id="btn-fetch"<?php if (!$is_admin): ?> disabled title="管理者のみ生成できます"<?php endif; ?> onclick="submitFetch()">
-                        <span class="btn-label">取得</span>
+                        <span class="btn-label">取得して画像生成</span>
                         <span class="spinner"></span>
                     </button>
                     <?php if ($tweet_url !== ''): ?>
-                    <a href="<?php echo h($tweet_url); ?>" target="_blank" class="btn btn-secondary">元の投稿 ↗</a>
+                    <a href="<?php echo h($tweet_url); ?>" target="_blank" rel="noopener" class="btn btn-secondary">元の投稿 ↗</a>
+                    <?php else: ?>
+                    <button type="button" class="btn btn-secondary" id="btn-open" onclick="openTweetUrl()" disabled>元の投稿 ↗</button>
                     <?php endif; ?>
                 </div>
                 <?php if ($fetch_error): ?>
                 <div class="msg-error"><?php echo h($fetch_error); ?></div>
                 <?php endif; ?>
-            </form>
-        </div>
-    </div>
-
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title"><span class="step">2</span> スレッド本文</div>
-        </div>
-        <div class="section-body">
-            <textarea class="code-area" id="thread_text" name="thread_text" rows="8" form="form-generate" placeholder="ここに取得したスレッド本文が表示されます。"><?php echo h($thread_text); ?></textarea>
-            <div class="char-count" id="thread_count"><?php echo mb_strlen($thread_text); ?> 文字</div>
-        </div>
-    </div>
-
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title"><span class="step">3</span> 画像生成プロンプト</div>
-        </div>
-        <div class="section-body">
-            <form method="POST" id="form-generate">
-                <input type="hidden" name="action" value="generate">
-                <input type="hidden" name="tweet_url" value="<?php echo h($tweet_url); ?>">
-                <div style="margin-bottom:.75rem">
-                    <textarea class="code-area" id="image_prompt" name="image_prompt" rows="10" placeholder="生成に使う画像プロンプトをここで編集できます。"><?php echo h($image_prompt === '' && $thread_text !== '' ? str_replace('{thread}', $thread_text, $default_prompt) : $image_prompt); ?></textarea>
-                </div>
-                <div style="margin-bottom:.75rem">
-                    <textarea class="code-area" id="negative_prompt" name="negative_prompt" rows="4" placeholder="blurry, low quality など任意で入力"><?php echo h($negative_prompt); ?></textarea>
-                </div>
-                <div style="display:flex;justify-content:center;margin-bottom:.75rem">
-                    <button type="button" class="btn btn-green" id="btn-generate"<?php if (!$is_admin): ?> disabled title="管理者のみ生成できます"<?php endif; ?> style="padding:.65rem 2.5rem;font-size:.9rem" onclick="submitGenerate()">
-                        <span class="btn-label">✦ 画像を生成</span>
-                        <span class="spinner"></span>
-                    </button>
-                </div>
-                <div class="hint">
-                    生成できるのは現在 <strong><?php echo h($ADMIN); ?></strong> のみです。公開ビューは <a href="<?php echo h($VIEW_FILE); ?>" style="color:#db2777;text-decoration:none;">uimagev.php</a> から誰でも参照できます。
+                <div class="hint" style="margin-top:.6rem">
+                    URLを入力して取得ボタンを押すと、スレッド取得、画像生成、スレッド表示、画像表示まで一気に実行します。現在生成できるのは <strong><?php echo h($ADMIN); ?></strong> のみです。
                 </div>
             </form>
         </div>
     </div>
 
-    <?php if ($generated_image_path !== ''): ?>
+    <div id="generating-msg" class="loading-msg">
+        ⏳ AI生成中です。スレッド取得と画像生成をまとめて実行しています。しばらくお待ちください...
+    </div>
+
+    <?php if ($detail_post): ?>
     <div class="section">
         <div class="section-header">
-            <div class="section-title"><span class="step" style="background:var(--green)">✓</span> 現在の生成画像</div>
-            <a class="btn btn-secondary" href="<?php echo h($BASE_URL . '/' . $VIEW_FILE . '?id=' . urlencode(ui_extract_tweet_id($tweet_url))); ?>">viewer を開く</a>
+            <div class="section-title"><span class="step">2</span> 取得したスレッド</div>
+            <div class="detail-meta">
+                <span><?php echo h(isset($detail_post['username']) ? '@' . $detail_post['username'] : ''); ?></span>
+                <span><?php echo h(isset($detail_post['uimage_saved_at']) ? $detail_post['uimage_saved_at'] : ''); ?></span>
+                <span style="font-family:var(--mono)"><?php echo h(isset($detail_post['tweet_id']) ? $detail_post['tweet_id'] : ''); ?></span>
+            </div>
         </div>
         <div class="section-body">
-            <img class="image-preview" src="<?php echo h($BASE_URL . '/' . $generated_image_path); ?>" alt="Generated image">
+            <textarea class="code-area thread-area" rows="10" readonly><?php echo h(isset($detail_post['thread_text']) ? $detail_post['thread_text'] : ''); ?></textarea>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <div class="section-title"><span class="step" style="background:var(--green)">✓</span> 生成画像</div>
+            <div class="detail-actions">
+                <?php if (!empty($detail_post['tweet_url'])): ?>
+                <a href="<?php echo h($detail_post['tweet_url']); ?>" target="_blank" rel="noopener" class="btn btn-secondary">元の投稿 ↗</a>
+                <?php endif; ?>
+                <?php if (!empty($detail_post['tweet_id'])): ?>
+                <a href="<?php echo h($VIEW_FILE . '?id=' . urlencode($detail_post['tweet_id'])); ?>" class="btn btn-secondary">公開表示</a>
+                <?php endif; ?>
+                <?php if ($logged_in && !empty($detail_post['uimage_path'])): ?>
+                <a href="<?php echo h($BASE_URL . '/' . $detail_post['uimage_path']); ?>" download class="btn btn-secondary">画像を保存</a>
+                <?php endif; ?>
+            </div>
+        </div>
+        <div class="section-body">
+            <?php if (!empty($detail_post['uimage_path'])): ?>
+            <img class="image-preview" src="<?php echo h($BASE_URL . '/' . $detail_post['uimage_path']); ?>" alt="Generated image">
+            <?php endif; ?>
+            <?php if (!empty($detail_post['uimage_prompt'])): ?>
+            <div class="hint" style="margin-top:.75rem">
+                画像生成は内部で自動プロンプト化しています。保存済みデータとして参照できます。
+            </div>
+            <?php endif; ?>
         </div>
     </div>
     <?php endif; ?>
 </div>
 
 <script>
-var ta = document.getElementById('thread_text');
-var counter = document.getElementById('thread_count');
-if (ta && counter) {
-    ta.addEventListener('input', function() {
-        counter.textContent = this.value.length + ' 文字';
+function openTweetUrl() {
+    var url = document.getElementById('tweet_url_input').value.trim();
+    if (url) window.open(url, '_blank');
+}
+var urlInput = document.getElementById('tweet_url_input');
+var btnOpen = document.getElementById('btn-open');
+if (urlInput && btnOpen) {
+    urlInput.addEventListener('input', function() {
+        btnOpen.disabled = this.value.trim() === '';
     });
 }
 function lockUI() {
     var btnF = document.getElementById('btn-fetch');
-    var btnG = document.getElementById('btn-generate');
     if (btnF) { btnF.disabled = true; btnF.classList.add('loading'); }
-    if (btnG) { btnG.disabled = true; btnG.classList.add('loading'); }
+    if (urlInput) { urlInput.disabled = true; }
+    if (btnOpen) { btnOpen.disabled = true; }
+    var msg = document.getElementById('generating-msg');
+    if (msg) { msg.style.display = 'block'; }
 }
 function submitFetch() {
     lockUI();
     document.getElementById('form-fetch').submit();
-}
-function submitGenerate() {
-    lockUI();
-    document.getElementById('form-generate').submit();
 }
 </script>
 </body>
