@@ -170,6 +170,43 @@ if (file_exists($DATA_DIR)) {
     }
 }
 
+if (isset($_GET['feed'])) {
+    $rss_items = array_slice($posts, 0, 20);
+    header('Access-Control-Allow-Origin: https://exbridge.jp');
+    header('Content-Type: application/rss+xml; charset=UTF-8');
+    echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+    echo '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">' . "\n";
+    echo '<channel>' . "\n";
+    echo '<title>AI画像生成タイムライン | UImageV</title>' . "\n";
+    echo '<link>' . $BASE_URL . '/uimagev.php</link>' . "\n";
+    echo '<description>X投稿から生成したAI画像のタイムライン。</description>' . "\n";
+    echo '<language>ja</language>' . "\n";
+    echo '<atom:link href="' . $BASE_URL . '/uimagev.php?feed" rel="self" type="application/rss+xml"/>' . "\n";
+    foreach ($rss_items as $p) {
+        $tweet_id = isset($p['tweet_id']) ? $p['tweet_id'] : '';
+        $thread = isset($p['thread_text']) ? $p['thread_text'] : '';
+        $date_raw = isset($p['uimage_saved_at']) ? $p['uimage_saved_at'] : '';
+        $uname = isset($p['username']) ? $p['username'] : '';
+        $title = mb_substr(str_replace("\n", ' ', $thread), 0, 50) . '...';
+        $desc = mb_substr(str_replace("\n", ' ', $thread), 0, 200);
+        $link = $BASE_URL . '/uimagev.php?id=' . urlencode($tweet_id);
+        $pub_date = $date_raw ? date('r', strtotime($date_raw)) : date('r');
+        echo '<item>' . "\n";
+        echo '<title><![CDATA[' . $title . ']]></title>' . "\n";
+        echo '<link>' . htmlspecialchars($link) . '</link>' . "\n";
+        echo '<guid isPermaLink="true">' . htmlspecialchars($link) . '</guid>' . "\n";
+        echo '<description><![CDATA[' . $desc . ($uname ? "\n\n@" . $uname : '') . ']]></description>' . "\n";
+        echo '<pubDate>' . $pub_date . '</pubDate>' . "\n";
+        if (!empty($p['uimage_path'])) {
+            echo '<enclosure url="' . htmlspecialchars($BASE_URL . '/' . ltrim($p['uimage_path'], '/')) . '" length="0" type="image/png"/>' . "\n";
+        }
+        echo '</item>' . "\n";
+    }
+    echo '</channel>' . "\n";
+    echo '</rss>' . "\n";
+    exit;
+}
+
 $detail_id = isset($_GET['id']) ? trim($_GET['id']) : '';
 $detail_post = null;
 if ($detail_id !== '') {
@@ -183,7 +220,7 @@ if ($detail_id !== '') {
 
 if ($detail_post) {
     $page_title = 'UImage | ' . $detail_post['tweet_id'];
-    $page_description = mb_substr(str_replace("\n", ' ', isset($detail_post['uimage_prompt']) ? $detail_post['uimage_prompt'] : ''), 0, 160);
+    $page_description = mb_substr(str_replace("\n", ' ', isset($detail_post['thread_text']) ? $detail_post['thread_text'] : ''), 0, 160);
     $page_url = $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($detail_post['tweet_id']);
 } else {
     $page_title = $SITE_NAME . ' — X投稿から生成した画像ビュー';
@@ -232,8 +269,6 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
 .post-id{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#ec4899;margin-bottom:8px;text-decoration:none;display:block}
 .post-id:hover{text-decoration:underline}
 .preview-image{display:block;width:100%;border-radius:12px;border:1px solid #e5e7eb;margin-bottom:12px}
-.prompt-block{background:#fff7fb;border-left:3px solid #ec4899;border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:12px;font-size:14px;line-height:1.8;color:#333;white-space:pre-wrap;max-height:120px;overflow:hidden;position:relative}
-.prompt-block::after{content:'';position:absolute;bottom:0;left:0;right:0;height:32px;background:linear-gradient(transparent,#fff7fb);pointer-events:none}
 .x-link{display:inline-flex;align-items:center;gap:6px;background:#f5f5f5;border:1px solid #e5e7eb;border-radius:8px;padding:6px 12px;text-decoration:none;color:#555;font-size:12px;transition:all .15s;margin-top:4px}
 .x-link:hover{background:#fdf2f8;border-color:#ec4899;color:#ec4899}
 .card-links{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
@@ -248,6 +283,7 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
 .detail-url-box a{color:#ec4899}
 .empty{text-align:center;color:#bbb;padding:80px 20px;font-size:15px}
 .empty a{color:#ec4899;text-decoration:none}
+.rss-badge{font-size:10px;font-weight:700;color:#c44f00;background:#fff5ef;border:1px solid #f5d0b8;border-radius:4px;padding:2px 7px;text-decoration:none;display:inline-flex;align-items:center;gap:3px}
 </style>
 </head>
 <body>
@@ -256,11 +292,19 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
     <?php if ($detail_post): ?>
     <h1><a href="<?php echo h($THIS_FILE); ?>">UImageV</a></h1>
     <span class="badge">URL2AI Images</span>
+    <a class="rss-badge" href="<?php echo h($THIS_FILE); ?>?feed" target="_blank">
+        <svg width="9" height="9" viewBox="0 0 8 8"><circle cx="1.5" cy="6.5" r="1.5" fill="#c44f00"/><path d="M0 4.5A3.5 3.5 0 013.5 8" stroke="#c44f00" stroke-width="1.2" fill="none"/><path d="M0 2A6 6 0 016 8" stroke="#c44f00" stroke-width="1.2" fill="none"/></svg>
+        RSS
+    </a>
     <a class="back-btn" href="<?php echo h($THIS_FILE); ?>">← 一覧</a>
     <?php else: ?>
     <h1>UImageV</h1>
     <span class="badge">URL2AI Images</span>
     <div class="userbar">
+        <a class="rss-badge" href="<?php echo h($THIS_FILE); ?>?feed" target="_blank">
+            <svg width="9" height="9" viewBox="0 0 8 8"><circle cx="1.5" cy="6.5" r="1.5" fill="#c44f00"/><path d="M0 4.5A3.5 3.5 0 013.5 8" stroke="#c44f00" stroke-width="1.2" fill="none"/><path d="M0 2A6 6 0 016 8" stroke="#c44f00" stroke-width="1.2" fill="none"/></svg>
+            RSS
+        </a>
         <?php if ($logged_in): ?>
         <span>@<strong><?php echo h($session_user); ?></strong></span>
         <a href="?uiv_logout=1" class="btn-sm">logout</a>
@@ -293,11 +337,6 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
         <div style="margin-top:14px">
             <a class="x-link" href="<?php echo h($BASE_URL . '/' . $detail_post['uimage_path']); ?>" download>画像を保存</a>
         </div>
-        <?php endif; ?>
-
-        <?php if (!empty($detail_post['uimage_prompt'])): ?>
-        <div class="detail-section-title">Image Prompt</div>
-        <div class="detail-prompt"><?php echo h($detail_post['uimage_prompt']); ?></div>
         <?php endif; ?>
 
         <?php if (!empty($detail_post['thread_text'])): ?>
@@ -334,9 +373,6 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
         </div>
         <a class="post-id" href="uimagev.php?id=<?php echo urlencode($p['tweet_id']); ?>">#<?php echo h($p['tweet_id']); ?></a>
         <a href="uimagev.php?id=<?php echo urlencode($p['tweet_id']); ?>"><img class="preview-image" src="<?php echo h($BASE_URL . '/' . $p['uimage_path']); ?>" alt="Generated image"></a>
-        <?php if (!empty($p['uimage_prompt'])): ?>
-        <div class="prompt-block"><?php echo h($p['uimage_prompt']); ?></div>
-        <?php endif; ?>
         <div class="card-links">
             <?php if (!empty($p['tweet_url'])): ?>
             <a href="<?php echo h($p['tweet_url']); ?>" target="_blank" rel="noopener" class="x-link">元の投稿</a>

@@ -261,7 +261,7 @@ $services = array(
         'bg'       => '#fff1f2',
         'view_url' => $BASE_URL . '/uimagev.php',
         'edit_url' => $BASE_URL . '/uimage.php',
-        'feed_url' => '',
+        'feed_url' => $BASE_URL . '/uimagev.php?feed',
         'image_url'=> $BASE_URL . '/images/uimage.png',
         'desc'     => 'X投稿URLから画像を生成して公開表示',
     ),

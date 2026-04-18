@@ -10,14 +10,24 @@ function detect_system($url){
     if($url === "") return "other";
     $u = strtolower($url);
 
-    if(strpos($u, "ustory") !== false)                          return "ustory";
-    if(strpos($u, "xinsight") !== false)                        return "xinsight";
-    if(strpos($u, "xview") !== false)                           return "xview";
-    if(strpos($u, "saveoss") !== false || strpos($u, "/oss") !== false) return "oss";
-    if(strpos($u, "aitrend") !== false)                         return "aitrend";
-    if(strpos($u, "newskeyword") !== false)                     return "newskeyword";
-    if(strpos($u, "aiknowledgecms") !== false || strpos($u, "kw=") !== false) return "cms";
-    if(strpos($u, "simpletrack") !== false || strpos($u, "analyze") !== false) return "analytics";
+    /* 順序重要: 長いパターンを先に */
+    if(strpos($u, "uparsev") !== false || strpos($u, "uparse") !== false)      return "uparse";
+    if(strpos($u, "udebate") !== false)                                          return "udebate";
+    if(strpos($u, "uimagev") !== false || strpos($u, "uimage") !== false)        return "uimage";
+    if(strpos($u, "umediav") !== false || strpos($u, "umedia") !== false)        return "umedia";
+    if(strpos($u, "usongv")  !== false || strpos($u, "usong")  !== false)        return "usong";
+    if(strpos($u, "ustoryv") !== false || strpos($u, "ustory") !== false)        return "ustory";
+    if(strpos($u, "xinsightv") !== false || strpos($u, "xinsight") !== false)   return "xinsight";
+    if(strpos($u, "xview") !== false)                                            return "xview";
+    if(strpos($u, "osszenn") !== false)                                          return "osszenn";
+    if(strpos($u, "saveoss") !== false || strpos($u, "/oss") !== false)          return "oss";
+    if(strpos($u, "ainews") !== false)                                           return "ainews";
+    if(strpos($u, "aitech") !== false)                                           return "aitech";
+    if(strpos($u, "aitrend") !== false)                                          return "aitrend";
+    if(strpos($u, "newskeyword") !== false)                                      return "newskeyword";
+    if(strpos($u, "aiknowledgecms") !== false || strpos($u, "kw=") !== false)   return "cms";
+    if(strpos($u, "knowradar") !== false)                                        return "knowradar";
+    if(strpos($u, "simpletrack") !== false || strpos($u, "analyze") !== false)  return "analytics";
     return "other";
 }
 
@@ -25,11 +35,20 @@ $SYSTEM_META = array(
     "cms"         => array("label" => "AIKnowledgeCMS",  "color" => "#a855f7"),
     "aitrend"     => array("label" => "AITrend",         "color" => "#06b6d4"),
     "newskeyword" => array("label" => "NewsKeyword",     "color" => "#3b82f6"),
-    "ustory"      => array("label" => "UStory",          "color" => "#f97316"),
-    "xinsight"    => array("label" => "XInsight",        "color" => "#ec4899"),
-    "xview"       => array("label" => "XView",           "color" => "#14b8a6"),
-    "oss"         => array("label" => "OSS",             "color" => "#22c55e"),
-    "analytics"   => array("label" => "Analytics",      "color" => "#64748b"),
+    "ustory"      => array("label" => "UStory",          "color" => "#7c3aed"),
+    "uparse"      => array("label" => "UParse",          "color" => "#0f766e"),
+    "usong"       => array("label" => "USong",           "color" => "#db2777"),
+    "umedia"      => array("label" => "UMedia",          "color" => "#0891b2"),
+    "uimage"      => array("label" => "UImage",          "color" => "#fb7185"),
+    "udebate"     => array("label" => "UDebate",         "color" => "#6d28d9"),
+    "xinsight"    => array("label" => "XInsight",        "color" => "#2563eb"),
+    "xview"       => array("label" => "XView",           "color" => "#0f766e"),
+    "oss"         => array("label" => "OSS",             "color" => "#6c63ff"),
+    "osszenn"     => array("label" => "OSSZenn",         "color" => "#3b82f6"),
+    "aitech"      => array("label" => "AITech",          "color" => "#0ea5e9"),
+    "ainews"      => array("label" => "AI News Radar",   "color" => "#e11d48"),
+    "knowradar"   => array("label" => "KnowRader",       "color" => "#6366f1"),
+    "analytics"   => array("label" => "Analytics",       "color" => "#64748b"),
     "other"       => array("label" => "Other",           "color" => "#475569"),
 );
 
@@ -162,6 +181,15 @@ foreach($system_daily as $sys => $daily){
     );
 }
 
+usort($system_series, function($a, $b){
+    $sumA = array_sum($a["data"]);
+    $sumB = array_sum($b["data"]);
+    if($sumA === $sumB) return strcmp($a["label"], $b["label"]);
+    return ($sumB > $sumA) ? 1 : -1;
+});
+
+$top_system_series = array_slice($system_series, 0, 8);
+
 // Top URLs per system (kw= filter for cms/aitrend)
 $system_urls = array();
 foreach($url_count as $u => $c){
@@ -179,6 +207,7 @@ $j_pv_counts     = json_encode(array_values($pv_per_day));
 $j_hour_labels   = json_encode(range(0,23));
 $j_hour_counts   = json_encode(array_values($hour_count));
 $j_system_series = json_encode($system_series, JSON_UNESCAPED_UNICODE);
+$j_top_system_series = json_encode($top_system_series, JSON_UNESCAPED_UNICODE);
 
 // systemPv (ドーナツ用)
 $donut_labels = array();
@@ -299,6 +328,12 @@ body::before{
     padding:24px;
     margin-bottom:24px;
 }
+.section-sub{
+    font-size:12px;
+    color:var(--muted);
+    margin:-6px 0 16px;
+    line-height:1.7;
+}
 .section h2{
     font-size:13px;
     font-family:var(--font-mono);
@@ -392,6 +427,8 @@ body::before{
 .log-ref{font-size:10px;color:var(--muted);grid-column:3;padding-left:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 canvas{width:100%!important;}
+.chart-wrap{position:relative;min-height:360px;}
+.chart-note{margin-top:12px;font-size:11px;color:var(--muted);font-family:var(--font-mono);}
 
 /* ── スクロールバー ── */
 ::-webkit-scrollbar{width:4px;height:4px;}
@@ -444,7 +481,11 @@ canvas{width:100%!important;}
 <!-- Daily PV (全体) + システム別積み上げ -->
 <div class="section">
     <h2>Daily PV — システム別推移</h2>
-    <canvas id="pvChart" height="100"></canvas>
+    <div class="section-sub">線が重なりすぎないよう、PV 上位 8 システムのみを表示しています。</div>
+    <div class="chart-wrap">
+        <canvas id="pvChart"></canvas>
+    </div>
+    <div class="chart-note">凡例をクリックすると系列の表示を切り替えられます。</div>
 </div>
 
 <!-- システム構成 + 時間帯 -->
@@ -491,15 +532,48 @@ new Chart(document.getElementById('pvChart'),{
     type:'line',
     data:{
         labels: <?php echo $j_dates; ?>,
-        datasets: <?php echo $j_system_series; ?>
+        datasets: <?php echo $j_top_system_series; ?>
     },
     options:{
         responsive:true,
+        maintainAspectRatio:false,
         interaction:{mode:'index',intersect:false},
-        plugins:{legend:{position:'top',labels:{font:{size:11},boxWidth:12}}},
+        plugins:{
+            legend:{
+                position:'bottom',
+                labels:{
+                    font:{size:11},
+                    boxWidth:12,
+                    usePointStyle:true,
+                    padding:16
+                }
+            },
+            tooltip:{
+                backgroundColor:'#0f172a',
+                titleColor:'#f8fafc',
+                bodyColor:'#e2e8f0',
+                padding:12
+            }
+        },
         scales:{
-            x:{ticks:{font:{size:10}},grid:{color:'#d1dae6'}},
-            y:{beginAtZero:true,ticks:{font:{size:10}},grid:{color:'#d1dae6'}}
+            x:{
+                ticks:{
+                    font:{size:10},
+                    maxRotation:0,
+                    autoSkip:true,
+                    maxTicksLimit:12
+                },
+                grid:{display:false}
+            },
+            y:{
+                beginAtZero:true,
+                ticks:{font:{size:10},precision:0},
+                grid:{color:'#d1dae6'}
+            }
+        },
+        elements:{
+            line:{borderWidth:2.5},
+            point:{radius:2,hoverRadius:5}
         }
     }
 });
