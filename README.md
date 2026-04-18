@@ -7,6 +7,7 @@ Turn any URL into AI-generated content including stories, debates, lyrics, and i
 - Overview Page: [url2ai.html](https://aiknowledgecms.exbridge.jp/url2ai.html)
 - Ecosystem Portal: [knowradar.php](https://aiknowledgecms.exbridge.jp/knowradar.php)
 - UPDF2MD Demo: [updf2md.php](https://aiknowledgecms.exbridge.jp/updf2md.php)
+- UImage Generator: [uimage.php](https://aiknowledgecms.exbridge.jp/uimage.php)
 - UImage Viewer: [uimagev.php](https://aiknowledgecms.exbridge.jp/uimagev.php)
 - URL2AI Token: [Bankr launch page](https://bankr.bot/launches/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3)
 
@@ -66,7 +67,7 @@ URL2AI is an AI engine that transforms X (Twitter) post URLs and web URLs into m
 | 📰 AI News Radar | News analysis | Analyzes X news posts together with linked articles |
 | 🌐 KnowRadar | Portal | Unified portal showing all modules with RSS feeds |
 | 📄 UPDF2MD | PDF to Markdown | Public demo + hosted MCP / paid API for PDF-to-Markdown conversion |
-| 🎨 UImage | Image generation | X post URL to image generation with public viewer |
+| 🎨 UImage | Image generation | Generates an image from an X post URL with admin-side generation and a public viewer + RSS |
 
 ## Architecture
 
@@ -84,7 +85,7 @@ X Post URL / Web URL
   data/xinsight_{tweet_id}.json
         ↓
   [display]
-  *v.php viewer files (ustoryv, uparsev, udebatev, umediav, usongv, xinsightv)
+  *v.php viewer files (ustoryv, uparsev, udebatev, umediav, usongv, xinsightv, uimagev)
 ```
 
 ## Stack
@@ -112,6 +113,8 @@ src/
 ├── umediav.php          # UMedia viewer + RSS
 ├── usong.php            # USong lyrics generator
 ├── usongv.php           # USong viewer + RSS
+├── uimage.php           # UImage generator
+├── uimagev.php          # UImage viewer + RSS
 ├── xinsight.php         # XInsight generator
 ├── xinsightv.php        # XInsight viewer + RSS
 ├── aitech.php           # AITech Links viewer
