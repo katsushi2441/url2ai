@@ -315,6 +315,7 @@ function ui_save_post_data($tweet_id, $data) {
 $action = isset($_POST['action']) ? $_POST['action'] : '';
 $tweet_url = isset($_POST['tweet_url']) ? trim($_POST['tweet_url']) : '';
 $force_regen = !empty($_POST['force_regen']);
+$custom_prompt = isset($_POST['custom_prompt']) ? trim($_POST['custom_prompt']) : '';
 $detail_id = isset($_GET['id']) ? preg_replace('/[^0-9]/', '', trim($_GET['id'])) : '';
 $detail_post = null;
 $fetch_error = isset($_SESSION['ui_flash_error']) ? $_SESSION['ui_flash_error'] : '';
@@ -361,7 +362,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'fetch') {
         exit;
     }
     $thread_text = ui_thread_to_text($thread);
-    $image_prompt = ui_build_image_prompt($thread_text);
+    $image_prompt = ($custom_prompt !== '') ? $custom_prompt : ui_build_image_prompt($thread_text);
     $payload = array(
         'prompt' => $image_prompt,
         'negative_prompt' => 'horror, creepy, ghost photo, grotesque, gore, blood, disturbing mouth, realistic oral cavity, deformed face, extra limbs, bad anatomy, blurry, low quality, dark horror, zombie, uncanny',
@@ -510,6 +511,7 @@ textarea.code-area{width:100%;border:1px solid var(--border2);border-radius:6px;
             <form method="POST" id="form-fetch">
                 <input type="hidden" name="action" value="fetch">
                 <input type="hidden" name="force_regen" id="force_regen" value="0">
+                <input type="hidden" name="custom_prompt" id="custom_prompt" value="">
                 <div class="row">
                     <input type="text" name="tweet_url" id="tweet_url_input" placeholder="https://x.com/user/status/..." value="<?php echo h($tweet_url); ?>">
                     <button type="button" class="btn btn-primary" id="btn-fetch"<?php if (!$is_admin): ?> disabled title="管理者のみ生成できます"<?php endif; ?> onclick="submitFetch()">
@@ -577,9 +579,17 @@ textarea.code-area{width:100%;border:1px solid var(--border2);border-radius:6px;
             <img class="image-preview" src="<?php echo h($BASE_URL . '/' . $detail_post['uimage_path']); ?>" alt="Generated image">
             <?php endif; ?>
             <?php if (!empty($detail_post['uimage_prompt'])): ?>
-            <div class="hint" style="margin-top:.75rem">
-                URL2AI ERNIE Image は ERNIE-Image-Turbo に渡すプロンプトを内部で自動生成しています。保存済みデータとして参照できます。
+            <?php if ($is_admin): ?>
+            <div style="margin-top:.75rem">
+                <div style="font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:.3rem">🖊 プロンプト編集（管理者）</div>
+                <textarea id="prompt-editor" class="code-area" rows="8"><?php echo h($detail_post['uimage_prompt']); ?></textarea>
+                <div class="hint" style="margin-top:.3rem">編集後に「再生成」を押すと、このプロンプトで画像を生成し直します。</div>
             </div>
+            <?php else: ?>
+            <div class="hint" style="margin-top:.75rem">
+                URL2AI ERNIE Image は ERNIE-Image-Turbo に渡すプロンプトを内部で自動生成しています。
+            </div>
+            <?php endif; ?>
             <?php endif; ?>
         </div>
     </div>
@@ -640,6 +650,9 @@ function submitFetch() {
 function submitRegenerate() {
     var force = document.getElementById('force_regen');
     if (force) { force.value = '1'; }
+    var editor = document.getElementById('prompt-editor');
+    var cp = document.getElementById('custom_prompt');
+    if (editor && cp) { cp.value = editor.value.trim(); }
     lockUI();
     document.getElementById('form-fetch').submit();
 }
