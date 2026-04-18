@@ -511,7 +511,6 @@ textarea.code-area{width:100%;border:1px solid var(--border2);border-radius:6px;
             <form method="POST" id="form-fetch">
                 <input type="hidden" name="action" value="fetch">
                 <input type="hidden" name="force_regen" id="force_regen" value="0">
-                <input type="hidden" name="custom_prompt" id="custom_prompt" value="">
                 <div class="row">
                     <input type="text" name="tweet_url" id="tweet_url_input" placeholder="https://x.com/user/status/..." value="<?php echo h($tweet_url); ?>">
                     <button type="button" class="btn btn-primary" id="btn-fetch"<?php if (!$is_admin): ?> disabled title="管理者のみ生成できます"<?php endif; ?> onclick="submitFetch()">
@@ -526,6 +525,14 @@ textarea.code-area{width:100%;border:1px solid var(--border2);border-radius:6px;
                 </div>
                 <?php if ($fetch_error): ?>
                 <div class="msg-error"><?php echo h($fetch_error); ?></div>
+                <?php endif; ?>
+                <?php if ($is_admin): ?>
+                <div style="margin-top:.75rem">
+                    <div style="font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:.3rem">🖊 プロンプト（空白=自動生成）</div>
+                    <textarea name="custom_prompt" id="custom_prompt" class="code-area" rows="6" placeholder="空白のままにすると、ツイート内容からプロンプトを自動生成します。&#10;ここに入力するとそのプロンプトで画像生成します。"><?php echo h($custom_prompt); ?></textarea>
+                </div>
+                <?php else: ?>
+                <input type="hidden" name="custom_prompt" id="custom_prompt" value="">
                 <?php endif; ?>
                 <div class="hint" style="margin-top:.6rem">
                     X投稿URLを入力すると、URL2AI ERNIE Image が ERNIE-Image-Turbo でスレッド取得から画像生成まで一気に実行します。現在生成できるのは <strong><?php echo h($ADMIN); ?></strong> のみです。
@@ -653,6 +660,11 @@ function submitRegenerate() {
     var editor = document.getElementById('prompt-editor');
     var cp = document.getElementById('custom_prompt');
     if (editor && cp) { cp.value = editor.value.trim(); }
+    else if (editor) {
+        var hidden = document.createElement('input');
+        hidden.type = 'hidden'; hidden.name = 'custom_prompt'; hidden.value = editor.value.trim();
+        document.getElementById('form-fetch').appendChild(hidden);
+    }
     lockUI();
     document.getElementById('form-fetch').submit();
 }
