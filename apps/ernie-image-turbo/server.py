@@ -14,7 +14,8 @@ from PIL import Image
 MODEL_ID = os.getenv("MODEL_ID", "baidu/ERNIE-Image-Turbo")
 DEVICE = os.getenv("DEVICE", "cuda")
 HOST = os.getenv("HOST", "0.0.0.0")
-PORT = int(os.getenv("PORT", "8010"))
+PORT = int(os.getenv("PORT", "8011"))
+ENABLE_CPU_OFFLOAD = os.getenv("ENABLE_CPU_OFFLOAD", "1") == "1"
 
 _pipeline = None
 _pipeline_lock = Lock()
@@ -48,11 +49,23 @@ def get_pipeline() -> ErnieImagePipeline:
     with _pipeline_lock:
         if _pipeline is None:
             dtype = resolve_dtype()
-            _pipeline = ErnieImagePipeline.from_pretrained(
+            pipe = ErnieImagePipeline.from_pretrained(
                 MODEL_ID,
                 torch_dtype=dtype,
             )
-            _pipeline = _pipeline.to(DEVICE)
+            pipe.set_progress_bar_config(disable=True)
+            pipe.enable_attention_slicing("max")
+            if hasattr(pipe, "enable_vae_slicing"):
+                pipe.enable_vae_slicing()
+            if hasattr(pipe, "enable_vae_tiling"):
+                pipe.enable_vae_tiling()
+
+            if DEVICE == "cuda" and torch.cuda.is_available() and ENABLE_CPU_OFFLOAD:
+                pipe.enable_model_cpu_offload()
+            else:
+                pipe = pipe.to(DEVICE)
+
+            _pipeline = pipe
         return _pipeline
 
 

@@ -7,6 +7,7 @@ Turn any URL into AI-generated content including stories, debates, lyrics, and i
 - Overview Page: [url2ai.html](https://aiknowledgecms.exbridge.jp/url2ai.html)
 - Ecosystem Portal: [knowradar.php](https://aiknowledgecms.exbridge.jp/knowradar.php)
 - UPDF2MD Demo: [updf2md.php](https://aiknowledgecms.exbridge.jp/updf2md.php)
+- UImage Viewer: [uimagev.php](https://aiknowledgecms.exbridge.jp/uimagev.php)
 - URL2AI Token: [Bankr launch page](https://bankr.bot/launches/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3)
 
 ## Hosted MCP / Paid API
@@ -65,6 +66,7 @@ URL2AI is an AI engine that transforms X (Twitter) post URLs and web URLs into m
 | 📰 AI News Radar | News analysis | Analyzes X news posts together with linked articles |
 | 🌐 KnowRadar | Portal | Unified portal showing all modules with RSS feeds |
 | 📄 UPDF2MD | PDF to Markdown | Public demo + hosted MCP / paid API for PDF-to-Markdown conversion |
+| 🎨 UImage | Image generation | X post URL to image generation with public viewer |
 
 ## Architecture
 

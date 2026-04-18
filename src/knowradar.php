@@ -253,6 +253,19 @@ $services = array(
         'desc'     => 'GitHub厳選AI系OSSのAI考察',
     ),
     array(
+        'id'       => 'uimage',
+        'name'     => 'UImage',
+        'name_ja'  => '画像生成',
+        'emoji'    => '🎨',
+        'color'    => '#fb7185',
+        'bg'       => '#fff1f2',
+        'view_url' => $BASE_URL . '/uimagev.php',
+        'edit_url' => $BASE_URL . '/uimage.php',
+        'feed_url' => '',
+        'image_url'=> $BASE_URL . '/images/uimage.png',
+        'desc'     => 'X投稿URLから画像を生成して公開表示',
+    ),
+    array(
         'id'       => 'osszenn',
         'name'     => 'OSSZenn',
         'name_ja'  => 'OSS × Zenn',
@@ -314,6 +327,7 @@ function kr_detect_system($url) {
     $u = strtolower($url);
     if (strpos($u, 'ainews')    !== false)                                        return 'ainews';
     if (strpos($u, 'udebate')   !== false)                                        return 'udebate';
+    if (strpos($u, 'uimagev')   !== false || strpos($u, 'uimage')   !== false)   return 'uimage';
     if (strpos($u, 'umediav')   !== false || strpos($u, 'umedia')   !== false)   return 'umedia';
     if (strpos($u, 'usongv')    !== false || strpos($u, 'usong')    !== false)   return 'usong';
     if (strpos($u, 'ustoryv')   !== false || strpos($u, 'ustory')   !== false)   return 'ustory';
@@ -467,11 +481,15 @@ body{background:#f8fafc;color:#0f172a;font-family:'Inter',-apple-system,sans-ser
 .feed-body{padding:10px 18px 14px;}
 .feed-list{list-style:none;margin:0;padding:0;}
 .feed-list li{padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:11px;line-height:1.5;display:flex;align-items:baseline;gap:6px;}
+.feed-list li.has-media{display:block;}
 .feed-list li:last-child{border-bottom:none;}
+.feed-row{display:flex;align-items:baseline;gap:6px;}
 .feed-date{color:#94a3b8;font-size:10px;flex-shrink:0;font-family:'JetBrains Mono',monospace;}
 .feed-link{color:#0f172a;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 .feed-link:hover{color:#6366f1;}
 .feed-loading{font-size:11px;color:#94a3b8;padding:6px 0;}
+.feed-media{margin-top:5px;}
+.feed-media img,.feed-media video{width:100%;max-height:130px;object-fit:cover;border-radius:6px;display:block;border:1px solid #e5e7eb;}
 
 /* 管理者リンク */
 .admin-link{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:#6366f1;background:#eef2ff;border:1px solid #c7d2fe;border-radius:4px;padding:2px 8px;text-decoration:none;margin-left:4px;}
@@ -579,6 +597,10 @@ var services = <?php echo json_encode(array_map(function($s) {
     return array('id' => $s['id'], 'feed_url' => $s['feed_url'], 'view_url' => $s['view_url']);
 }, $services), JSON_UNESCAPED_UNICODE); ?>;
 
+function krEsc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function krLoadFeed(id, feedUrl) {
     var ul = document.getElementById('feed-' + id);
     if (!ul) return;
@@ -603,10 +625,36 @@ function krLoadFeed(id, feedUrl) {
                     if (!isNaN(dt)) { d = (dt.getMonth()+1) + '/' + dt.getDate(); }
                 }
                 if (t.length > 38) t = t.substring(0, 38) + '…';
-                html += '<li>'
-                    + (d ? '<span class="feed-date">' + d + '</span>' : '')
-                    + '<a class="feed-link" href="' + l + '" target="_blank">' + t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</a>'
-                    + '</li>';
+
+                /* enclosure からメディアを取得 */
+                var mediaHtml = '';
+                var encEl = items[i].querySelector('enclosure');
+                if (encEl) {
+                    var mUrl  = encEl.getAttribute('url')  || '';
+                    var mType = encEl.getAttribute('type') || '';
+                    if (mUrl) {
+                        if (mType.indexOf('image') === 0) {
+                            mediaHtml = '<div class="feed-media"><img src="' + krEsc(mUrl) + '" loading="lazy" alt=""></div>';
+                        } else if (mType.indexOf('video') === 0) {
+                            mediaHtml = '<div class="feed-media"><video src="' + krEsc(mUrl) + '" muted playsinline controls></video></div>';
+                        }
+                    }
+                }
+
+                if (mediaHtml) {
+                    html += '<li class="has-media">'
+                        + '<div class="feed-row">'
+                        + (d ? '<span class="feed-date">' + d + '</span>' : '')
+                        + '<a class="feed-link" href="' + krEsc(l) + '" target="_blank">' + krEsc(t) + '</a>'
+                        + '</div>'
+                        + mediaHtml
+                        + '</li>';
+                } else {
+                    html += '<li>'
+                        + (d ? '<span class="feed-date">' + d + '</span>' : '')
+                        + '<a class="feed-link" href="' + krEsc(l) + '" target="_blank">' + krEsc(t) + '</a>'
+                        + '</li>';
+                }
                 count++;
             }
             if (html === '') {
