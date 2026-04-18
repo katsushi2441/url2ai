@@ -690,6 +690,9 @@ function renderPosts(from, to) {
             + '<div class="btn-group">'
             + '<button class="copy-btn" type="button" onclick="copyPost(' + idx + ')">コピー</button>'
             + '<a class="copy-btn" id="x-btn-' + idx + '" href="#" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;">𝕏</a>'
+            <?php if ($is_admin): ?>
+            + '<button class="copy-btn" type="button" id="reanalyze-btn-' + idx + '" onclick="reanalyzePost(' + idx + ')">🔄 再考察</button>'
+            <?php endif; ?>
             + '</div></div>'
             + '<div class="post-title"><a href="' + THIS_FILE + '?id=' + encodeURIComponent(post.id) + '">' + esc(post.title) + '</a></div>'
             + summaryHtml
@@ -804,6 +807,33 @@ function adminRegister() {
 document.getElementById('admin-url-input').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') adminRegister();
 });
+
+function reanalyzePost(idx) {
+    var post = posts[idx];
+    if (!post) return;
+    var btn = document.getElementById('reanalyze-btn-' + idx);
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ 考察中...'; }
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', 'saveainews.php', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState !== 4) return;
+        if (btn) { btn.disabled = false; btn.textContent = '🔄 再考察'; }
+        try {
+            var res = JSON.parse(xhr.responseText);
+            if (res.status === 'ok') {
+                showToast('再考察完了: ' + res.title);
+                setTimeout(function() { location.reload(); }, 1200);
+            } else {
+                showToast('エラー: ' + (res.error || '不明'));
+            }
+        } catch(e) {
+            showToast('通信エラー');
+        }
+    };
+    xhr.send(JSON.stringify({ action: 'reanalyze', tweet_url: post.tweet_url }));
+}
 <?php endif; ?>
 
 function showToast(msg) {
