@@ -1,0 +1,3 @@
+apps/url2ai-mcp/.venv/
+apps/url2ai-mcp/__pycache__/
+*.pyc
