@@ -177,9 +177,9 @@ if (isset($_GET['feed'])) {
     echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
     echo '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">' . "\n";
     echo '<channel>' . "\n";
-    echo '<title>AI画像生成タイムライン | UImageV</title>' . "\n";
+    echo '<title>ERNIE-Image-Turbo 画像生成タイムライン | UImageV</title>' . "\n";
     echo '<link>' . $BASE_URL . '/uimagev.php</link>' . "\n";
-    echo '<description>X投稿から生成したAI画像のタイムライン。</description>' . "\n";
+    echo '<description>X投稿から ERNIE-Image-Turbo で生成したAI画像のタイムライン。</description>' . "\n";
     echo '<language>ja</language>' . "\n";
     echo '<atom:link href="' . $BASE_URL . '/uimagev.php?feed" rel="self" type="application/rss+xml"/>' . "\n";
     foreach ($rss_items as $p) {
@@ -219,12 +219,12 @@ if ($detail_id !== '') {
 }
 
 if ($detail_post) {
-    $page_title = 'UImage | ' . $detail_post['tweet_id'];
-    $page_description = mb_substr(str_replace("\n", ' ', isset($detail_post['thread_text']) ? $detail_post['thread_text'] : ''), 0, 160);
+    $page_title = 'UImage | ERNIE-Image-Turbo | ' . $detail_post['tweet_id'];
+    $page_description = 'ERNIE-Image-Turbo で生成した画像。' . mb_substr(str_replace("\n", ' ', isset($detail_post['thread_text']) ? $detail_post['thread_text'] : ''), 0, 120);
     $page_url = $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($detail_post['tweet_id']);
 } else {
-    $page_title = $SITE_NAME . ' — X投稿から生成した画像ビュー';
-    $page_description = 'X投稿URLをもとに生成した画像を公開表示するビューアです。';
+    $page_title = $SITE_NAME . ' — ERNIE-Image-Turbo 画像ビュー';
+    $page_description = 'X投稿URLをもとに ERNIE-Image-Turbo で生成した画像を公開表示するビューアです。';
     $page_url = $BASE_URL . '/' . $THIS_FILE;
 }
 ?><!DOCTYPE html>
@@ -308,7 +308,7 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
     <div style="font-size:22px">🎨</div>
     <?php if ($detail_post): ?>
     <h1><a href="<?php echo h($THIS_FILE); ?>">UImageV</a></h1>
-    <span class="badge">URL2AI Images</span>
+    <span class="badge">ERNIE-Image-Turbo</span>
     <a class="rss-badge" href="<?php echo h($THIS_FILE); ?>?feed" target="_blank">
         <svg width="9" height="9" viewBox="0 0 8 8"><circle cx="1.5" cy="6.5" r="1.5" fill="#c44f00"/><path d="M0 4.5A3.5 3.5 0 013.5 8" stroke="#c44f00" stroke-width="1.2" fill="none"/><path d="M0 2A6 6 0 016 8" stroke="#c44f00" stroke-width="1.2" fill="none"/></svg>
         RSS
@@ -316,7 +316,7 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
     <a class="back-btn" href="<?php echo h($THIS_FILE); ?>">← 一覧</a>
     <?php else: ?>
     <h1>UImageV</h1>
-    <span class="badge">URL2AI Images</span>
+    <span class="badge">ERNIE-Image-Turbo</span>
     <div class="userbar">
         <a class="rss-badge" href="<?php echo h($THIS_FILE); ?>?feed" target="_blank">
             <svg width="9" height="9" viewBox="0 0 8 8"><circle cx="1.5" cy="6.5" r="1.5" fill="#c44f00"/><path d="M0 4.5A3.5 3.5 0 013.5 8" stroke="#c44f00" stroke-width="1.2" fill="none"/><path d="M0 2A6 6 0 016 8" stroke="#c44f00" stroke-width="1.2" fill="none"/></svg>
@@ -347,7 +347,7 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
         <?php endif; ?>
     </div>
     <div class="detail-body">
-        <div class="detail-section-title">🎨 Generated Image</div>
+        <div class="detail-section-title">🎨 Generated Image by ERNIE-Image-Turbo</div>
         <img class="detail-image" src="<?php echo h($BASE_URL . '/' . $detail_post['uimage_path']); ?>" alt="Generated image">
 
         <?php if ($logged_in): ?>
@@ -372,7 +372,7 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
 <?php else: ?>
 <div class="container">
     <div class="count-bar">
-        <?php echo count($posts); ?> 件の生成画像
+        <?php echo count($posts); ?> 件の ERNIE-Image-Turbo 生成画像
         <?php if ($logged_in): ?> — @<?php echo h($session_user); ?><?php endif; ?>
     </div>
     <?php if (empty($posts)): ?>

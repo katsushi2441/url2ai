@@ -69,6 +69,8 @@ URL2AI is an AI engine that transforms X (Twitter) post URLs and web URLs into m
 | 📄 UPDF2MD | PDF to Markdown | Public demo + hosted MCP / paid API for PDF-to-Markdown conversion |
 | 🎨 UImage | Image generation | Generates an image from an X post URL with admin-side generation and a public viewer + RSS |
 
+UImage is powered by ERNIE-Image-Turbo (Apache 2.0) and hosted on a local RTX 3090 for low-latency image generation. It is built for URL-to-image workflows from X posts, with a public viewer, RSS distribution, and reusable social posting assets.
+
 ## Architecture
 
 ```

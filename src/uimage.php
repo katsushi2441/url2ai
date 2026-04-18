@@ -407,7 +407,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'fetch') {
 
 $page_title = $SITE_NAME;
 if ($detail_post && !empty($detail_post['tweet_id'])) {
-    $page_title = $SITE_NAME . ' | ' . $detail_post['tweet_id'];
+    $page_title = $SITE_NAME . ' | ERNIE-Image-Turbo | ' . $detail_post['tweet_id'];
+} else {
+    $page_title = $SITE_NAME . ' | ERNIE-Image-Turbo';
 }
 ?><!DOCTYPE html>
 <html lang="ja">
@@ -524,7 +526,7 @@ textarea.code-area{width:100%;border:1px solid var(--border2);border-radius:6px;
                 <div class="msg-error"><?php echo h($fetch_error); ?></div>
                 <?php endif; ?>
                 <div class="hint" style="margin-top:.6rem">
-                    URLを入力して取得ボタンを押すと、スレッド取得、画像生成、スレッド表示、画像表示まで一気に実行します。現在生成できるのは <strong><?php echo h($ADMIN); ?></strong> のみです。
+                    X投稿URLを入力すると、ERNIE-Image-Turbo でスレッド取得から画像生成まで一気に実行します。現在生成できるのは <strong><?php echo h($ADMIN); ?></strong> のみです。
                 </div>
             </form>
         </div>
@@ -576,7 +578,7 @@ textarea.code-area{width:100%;border:1px solid var(--border2);border-radius:6px;
             <?php endif; ?>
             <?php if (!empty($detail_post['uimage_prompt'])): ?>
             <div class="hint" style="margin-top:.75rem">
-                画像生成は内部で自動プロンプト化しています。保存済みデータとして参照できます。
+                ERNIE-Image-Turbo に渡すプロンプトは内部で自動生成しています。保存済みデータとして参照できます。
             </div>
             <?php endif; ?>
         </div>
