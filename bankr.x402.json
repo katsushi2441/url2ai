@@ -4,7 +4,7 @@
   "services": {
     "updf2md": {
       "price": "0.001",
-      "description": "Convert a publicly reachable PDF into Markdown for AI workflows and MCP tools.",
+      "description": "PDF to Markdown conversion endpoint for MCP tools, AI agents, and document extraction workflows. Converts a public PDF URL into Markdown and returns OCR/layout metadata.",
       "methods": [
         "POST"
       ],
@@ -14,7 +14,7 @@
           "properties": {
             "pdf_url": {
               "type": "string",
-              "description": "Publicly reachable HTTP(S) URL of the PDF to convert."
+              "description": "Publicly reachable HTTP(S) URL of the PDF document to convert to Markdown."
             },
             "pages": {
               "type": "string",
@@ -43,6 +43,69 @@
             "processing_time_ms": {
               "type": "integer",
               "description": "Time spent in the backend converter in milliseconds."
+            }
+          }
+        }
+      }
+    },
+    "uimage": {
+      "price": "0.01",
+      "description": "URL2AI ERNIE Image API for AI agents and MCP workflows. Generates an image from text, a public URL, or an X post URL using ERNIE-Image-Turbo.",
+      "methods": [
+        "POST"
+      ],
+      "schema": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "input_type": {
+              "type": "string",
+              "description": "One of text, url, or x_post."
+            },
+            "text": {
+              "type": "string",
+              "description": "Direct text input for image generation."
+            },
+            "url": {
+              "type": "string",
+              "description": "Publicly reachable HTTP(S) URL to summarize into an image prompt."
+            },
+            "tweet_url": {
+              "type": "string",
+              "description": "X post URL when using x_post mode."
+            },
+            "width": {
+              "type": "integer",
+              "description": "Optional output width. Default 1024."
+            },
+            "height": {
+              "type": "integer",
+              "description": "Optional output height. Default 1024."
+            }
+          }
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "input_type": {
+              "type": "string",
+              "description": "Resolved input type used for generation."
+            },
+            "model": {
+              "type": "string",
+              "description": "Image model used for generation."
+            },
+            "prompt": {
+              "type": "string",
+              "description": "Final prompt sent to the image backend."
+            },
+            "image_base64": {
+              "type": "string",
+              "description": "Generated image bytes encoded as base64."
+            },
+            "output_format": {
+              "type": "string",
+              "description": "Image format such as png or jpeg."
             }
           }
         }

@@ -533,13 +533,13 @@ h1 {
             <h3>Hosted MCP Server, Paid API, and x402 Endpoint</h3>
             <p>
                 URL2AI は無料デモだけでなく、AI エージェント向けの hosted MCP server / paid API としても使えます。
-                特に UPDF2MD は URL2AI エコシステムの flagship product のひとつで、PDF to Markdown 変換をそのまま hosted endpoint として公開しています。MCP、agent workflow、document extraction の入口としてそのまま接続できます。
+                いまは UPDF2MD と URL2AI ERNIE Image API の 2 本が Bankr x402 endpoint として live で、document extraction と URL-to-image workflow の両方をそのまま agent から使えます。
             </p>
             <ul class="promo-points">
                 <li>Free Web demo for evaluation and sharing</li>
                 <li>Hosted MCP / paid API for production automation</li>
                 <li>Bankr x402 Cloud deployment for pay-per-request usage</li>
-                <li>Current hosted price: 0.001 USDC per request</li>
+                <li>Current hosted prices: updf2md 0.001 USDC / uimage 0.01 USDC</li>
             </ul>
             <div class="promo-note">
                 <strong>Ecosystem token:</strong>
@@ -547,8 +547,9 @@ h1 {
                 Symbol: <code>URLAI</code><br>
                 Token address: <code>0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3</code>
             </div>
-            <div class="promo-endpoint">Bankr x402 endpoint:
-https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md</div>
+            <div class="promo-endpoint">Bankr x402 endpoints:
+https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md
+https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage</div>
             <div class="promo-actions">
                 <a class="promo-link primary" href="./updf2md.php">Try UPDF2MD Demo</a>
                 <a class="promo-link secondary" href="https://docs.bankr.bot/" target="_blank" rel="noopener">Start with Bankr Docs</a>
@@ -715,7 +716,7 @@ https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md</div>
                 <div class="card-body">
                     <div class="pill">13</div>
                     <h4>UImage</h4>
-                    <p>X投稿URLから画像を生成する URL2AI generate image システム。URL2AI ERNIE Image API として、ERNIE-Image-Turbo をローカル RTX 3090 で動かし、低遅延で画像生成します。生成は管理者限定、公開ビューは誰でも参照できます。</p>
+                    <p>X投稿URLから画像を生成する URL2AI generate image システム。URL2AI ERNIE Image API として、ERNIE-Image-Turbo をローカル RTX 3090 で動かし、低遅延で画像生成します。Bankr x402 endpoint では text / URL / X post URL を受けられ、AI agent からも使えます。</p>
                     <a class="button" href="./uimagev.php">Open viewer</a>
                 </div>
             </div>
