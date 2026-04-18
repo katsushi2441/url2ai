@@ -239,7 +239,7 @@ function ui_thread_to_text($thread) {
     return implode("\n\n", $lines);
 }
 function ui_build_image_prompt($thread_text) {
-    return "以下はXの投稿スレッドです。この内容をもとに、1枚の印象的な画像を生成するためのビジュアル表現を行います。\n\n条件：\n- 日本語でそのまま画像生成モデルに渡せるプロンプトにする\n- X投稿の主題・感情・状況を抽出して、視覚的なシーンに変換する\n- 写実寄りでもイラスト寄りでもよいが、雰囲気・構図・光・色を具体的に入れる\n- 人物が出る場合は年齢感・服装・表情・背景も補う\n- 説明文や前置きは不要。画像生成用プロンプトだけを出力する\n\n---\n" . $thread_text . "\n---";
+    return "以下はXの投稿スレッドです。この内容をもとに、URL2AI の公開デモ向けに、明るく見やすい1枚絵の画像生成プロンプトを日本語で作成してください。\n\n条件：\n- 説明文や前置きは不要。画像生成用プロンプトだけを出力する\n- 全体はクリーンで明るい、コミカルで親しみやすい、広告ビジュアルやポップなイラスト寄りにする\n- 不気味、ホラー、グロテスク、心霊写真風、流血、過度な肉体表現、過度に生々しい口内表現は避ける\n- 投稿に強い言葉や誇張表現があっても、過激にせずユーモラスで安全な比喩表現に変換する\n- 背景は明るく、色ははっきり、構図は整理され、被写体が分かりやすいこと\n- 人物が出る場合は自然で清潔感のある表情にし、奇形や崩れた顔にしない\n- 実写ホラー風ではなく、イラスト、ポスター、絵本、広告キービジュアルの方向を優先する\n\n---\n" . $thread_text . "\n---";
 }
 function ui_call_image_api($apiUrl, $payload) {
     if (!function_exists('curl_init')) {
@@ -314,6 +314,7 @@ function ui_save_post_data($tweet_id, $data) {
 
 $action = isset($_POST['action']) ? $_POST['action'] : '';
 $tweet_url = isset($_POST['tweet_url']) ? trim($_POST['tweet_url']) : '';
+$force_regen = !empty($_POST['force_regen']);
 $detail_id = isset($_GET['id']) ? preg_replace('/[^0-9]/', '', trim($_GET['id'])) : '';
 $detail_post = null;
 $fetch_error = isset($_SESSION['ui_flash_error']) ? $_SESSION['ui_flash_error'] : '';
@@ -348,7 +349,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'fetch') {
     }
 
     $saved = ui_load_saved_post($tweet_id);
-    if (is_array($saved) && !empty($saved['uimage_path']) && !empty($saved['thread_text'])) {
+    if (!$force_regen && is_array($saved) && !empty($saved['uimage_path']) && !empty($saved['thread_text'])) {
         header('Location: ' . $x_redirect_uri . '?id=' . urlencode($tweet_id));
         exit;
     }
@@ -363,6 +364,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'fetch') {
     $image_prompt = ui_build_image_prompt($thread_text);
     $payload = array(
         'prompt' => $image_prompt,
+        'negative_prompt' => 'horror, creepy, ghost photo, grotesque, gore, blood, disturbing mouth, realistic oral cavity, deformed face, extra limbs, bad anatomy, blurry, low quality, dark horror, zombie, uncanny',
         'width' => 1024,
         'height' => 1024,
         'num_inference_steps' => 8,
@@ -459,7 +461,9 @@ textarea.code-area{width:100%;border:1px solid var(--border2);border-radius:6px;
 @media (max-width: 600px) {
     .row { flex-wrap: wrap; }
     .row input[type=text] { flex: 1 1 100%; min-width: 0; }
-    .row .btn { flex: 1 1 auto; white-space: nowrap; font-size:.75rem; padding:.45rem .6rem; }
+    .row .btn { flex: 1 1 calc(50% - .3rem); white-space: nowrap; font-size:.75rem; padding:.45rem .6rem; justify-content:center; }
+    .detail-actions { width:100%; }
+    .detail-actions .btn { flex:1 1 calc(50% - .3rem); justify-content:center; min-width:0; white-space:nowrap; font-size:.75rem; padding:.45rem .6rem; }
     .container { padding: 1rem; }
     .section-body { padding: .75rem; }
 }
@@ -503,6 +507,7 @@ textarea.code-area{width:100%;border:1px solid var(--border2);border-radius:6px;
         <div class="section-body">
             <form method="POST" id="form-fetch">
                 <input type="hidden" name="action" value="fetch">
+                <input type="hidden" name="force_regen" id="force_regen" value="0">
                 <div class="row">
                     <input type="text" name="tweet_url" id="tweet_url_input" placeholder="https://x.com/user/status/..." value="<?php echo h($tweet_url); ?>">
                     <button type="button" class="btn btn-primary" id="btn-fetch"<?php if (!$is_admin): ?> disabled title="管理者のみ生成できます"<?php endif; ?> onclick="submitFetch()">
@@ -554,6 +559,12 @@ textarea.code-area{width:100%;border:1px solid var(--border2);border-radius:6px;
                 <?php if (!empty($detail_post['tweet_id'])): ?>
                 <a href="<?php echo h($VIEW_FILE . '?id=' . urlencode($detail_post['tweet_id'])); ?>" class="btn btn-secondary">公開表示</a>
                 <?php endif; ?>
+                <?php if (!empty($detail_post['tweet_id'])): ?>
+                <button type="button" class="btn btn-secondary" onclick="copyText('uimage_copy')">コピー</button>
+                <?php endif; ?>
+                <?php if ($is_admin && !empty($detail_post['tweet_url'])): ?>
+                <button type="button" class="btn btn-primary" id="btn-regenerate" onclick="submitRegenerate()">再生成</button>
+                <?php endif; ?>
                 <?php if ($logged_in && !empty($detail_post['uimage_path'])): ?>
                 <a href="<?php echo h($BASE_URL . '/' . $detail_post['uimage_path']); ?>" download class="btn btn-secondary">画像を保存</a>
                 <?php endif; ?>
@@ -585,6 +596,31 @@ if (urlInput && btnOpen) {
         btnOpen.disabled = this.value.trim() === '';
     });
 }
+function copyText(mode) {
+    var tweetUrl = '';
+    var urlEl = document.getElementById('tweet_url_input');
+    if (urlEl && urlEl.value.trim()) {
+        tweetUrl = urlEl.value.trim();
+    }
+    var viewUrl = '';
+    var tidMatch = tweetUrl.match(/(\d{15,20})/);
+    if (tidMatch) {
+        viewUrl = 'https://aiknowledgecms.exbridge.jp/uimagev.php?id=' + tidMatch[1];
+    }
+    var text = '#URL2AI 画像生成'
+        + (viewUrl ? '\n' + viewUrl : '')
+        + (tweetUrl ? '\n元の投稿\n' + tweetUrl : '');
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+    } else {
+        var dummy = document.createElement('textarea');
+        dummy.value = text;
+        document.body.appendChild(dummy);
+        dummy.select();
+        document.execCommand('copy');
+        document.body.removeChild(dummy);
+    }
+}
 function lockUI() {
     var btnF = document.getElementById('btn-fetch');
     if (btnF) { btnF.disabled = true; btnF.classList.add('loading'); }
@@ -594,6 +630,14 @@ function lockUI() {
     if (msg) { msg.style.display = 'block'; }
 }
 function submitFetch() {
+    var force = document.getElementById('force_regen');
+    if (force) { force.value = '0'; }
+    lockUI();
+    document.getElementById('form-fetch').submit();
+}
+function submitRegenerate() {
+    var force = document.getElementById('force_regen');
+    if (force) { force.value = '1'; }
     lockUI();
     document.getElementById('form-fetch').submit();
 }
