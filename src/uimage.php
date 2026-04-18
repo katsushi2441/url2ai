@@ -526,7 +526,7 @@ textarea.code-area{width:100%;border:1px solid var(--border2);border-radius:6px;
                 <div class="msg-error"><?php echo h($fetch_error); ?></div>
                 <?php endif; ?>
                 <div class="hint" style="margin-top:.6rem">
-                    X投稿URLを入力すると、ERNIE-Image-Turbo でスレッド取得から画像生成まで一気に実行します。現在生成できるのは <strong><?php echo h($ADMIN); ?></strong> のみです。
+                    X投稿URLを入力すると、URL2AI ERNIE Image API が ERNIE-Image-Turbo でスレッド取得から画像生成まで一気に実行します。現在生成できるのは <strong><?php echo h($ADMIN); ?></strong> のみです。
                 </div>
             </form>
         </div>
@@ -578,7 +578,7 @@ textarea.code-area{width:100%;border:1px solid var(--border2);border-radius:6px;
             <?php endif; ?>
             <?php if (!empty($detail_post['uimage_prompt'])): ?>
             <div class="hint" style="margin-top:.75rem">
-                ERNIE-Image-Turbo に渡すプロンプトは内部で自動生成しています。保存済みデータとして参照できます。
+                URL2AI ERNIE Image API は ERNIE-Image-Turbo に渡すプロンプトを内部で自動生成しています。保存済みデータとして参照できます。
             </div>
             <?php endif; ?>
         </div>
