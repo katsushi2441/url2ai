@@ -1,7 +1,8 @@
 <?php
 session_start();
 date_default_timezone_set("Asia/Tokyo");
-$DATA_FILE    = __DIR__ . '/data/oss_posts.json';
+$DATA_DIR     = __DIR__ . '/data';
+$DATA_FILE    = $DATA_DIR . '/oss_posts.json'; // 旧形式（移行用）
 $BASE_URL     = 'https://aiknowledgecms.exbridge.jp';
 $THIS_FILE    = 'oss.php';
 $SITE_NAME    = 'AIGM OSS Timeline';
@@ -70,10 +71,34 @@ $is_admin     = ($session_user === $ADMIN);
 $logged_in    = ($session_user !== '');
 
 $posts = array();
-if (file_exists($DATA_FILE)) {
-    $posts = json_decode(file_get_contents($DATA_FILE), true);
-    if (!$posts) $posts = array();
+/* 個別ファイル読み込み */
+$oss_post_files = glob($DATA_DIR . '/oss_*.json');
+if ($oss_post_files) {
+    foreach ($oss_post_files as $pf) {
+        $p = json_decode(file_get_contents($pf), true);
+        if (is_array($p) && !empty($p['id'])) {
+            $posts[] = $p;
+        }
+    }
 }
+/* 旧形式の一括ファイルが残っている場合も取り込む（移行用） */
+if (file_exists($DATA_FILE)) {
+    $old = json_decode(file_get_contents($DATA_FILE), true);
+    if (is_array($old)) {
+        $existing_ids = array();
+        foreach ($posts as $p) { $existing_ids[$p['id']] = true; }
+        foreach ($old as $p) {
+            if (is_array($p) && !empty($p['id']) && !isset($existing_ids[$p['id']])) {
+                $posts[] = $p;
+            }
+        }
+    }
+}
+usort($posts, function($a, $b) {
+    $ta = isset($a['timestamp']) ? $a['timestamp'] : (isset($a['created_at']) ? strtotime($a['created_at']) : 0);
+    $tb = isset($b['timestamp']) ? $b['timestamp'] : (isset($b['created_at']) ? strtotime($b['created_at']) : 0);
+    return $tb - $ta;
+});
 
 /* =========================================================
    RSS フィード出力 (?feed)
@@ -612,6 +637,7 @@ var detailPageUrl = '<?php echo $BASE_URL; ?>/oss.php?id=<?php echo urlencode($d
 
 function buildDetailText(post) {
     var lines = [];
+    lines.push('#URL2AI OSS');
     lines.push(post.title);
     lines.push('');
     if (post.post_text) {
@@ -796,6 +822,7 @@ function getDetailUrl(post) {
 
 function buildPostText(post) {
     var lines = [];
+    lines.push('#URL2AI OSS');
     lines.push(post.title);
     lines.push('');
     if (post.post_text) {

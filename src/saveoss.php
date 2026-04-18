@@ -4,7 +4,55 @@ header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
 $ADMIN     = 'xb_bittensor';
-$DATA_FILE = __DIR__ . '/data/oss_posts.json';
+$DATA_DIR  = __DIR__ . '/data';
+$DATA_FILE = $DATA_DIR . '/oss_posts.json'; // 旧形式（移行用）
+
+function oss_post_file($id) {
+    global $DATA_DIR;
+    return $DATA_DIR . '/oss_' . preg_replace('/[^a-zA-Z0-9\-_]/', '-', $id) . '.json';
+}
+
+function oss_load_all_posts() {
+    global $DATA_DIR, $DATA_FILE;
+    $posts = array();
+    $files = glob($DATA_DIR . '/oss_*.json');
+    if ($files) {
+        foreach ($files as $f) {
+            $p = json_decode(file_get_contents($f), true);
+            if (is_array($p) && !empty($p['id'])) {
+                $posts[] = $p;
+            }
+        }
+    }
+    /* 旧形式の一括ファイルが残っている場合も取り込む（移行用） */
+    if (file_exists($DATA_FILE)) {
+        $old = json_decode(file_get_contents($DATA_FILE), true);
+        if (is_array($old)) {
+            $existing_ids = array();
+            foreach ($posts as $p) { $existing_ids[$p['id']] = true; }
+            foreach ($old as $p) {
+                if (is_array($p) && !empty($p['id']) && !isset($existing_ids[$p['id']])) {
+                    $posts[] = $p;
+                }
+            }
+        }
+    }
+    return $posts;
+}
+
+function oss_save_post($post) {
+    $file = oss_post_file($post['id']);
+    $json = json_encode($post, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    return file_put_contents($file, $json, LOCK_EX) !== false;
+}
+
+function oss_delete_post($id) {
+    $file = oss_post_file($id);
+    if (file_exists($file)) {
+        return unlink($file);
+    }
+    return false;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -23,18 +71,14 @@ $action = isset($input['action']) ? $input['action'] : '';
 
 // ========== 全件削除 ==========
 if ($action === 'deleteall') {
-    $posts = array();
-    if (file_exists($DATA_FILE)) {
-        $posts = json_decode(file_get_contents($DATA_FILE), true);
-        if (!$posts) $posts = array();
+    $files = glob($DATA_DIR . '/oss_*.json');
+    $count = $files ? count($files) : 0;
+    if ($files) {
+        foreach ($files as $f) { @unlink($f); }
     }
-    $count = count($posts);
-    if (file_put_contents($DATA_FILE, json_encode(array(), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT))) {
-        echo json_encode(array('status' => 'ok', 'deleted' => $count));
-    } else {
-        http_response_code(500);
-        echo json_encode(array('error' => 'Failed to save'));
-    }
+    /* 旧形式ファイルも消す */
+    if (file_exists($DATA_FILE)) { @unlink($DATA_FILE); $count++; }
+    echo json_encode(array('status' => 'ok', 'deleted' => $count));
     exit;
 }
 
@@ -46,31 +90,12 @@ if ($action === 'delete') {
         echo json_encode(array('error' => 'id required'));
         exit;
     }
-    $posts = array();
-    if (file_exists($DATA_FILE)) {
-        $posts = json_decode(file_get_contents($DATA_FILE), true);
-        if (!$posts) $posts = array();
-    }
-    $new_posts = array();
-    $deleted   = false;
-    foreach ($posts as $post) {
-        if ($post['id'] === $target_id) {
-            $deleted = true;
-            continue;
-        }
-        $new_posts[] = $post;
-    }
-    if (!$deleted) {
+    if (!oss_delete_post($target_id)) {
         http_response_code(404);
         echo json_encode(array('error' => 'post not found'));
         exit;
     }
-    if (file_put_contents($DATA_FILE, json_encode($new_posts, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT))) {
-        echo json_encode(array('status' => 'ok', 'id' => $target_id));
-    } else {
-        http_response_code(500);
-        echo json_encode(array('error' => 'Failed to save'));
-    }
+    echo json_encode(array('status' => 'ok', 'id' => $target_id));
     exit;
 }
 
@@ -295,12 +320,6 @@ if ($action === 'manual_register') {
     $repo_id = $user . '_' . $reponame;
     $repo_id = preg_replace('/[^a-zA-Z0-9\-_]/', '-', $repo_id);
 
-    $posts = array();
-    if (file_exists($DATA_FILE)) {
-        $posts = json_decode(file_get_contents($DATA_FILE), true);
-        if (!$posts) $posts = array();
-    }
-
     $new_post = array(
         'id'         => $repo_id,
         'author'     => $ADMIN,
@@ -313,27 +332,22 @@ if ($action === 'manual_register') {
         'timestamp'  => time()
     );
 
-    $found     = false;
-    $new_posts = array();
-    foreach ($posts as $p) {
-        if ($p['github_url'] === $github_url) {
-            $new_posts[] = $new_post;
+    /* github_url の重複チェック（既存なら上書き） */
+    $found = false;
+    foreach (oss_load_all_posts() as $p) {
+        if (isset($p['github_url']) && $p['github_url'] === $github_url) {
             $found = true;
-        } else {
-            $new_posts[] = $p;
+            break;
         }
     }
-    if (!$found) {
-        array_unshift($new_posts, $new_post);
-    }
 
-    if (file_put_contents($DATA_FILE, json_encode($new_posts, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT))) {
-        $status = $found ? 'updated' : 'ok';
-        echo json_encode(array('status' => $status, 'id' => $repo_id, 'title' => $title), JSON_UNESCAPED_UNICODE);
-    } else {
+    if (!oss_save_post($new_post)) {
         http_response_code(500);
         echo json_encode(array('error' => 'Failed to save'));
+        exit;
     }
+    $status = $found ? 'updated' : 'ok';
+    echo json_encode(array('status' => $status, 'id' => $repo_id, 'title' => $title), JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -356,14 +370,8 @@ if (!$github_url || !$title) {
     exit;
 }
 
-$posts = array();
-if (file_exists($DATA_FILE)) {
-    $posts = json_decode(file_get_contents($DATA_FILE), true);
-    if (!$posts) $posts = array();
-}
-
-foreach ($posts as $p) {
-    if ($p['github_url'] === $github_url) {
+foreach (oss_load_all_posts() as $p) {
+    if (isset($p['github_url']) && $p['github_url'] === $github_url) {
         echo json_encode(array('status' => 'duplicate', 'message' => 'already exists'));
         exit;
     }
@@ -390,9 +398,7 @@ $post = array(
     'timestamp'  => time()
 );
 
-array_unshift($posts, $post);
-
-if (file_put_contents($DATA_FILE, json_encode($posts, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT))) {
+if (oss_save_post($post)) {
     echo json_encode(array('status' => 'ok', 'id' => $post['id']));
 } else {
     http_response_code(500);
