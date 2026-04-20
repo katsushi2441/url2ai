@@ -4,12 +4,13 @@ date_default_timezone_set('Asia/Tokyo');
 
 if (session_status() === PHP_SESSION_NONE) {
     $session_lifetime = 60 * 60 * 24 * 30;
-    ini_set('session.gc_maxlifetime', $session_lifetime);
+    ini_set('session.gc_maxlifetime',  $session_lifetime);
     ini_set('session.cookie_lifetime', $session_lifetime);
     ini_set('session.cookie_path',     '/');
     ini_set('session.cookie_domain',   AIGM_COOKIE_DOMAIN);
     ini_set('session.cookie_secure',   '1');
     ini_set('session.cookie_httponly', '1');
+    ini_set('session.cookie_samesite', 'Lax');
     session_cache_expire(60 * 24 * 30);
     session_start();
     if (isset($_COOKIE[session_name()])) {
@@ -280,18 +281,23 @@ input[type=text]:focus{border-color:var(--accent)}
                     <input type="text" name="ticker" id="ticker-input"
                            placeholder="例: BTC, ETH, SOL, NVIDIA, 7203.T"
                            value="<?php echo h($ticker); ?>">
-                    <button type="button" class="btn btn-primary" id="btn-gen"
-                            <?php if (!$is_admin): ?> disabled title="管理者のみ生成できます"<?php endif; ?>
-                            onclick="submitGen()">
-                        <span class="btn-label"><?php echo ($saved && $ticker) ? '再生成' : 'レポート生成'; ?></span>
+                    <button type="button" class="btn btn-secondary" id="btn-view"
+                            onclick="viewReport()">
+                        📊 レポート表示
+                    </button>
+                    <?php if ($is_admin): ?>
+                    <button type="button" class="btn btn-primary" id="btn-regen"
+                            onclick="submitRegen()">
+                        <span class="btn-label">🔄 再生成</span>
                         <span class="spinner"></span>
                     </button>
+                    <?php endif; ?>
                 </div>
                 <?php if ($flash_error): ?>
                 <div class="msg-error"><?php echo h($flash_error); ?></div>
                 <?php endif; ?>
                 <div class="hint">
-                    入力後「レポート生成」を押すと、Web検索＋AI分析で金融投資家向けレポートを生成します（2〜5分かかります）。現在生成できるのは <strong><?php echo h($ADMIN); ?></strong> のみです。
+                    「レポート表示」は保存済みレポートを表示します。「再生成」はWeb検索＋AI分析で最新レポートを生成します（2〜5分）。
                 </div>
             </form>
         </div>
@@ -351,17 +357,22 @@ input[type=text]:focus{border-color:var(--accent)}
 </div>
 
 <script>
-function submitGen() {
+function viewReport() {
     var ticker = document.getElementById('ticker-input').value.trim();
     if (!ticker) { return; }
-    var btn = document.getElementById('btn-gen');
+    window.location.href = 'finreport.php?ticker=' + encodeURIComponent(ticker);
+}
+function submitRegen() {
+    var ticker = document.getElementById('ticker-input').value.trim();
+    if (!ticker) { return; }
+    var btn = document.getElementById('btn-regen');
     var msg = document.getElementById('loading-msg');
     if (btn) { btn.disabled = true; btn.classList.add('loading'); }
     if (msg) { msg.style.display = 'block'; }
     document.getElementById('form-gen').submit();
 }
 document.getElementById('ticker-input').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') submitGen();
+    if (e.key === 'Enter') viewReport();
 });
 
 <?php if ($saved && !empty($saved['report'])): ?>
