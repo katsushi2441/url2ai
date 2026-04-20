@@ -7,13 +7,15 @@ if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.gc_maxlifetime',  $session_lifetime);
     ini_set('session.cookie_lifetime', $session_lifetime);
     ini_set('session.cookie_path',     '/');
-    ini_set('session.cookie_domain',   AIGM_COOKIE_DOMAIN);
+    ini_set('session.cookie_domain',   'aiknowledgecms.exbridge.jp');
     ini_set('session.cookie_secure',   '1');
     ini_set('session.cookie_httponly', '1');
     session_cache_expire(60 * 24 * 30);
     session_start();
     if (isset($_COOKIE[session_name()])) {
-        setcookie(session_name(), session_id(), time() + $session_lifetime, '/', AIGM_COOKIE_DOMAIN, true, true);
+        setcookie(session_name(), session_id(),
+            time() + $session_lifetime, '/',
+            'aiknowledgecms.exbridge.jp', true, true);
     }
 }
 
@@ -34,67 +36,129 @@ if (file_exists($x_keys_file)) {
 }
 $x_client_id     = isset($x_keys['X_API_KEY'])    ? $x_keys['X_API_KEY']    : '';
 $x_client_secret = isset($x_keys['X_API_SECRET']) ? $x_keys['X_API_SECRET'] : '';
-$x_redirect_uri  = $BASE_URL . '/' . $THIS_FILE;
+$x_redirect_uri  = 'https://aiknowledgecms.exbridge.jp/finreport.php';
 
-function fr_base64url($d) { return rtrim(strtr(base64_encode($d), '+/', '-_'), '='); }
-function fr_gen_verifier() { $b=''; for($i=0;$i<32;$i++){$b.=chr(mt_rand(0,255));} return fr_base64url($b); }
-function fr_gen_challenge($v) { return fr_base64url(hash('sha256',$v,true)); }
-function fr_x_post($url,$data,$headers) {
-    $opts=array('http'=>array('method'=>'POST','header'=>implode("\r\n",$headers)."\r\n",'content'=>$data,'timeout'=>12,'ignore_errors'=>true));
-    $r=@file_get_contents($url,false,stream_context_create($opts));
-    if(!$r){$r='{}';}return json_decode($r,true);
+function fr_base64url($data) {
+    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
 }
-function fr_x_get($url,$token) {
-    $opts=array('http'=>array('method'=>'GET','header'=>"Authorization: Bearer $token\r\nUser-Agent: FinReport/1.0\r\n",'timeout'=>12,'ignore_errors'=>true));
-    $r=@file_get_contents($url,false,stream_context_create($opts));
-    if(!$r){$r='{}';}return json_decode($r,true);
+function fr_gen_verifier() {
+    $bytes = '';
+    for ($i = 0; $i < 32; $i++) { $bytes .= chr(mt_rand(0, 255)); }
+    return fr_base64url($bytes);
+}
+function fr_gen_challenge($verifier) {
+    return fr_base64url(hash('sha256', $verifier, true));
+}
+function fr_x_post($url, $post_data, $headers) {
+    $opts = array('http' => array(
+        'method'        => 'POST',
+        'header'        => implode("\r\n", $headers) . "\r\n",
+        'content'       => $post_data,
+        'timeout'       => 12,
+        'ignore_errors' => true,
+    ));
+    $res = @file_get_contents($url, false, stream_context_create($opts));
+    if (!$res) { $res = '{}'; }
+    return json_decode($res, true);
+}
+function fr_x_get($url, $token) {
+    $opts = array('http' => array(
+        'method'        => 'GET',
+        'header'        => "Authorization: Bearer $token\r\nUser-Agent: FinReport/1.0\r\n",
+        'timeout'       => 12,
+        'ignore_errors' => true,
+    ));
+    $res = @file_get_contents($url, false, stream_context_create($opts));
+    if (!$res) { $res = '{}'; }
+    return json_decode($res, true);
 }
 
 if (isset($_GET['fr_logout'])) {
     session_destroy();
-    setcookie(session_name(), '', time()-3600, '/', AIGM_COOKIE_DOMAIN, true, true);
-    header('Location: ' . $x_redirect_uri); exit;
+    setcookie(session_name(), '', time() - 3600, '/',
+        'aiknowledgecms.exbridge.jp', true, true);
+    header('Location: ' . $x_redirect_uri);
+    exit;
 }
 if (isset($_GET['fr_login'])) {
-    $ver=$ver=fr_gen_verifier(); $chal=fr_gen_challenge($ver); $state=md5(uniqid('',true));
-    $_SESSION['fr_code_verifier']=$ver; $_SESSION['fr_oauth_state']=$state;
-    $p=array('response_type'=>'code','client_id'=>$x_client_id,'redirect_uri'=>$x_redirect_uri,
-             'scope'=>'tweet.read users.read offline.access','state'=>$state,'code_challenge'=>$chal,'code_challenge_method'=>'S256');
-    header('Location: https://twitter.com/i/oauth2/authorize?'.http_build_query($p)); exit;
+    $verifier  = fr_gen_verifier();
+    $challenge = fr_gen_challenge($verifier);
+    $state     = md5(uniqid('', true));
+    $_SESSION['fr_code_verifier'] = $verifier;
+    $_SESSION['fr_oauth_state']   = $state;
+    $params = array(
+        'response_type'         => 'code',
+        'client_id'             => $x_client_id,
+        'redirect_uri'          => $x_redirect_uri,
+        'scope'                 => 'tweet.read users.read offline.access',
+        'state'                 => $state,
+        'code_challenge'        => $challenge,
+        'code_challenge_method' => 'S256',
+    );
+    header('Location: https://twitter.com/i/oauth2/authorize?' . http_build_query($params));
+    exit;
 }
-if (isset($_GET['code'])&&isset($_GET['state'])&&isset($_SESSION['fr_oauth_state'])) {
-    if ($_GET['state']===$_SESSION['fr_oauth_state']) {
-        $post=http_build_query(array('grant_type'=>'authorization_code','code'=>$_GET['code'],'redirect_uri'=>$x_redirect_uri,'code_verifier'=>$_SESSION['fr_code_verifier'],'client_id'=>$x_client_id));
-        $cred=base64_encode($x_client_id.':'.$x_client_secret);
-        $data=fr_x_post('https://api.twitter.com/2/oauth2/token',$post,array('Content-Type: application/x-www-form-urlencoded','Authorization: Basic '.$cred));
+if (isset($_GET['code']) && isset($_GET['state']) && isset($_SESSION['fr_oauth_state'])) {
+    if ($_GET['state'] === $_SESSION['fr_oauth_state']) {
+        $post = http_build_query(array(
+            'grant_type'    => 'authorization_code',
+            'code'          => $_GET['code'],
+            'redirect_uri'  => $x_redirect_uri,
+            'code_verifier' => $_SESSION['fr_code_verifier'],
+            'client_id'     => $x_client_id,
+        ));
+        $cred = base64_encode($x_client_id . ':' . $x_client_secret);
+        $data = fr_x_post('https://api.twitter.com/2/oauth2/token', $post, array(
+            'Content-Type: application/x-www-form-urlencoded',
+            'Authorization: Basic ' . $cred,
+        ));
         if (isset($data['access_token'])) {
-            $_SESSION['session_access_token']=$data['access_token'];
-            $_SESSION['session_token_expires']=time()+(isset($data['expires_in'])?(int)$data['expires_in']:7200);
-            if (!empty($data['refresh_token'])) { $_SESSION['session_refresh_token']=$data['refresh_token']; }
-            unset($_SESSION['fr_oauth_state'],$_SESSION['fr_code_verifier']);
-            $me=fr_x_get('https://api.twitter.com/2/users/me',$data['access_token']);
-            if (isset($me['data']['username'])) { $_SESSION['session_username']=$me['data']['username']; }
+            $_SESSION['session_access_token']  = $data['access_token'];
+            $_SESSION['session_token_expires'] = time() + (isset($data['expires_in']) ? (int)$data['expires_in'] : 7200);
+            if (!empty($data['refresh_token'])) {
+                $_SESSION['session_refresh_token'] = $data['refresh_token'];
+            }
+            unset($_SESSION['fr_oauth_state'], $_SESSION['fr_code_verifier']);
+            $me = fr_x_get('https://api.twitter.com/2/users/me', $data['access_token']);
+            if (isset($me['data']['username'])) {
+                $_SESSION['session_username'] = $me['data']['username'];
+            }
         }
     }
-    header('Location: ' . $x_redirect_uri); exit;
+    header('Location: ' . $x_redirect_uri);
+    exit;
 }
 
-if (!empty($_SESSION['session_refresh_token'])&&!empty($_SESSION['session_token_expires'])&&time()>$_SESSION['session_token_expires']-300) {
-    $cred_r=base64_encode($x_client_id.':'.$x_client_secret);
-    $post_r=http_build_query(array('grant_type'=>'refresh_token','refresh_token'=>$_SESSION['session_refresh_token'],'client_id'=>$x_client_id));
-    $ref=fr_x_post('https://api.twitter.com/2/oauth2/token',$post_r,array('Content-Type: application/x-www-form-urlencoded','Authorization: Basic '.$cred_r));
+if (
+    !empty($_SESSION['session_refresh_token']) &&
+    !empty($_SESSION['session_token_expires']) &&
+    time() > $_SESSION['session_token_expires'] - 300
+) {
+    $cred_r = base64_encode($x_client_id . ':' . $x_client_secret);
+    $post_r = http_build_query(array(
+        'grant_type'    => 'refresh_token',
+        'refresh_token' => $_SESSION['session_refresh_token'],
+        'client_id'     => $x_client_id,
+    ));
+    $ref = fr_x_post('https://api.twitter.com/2/oauth2/token', $post_r, array(
+        'Content-Type: application/x-www-form-urlencoded',
+        'Authorization: Basic ' . $cred_r,
+    ));
     if (!empty($ref['access_token'])) {
-        $_SESSION['session_access_token']=$ref['access_token'];
-        $_SESSION['session_token_expires']=time()+(isset($ref['expires_in'])?(int)$ref['expires_in']:7200);
-        if (!empty($ref['refresh_token'])) { $_SESSION['session_refresh_token']=$ref['refresh_token']; }
+        $_SESSION['session_access_token']  = $ref['access_token'];
+        $_SESSION['session_token_expires'] = time() + (isset($ref['expires_in']) ? (int)$ref['expires_in'] : 7200);
+        if (!empty($ref['refresh_token'])) {
+            $_SESSION['session_refresh_token'] = $ref['refresh_token'];
+        }
     } else {
-        unset($_SESSION['session_access_token'],$_SESSION['session_refresh_token'],$_SESSION['session_token_expires'],$_SESSION['session_username']);
+        unset($_SESSION['session_access_token'], $_SESSION['session_refresh_token'],
+              $_SESSION['session_token_expires'], $_SESSION['session_username']);
     }
 }
 
 $logged_in = isset($_SESSION['session_access_token']) && $_SESSION['session_access_token'] !== '';
 $username  = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
-$is_admin  = ($username === $ADMIN);
+$is_admin  = ($username === 'xb_bittensor');
 
 function h($s) { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
 
