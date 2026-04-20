@@ -1,0 +1,15 @@
+[Unit]
+Description=FinReport FastAPI Service
+After=network.target
+
+[Service]
+Type=simple
+User=kojima
+WorkingDirectory=/home/kojima/work/url2ai/apps/finreport
+EnvironmentFile=/home/kojima/work/url2ai/apps/finreport/.env
+ExecStart=/home/kojima/work/url2ai/apps/finreport/.venv/bin/uvicorn server:app --host ${HOST} --port ${PORT}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

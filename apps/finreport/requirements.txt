@@ -1,0 +1,7 @@
+gpt-researcher>=0.11
+fastapi
+uvicorn
+httpx
+duckduckgo-search
+sentence-transformers
+beautifulsoup4
