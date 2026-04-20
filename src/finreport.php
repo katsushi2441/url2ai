@@ -283,12 +283,9 @@ input[type=text]:focus{border-color:var(--accent)}
                     <button type="button" class="btn btn-primary" id="btn-gen"
                             <?php if (!$is_admin): ?> disabled title="管理者のみ生成できます"<?php endif; ?>
                             onclick="submitGen()">
-                        <span class="btn-label">レポート生成</span>
+                        <span class="btn-label"><?php echo ($saved && $ticker) ? '再生成' : 'レポート生成'; ?></span>
                         <span class="spinner"></span>
                     </button>
-                    <?php if ($saved && $ticker): ?>
-                    <button type="button" class="btn btn-secondary" onclick="submitRegen()">再生成</button>
-                    <?php endif; ?>
                 </div>
                 <?php if ($flash_error): ?>
                 <div class="msg-error"><?php echo h($flash_error); ?></div>
@@ -361,10 +358,6 @@ function submitGen() {
     if (btn) { btn.disabled = true; btn.classList.add('loading'); }
     if (msg) { msg.style.display = 'block'; }
     document.getElementById('form-gen').submit();
-}
-function submitRegen() {
-    if (!confirm('再生成しますか？（上書き保存されます）')) return;
-    submitGen();
 }
 document.getElementById('ticker-input').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') submitGen();
