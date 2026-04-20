@@ -310,6 +310,7 @@ input[type=text]:focus{border-color:var(--accent)}
             <div class="meta-bar">
                 <span><?php echo h($saved['ticker']); ?></span>
                 <span><?php echo h(isset($saved['created_at']) ? $saved['created_at'] : ''); ?></span>
+                <button type="button" class="btn-sm" onclick="copyShare()">📋 コピー</button>
                 <button type="button" class="btn-sm" onclick="copyReport()">Markdownコピー</button>
             </div>
         </div>
@@ -368,6 +369,16 @@ var raw = document.getElementById('report-raw').value;
 document.getElementById('report-render').innerHTML = marked.parse(raw);
 <?php endif; ?>
 
+<?php if ($saved): ?>
+function copyShare() {
+    var summary = <?php echo json_encode(isset($saved['summary']) ? $saved['summary'] : '', JSON_UNESCAPED_UNICODE); ?>;
+    var detailUrl = <?php echo json_encode($BASE_URL . '/finreportv.php?ticker=' . urlencode($saved['ticker']), JSON_UNESCAPED_UNICODE); ?>;
+    var text = '#URL2AI 投資レポート\n\n' + summary + '\n\n' + detailUrl;
+    navigator.clipboard.writeText(text).then(function() {
+        alert('コピーしました');
+    });
+}
+<?php endif; ?>
 function copyReport() {
     var raw = document.getElementById('report-raw');
     if (!raw) return;
