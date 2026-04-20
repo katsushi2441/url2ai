@@ -612,7 +612,7 @@ function copyText(id) {
 function copyLyrics() {
     var el = document.getElementById('lyrics_area');
     if (!el) return;
-    var text = '#AIボカロ歌詞\n' + el.value;
+    var text = '#URL2AI ボカロ歌詞\n' + el.value;
     var tweetUrl = '';
     var hiddenUrl = document.querySelector('#form-analyze input[name="tweet_url"]');
     if (hiddenUrl) { tweetUrl = hiddenUrl.value.trim(); }

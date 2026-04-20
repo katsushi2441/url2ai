@@ -459,7 +459,7 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
         var _dpUrl = '<?php echo $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($detail_post['tweet_id']); ?>';
         function copyDetail() {
             var lines = [];
-            if (_dp.lyrics) { lines.push('#AIボカロ歌詞'); lines.push(_dp.lyrics); }
+            if (_dp.lyrics) { lines.push(<?php echo json_encode('#URL2AI ボカロ歌詞'); ?>); lines.push(_dp.lyrics); }
             lines.push('');
             if (_dp.tweet_url) lines.push(_dp.tweet_url);
             lines.push(_dpUrl);

@@ -260,13 +260,17 @@ if ($detail_post) {
 <meta property="og:url" content="<?php echo h($page_url); ?>">
 <meta property="og:site_name" content="<?php echo h($SITE_NAME); ?>">
 <meta property="og:locale" content="ja_JP">
+<meta property="og:image" content="<?php echo h($BASE_URL); ?>/images/udebate.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <?php if ($page_type === 'article' && $published_time): ?>
 <meta property="article:published_time" content="<?php echo h($published_time); ?>">
 <?php endif; ?>
-<meta name="twitter:card" content="summary">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@xb_bittensor">
 <meta name="twitter:title" content="<?php echo h($page_title); ?>">
 <meta name="twitter:description" content="<?php echo h($page_description); ?>">
+<meta name="twitter:image" content="<?php echo h($BASE_URL); ?>/images/udebate.png">
 <script type="application/ld+json">
 <?php echo json_encode($jsonld, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES); ?>
 </script>
@@ -474,7 +478,7 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
         var _dpUrl = '<?php echo $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($detail_post['tweet_id']); ?>';
         function copyDetail() {
             var lines = [];
-            if (_dp.debate_conclusion) { lines.push('#AI議論'); lines.push(_dp.debate_conclusion); }
+            if (_dp.debate_conclusion) { lines.push(<?php echo json_encode('#URL2AI 議論'); ?>); lines.push(_dp.debate_conclusion); }
             lines.push('');
             if (_dp.tweet_url) lines.push(_dp.tweet_url);
             lines.push(_dpUrl);

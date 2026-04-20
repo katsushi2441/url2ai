@@ -3,8 +3,7 @@ require_once __DIR__ . '/config.php';
 date_default_timezone_set('Asia/Tokyo');
 header('Content-Type: application/json; charset=UTF-8');
 
-define('DATA_DIR',  __DIR__ . '/data');
-define('DATA_FILE', DATA_DIR . '/aitech_posts.json'); // 旧形式（読み込み専用・移行用）
+define('DATA_FILE',    __DIR__ . '/data/aitech_posts.json');
 
 session_start();
 $session_user = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
@@ -175,34 +174,16 @@ if (!preg_match('/^https?:\/\/.+/', $url)) {
 }
 
 /* =========================================================
-   重複チェック（個別ファイルを走査）
+   既存データ読み込み
 ========================================================= */
-function at_load_all_posts() {
-    $files = glob(DATA_DIR . '/aitech_*.json');
-    $posts = array();
-    if ($files) {
-        foreach ($files as $f) {
-            $p = json_decode(file_get_contents($f), true);
-            if (is_array($p) && !empty($p['id'])) {
-                $posts[] = $p;
-            }
-        }
-    }
-    /* 旧形式の一括ファイルが残っている場合は読み込む（移行用） */
-    if (file_exists(DATA_FILE)) {
-        $old = json_decode(file_get_contents(DATA_FILE), true);
-        if (is_array($old)) {
-            foreach ($old as $p) {
-                if (is_array($p) && !empty($p['id'])) {
-                    $posts[] = $p;
-                }
-            }
-        }
-    }
-    return $posts;
+$posts = array();
+if (file_exists(DATA_FILE)) {
+    $posts = json_decode(file_get_contents(DATA_FILE), true);
+    if (!is_array($posts)) { $posts = array(); }
 }
 
-foreach (at_load_all_posts() as $p) {
+/* 重複チェック */
+foreach ($posts as $p) {
     if (isset($p['url']) && $p['url'] === $url) {
         echo json_encode(array('status' => 'duplicate', 'title' => isset($p['title']) ? $p['title'] : $url));
         exit;
@@ -361,7 +342,7 @@ if (count($tags) < 2) {
 }
 
 /* =========================================================
-   保存（1投稿1ファイル）
+   保存
 ========================================================= */
 $id = md5($url . date('YmdHis'));
 $new_post = array(
@@ -374,8 +355,8 @@ $new_post = array(
     'created_at' => date('Y-m-d H:i:s'),
 );
 
-$post_file = DATA_DIR . '/aitech_' . preg_replace('/[^a-zA-Z0-9]/', '', $id) . '.json';
-if (!write_json_atomic($post_file, $new_post)) {
+array_unshift($posts, $new_post);
+if (!write_json_atomic(DATA_FILE, $posts)) {
     echo json_encode(array('status' => 'error', 'error' => '保存に失敗しました'));
     exit;
 }

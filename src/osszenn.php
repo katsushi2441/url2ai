@@ -1201,6 +1201,7 @@ var detailPageUrl = '<?php echo $BASE_URL; ?>/osszenn.php?id=<?php echo urlencod
 
 function buildDetailText(post) {
     var lines = [];
+    lines.push('#URL2AI osszenn');
     lines.push(post.title);
     lines.push('');
     if (post.post_text) {
@@ -1506,6 +1507,7 @@ function getDetailUrl(post) {
 
 function buildPostText(post) {
     var lines = [];
+    lines.push('#URL2AI osszenn');
     lines.push(post.title);
     lines.push('');
     if (post.post_text) {

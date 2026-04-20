@@ -222,6 +222,14 @@ if (isset($_GET['feed'])) {
         echo '<guid isPermaLink="true">' . htmlspecialchars($link) . '</guid>' . "\n";
         echo '<description><![CDATA[' . $desc . ($uname ? "\n\n@" . $uname : '') . ']]></description>' . "\n";
         echo '<pubDate>' . $pub_date . '</pubDate>' . "\n";
+        /* メディア（最初の1件）を enclosure で出力 */
+        if (!empty($p['media'])) {
+            $fm = $p['media'][0];
+            if (!empty($fm['url'])) {
+                $fm_type = ($fm['type'] === 'video' || $fm['type'] === 'gif') ? 'video/mp4' : 'image/jpeg';
+                echo '<enclosure url="' . htmlspecialchars($fm['url']) . '" length="0" type="' . $fm_type . '"/>' . "\n";
+            }
+        }
         echo '</item>' . "\n";
     }
     echo '</channel>' . "\n";

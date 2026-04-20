@@ -1,0 +1,16 @@
+[Unit]
+Description=OSS Worker - GitHub Trending Auto Register
+After=network.target
+
+[Service]
+Type=simple
+User=kojima
+WorkingDirectory=/home/kojima/bittensorman/aidexx/aiknowledgecms/url2ai/src
+ExecStart=/usr/bin/python3 oss_worker.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/kojima/oss_worker.log
+StandardError=append:/home/kojima/oss_worker.log
+
+[Install]
+WantedBy=multi-user.target

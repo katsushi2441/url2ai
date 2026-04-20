@@ -2,7 +2,25 @@
 require_once __DIR__ . '/config.php';
 date_default_timezone_set("Asia/Tokyo");
 
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
+/* =========================================================
+   セッション長期維持設定（30日）
+========================================================= */
+if (session_status() === PHP_SESSION_NONE) {
+    $session_lifetime = 60 * 60 * 24 * 30;
+    ini_set('session.gc_maxlifetime', $session_lifetime);
+    ini_set('session.cookie_lifetime', $session_lifetime);
+    ini_set('session.cookie_path',     '/');
+    ini_set('session.cookie_domain',   'aiknowledgecms.exbridge.jp');
+    ini_set('session.cookie_secure',   '1');
+    ini_set('session.cookie_httponly',  '1');
+    session_cache_expire(60 * 24 * 30);
+    session_start();
+    if (isset($_COOKIE[session_name()])) {
+        setcookie(session_name(), session_id(),
+            time() + $session_lifetime, '/',
+            'aiknowledgecms.exbridge.jp', true, true);
+    }
+}
 
 /* =========================================================
    X API キー読み込み
@@ -63,6 +81,8 @@ function db_x_get($url, $token) {
 
 if (isset($_GET['db_logout'])) {
     session_destroy();
+    setcookie(session_name(), '', time() - 3600, '/',
+        'aiknowledgecms.exbridge.jp', true, true);
     header('Location: ' . $x_redirect_uri);
     exit;
 }
@@ -76,7 +96,7 @@ if (isset($_GET['db_login'])) {
         'response_type'         => 'code',
         'client_id'             => $x_client_id,
         'redirect_uri'          => $x_redirect_uri,
-        'scope'                 => 'tweet.read users.read',
+        'scope'                 => 'tweet.read users.read offline.access',
         'state'                 => $state,
         'code_challenge'        => $challenge,
         'code_challenge_method' => 'S256',
@@ -99,7 +119,11 @@ if (isset($_GET['code']) && isset($_GET['state']) && isset($_SESSION['db_oauth_s
             'Authorization: Basic ' . $cred,
         ));
         if (isset($data['access_token'])) {
-            $_SESSION['session_access_token'] = $data['access_token'];
+            $_SESSION['session_access_token']  = $data['access_token'];
+            $_SESSION['session_token_expires']  = time() + (isset($data['expires_in']) ? (int)$data['expires_in'] : 7200);
+            if (!empty($data['refresh_token'])) {
+                $_SESSION['session_refresh_token'] = $data['refresh_token'];
+            }
             unset($_SESSION['db_oauth_state'], $_SESSION['db_code_verifier']);
             $me = db_x_get('https://api.twitter.com/2/users/me', $data['access_token']);
             if (isset($me['data']['username'])) {
@@ -109,6 +133,36 @@ if (isset($_GET['code']) && isset($_GET['state']) && isset($_SESSION['db_oauth_s
     }
     header('Location: ' . $x_redirect_uri);
     exit;
+}
+
+/* =========================================================
+   アクセストークン自動リフレッシュ
+========================================================= */
+if (
+    !empty($_SESSION['session_refresh_token']) &&
+    !empty($_SESSION['session_token_expires']) &&
+    time() > $_SESSION['session_token_expires'] - 300
+) {
+    $cred_r = base64_encode($x_client_id . ':' . $x_client_secret);
+    $post_r = http_build_query(array(
+        'grant_type'    => 'refresh_token',
+        'refresh_token' => $_SESSION['session_refresh_token'],
+        'client_id'     => $x_client_id,
+    ));
+    $ref = db_x_post('https://api.twitter.com/2/oauth2/token', $post_r, array(
+        'Content-Type: application/x-www-form-urlencoded',
+        'Authorization: Basic ' . $cred_r,
+    ));
+    if (!empty($ref['access_token'])) {
+        $_SESSION['session_access_token']  = $ref['access_token'];
+        $_SESSION['session_token_expires'] = time() + (isset($ref['expires_in']) ? (int)$ref['expires_in'] : 7200);
+        if (!empty($ref['refresh_token'])) {
+            $_SESSION['session_refresh_token'] = $ref['refresh_token'];
+        }
+    } else {
+        unset($_SESSION['session_access_token'], $_SESSION['session_refresh_token'],
+              $_SESSION['session_token_expires'], $_SESSION['session_username']);
+    }
 }
 
 $logged_in = isset($_SESSION['session_access_token']) && $_SESSION['session_access_token'] !== '';
@@ -355,6 +409,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin) {
                 exit;
             }
             $thread_text = thread_to_text($thread);
+        }
+        /* thread_text を JSON に保存（リダイレクト後も読めるように） */
+        if ($thread_text !== '') {
+            if (file_exists($xf)) {
+                $xd = json_decode(file_get_contents($xf), true);
+                if (!is_array($xd)) { $xd = array(); }
+            } else {
+                $xd = array();
+            }
+            if (empty($xd['tweet_id']))    { $xd['tweet_id']    = $tweet_id; }
+            if (empty($xd['tweet_url']))   { $xd['tweet_url']   = $tweet_url; }
+            if (empty($xd['thread_text'])) { $xd['thread_text'] = $thread_text; }
+            if (empty($xd['saved_at']))    { $xd['saved_at']    = date('Y-m-d H:i:s'); }
+            file_put_contents($xf, json_encode($xd, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
         }
         header('Location: ' . $x_redirect_uri . '?tweet_url=' . urlencode($tweet_url));
         exit;
@@ -669,7 +737,7 @@ textarea.code-area:focus{border-color:var(--accent)}
                 var conclusion = <?php echo json_encode($saved_debate['debate_conclusion'], JSON_UNESCAPED_UNICODE); ?>;
                 var tweetUrl  = <?php echo json_encode($tweet_url, JSON_UNESCAPED_UNICODE); ?>;
                 var debatevUrl = <?php echo json_encode($debatev_url, JSON_UNESCAPED_UNICODE); ?>;
-                var text = '#AI議論\n' + conclusion
+                var text = '#URL2AI 議論\n' + conclusion
                          + '\n\n意見の異なる２つのAIで議論させました。\nUDebate AI\n' + debatevUrl
                          + '\n\n' + tweetUrl;
                 navigator.clipboard.writeText(text).then(function() {
@@ -882,7 +950,7 @@ function copyDebateJS() {
     var m = tweetUrl.match(/(\d{15,20})/);
     var tid = m ? m[1] : '';
     var debatevUrl = 'https://aiknowledgecms.exbridge.jp/udebatev.php?id=' + encodeURIComponent(tid);
-    var text = '#AI議論\n' + debateConclusion
+    var text = '#URL2AI 議論\n' + debateConclusion
              + '\n\n意見の異なる２つのAIで議論させました。\nUDebate AI\n' + debatevUrl
              + '\n\n' + tweetUrl;
     navigator.clipboard.writeText(text).then(function() {

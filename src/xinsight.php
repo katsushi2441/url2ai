@@ -249,6 +249,12 @@ if (isset($_POST['thread_text_b64']) && $_POST['thread_text_b64'] !== '') {
     }
 }
 $prompt_tmpl  = $default_prompt;
+if (isset($_POST['prompt_tmpl_b64']) && $_POST['prompt_tmpl_b64'] !== '') {
+    $decoded_prompt = base64_decode($_POST['prompt_tmpl_b64'], true);
+    if ($decoded_prompt !== false && trim($decoded_prompt) !== '') {
+        $prompt_tmpl = trim($decoded_prompt);
+    }
+}
 $insight      = '';
 $fetch_error  = isset($_SESSION['xi_flash_error']) ? $_SESSION['xi_flash_error'] : '';
 if (isset($_SESSION['xi_flash_error'])) { unset($_SESSION['xi_flash_error']); }
@@ -525,6 +531,7 @@ textarea.insight-area{background:#f8fafc;min-height:200px}
         <input type="hidden" name="action" value="analyze">
         <input type="hidden" name="tweet_url" value="<?php echo h($tweet_url); ?>">
         <input type="hidden" name="thread_text_b64" id="thread_text_b64" value="<?php echo base64_encode($thread_text); ?>">
+        <input type="hidden" name="prompt_tmpl_b64" id="prompt_tmpl_b64" value="<?php echo base64_encode($prompt_tmpl); ?>">
         <div style="display:flex;justify-content:center;margin-bottom:1rem">
             <button type="submit" class="btn btn-green" id="btn-analyze"<?php if (!$is_admin): ?> disabled title="ログインが必要です"<?php endif; ?> style="padding:.65rem 2.5rem;font-size:.9rem">
                 <span class="btn-label">✦ AIで考察する</span>
@@ -637,8 +644,17 @@ document.getElementById('form-analyze').addEventListener('submit', function(e) {
     btn.classList.add('loading');
     btn.disabled = true;
     syncThreadB64();
+    syncPromptB64();
     this.submit();
 });
+
+function syncPromptB64() {
+    var pt = document.getElementById('prompt_tmpl');
+    var hidden = document.getElementById('prompt_tmpl_b64');
+    if (pt && hidden) {
+        hidden.value = btoa(unescape(encodeURIComponent(pt.value)));
+    }
+}
 
 function syncThreadB64() {
     var ta = document.getElementById('thread_text');
