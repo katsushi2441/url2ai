@@ -81,6 +81,7 @@ if (isset($_GET['fr_logout'])) {
     exit;
 }
 if (isset($_GET['fr_login'])) {
+    session_regenerate_id(true);
     $verifier  = fr_gen_verifier();
     $challenge = fr_gen_challenge($verifier);
     $state     = md5(uniqid('', true));
