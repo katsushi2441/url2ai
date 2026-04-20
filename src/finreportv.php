@@ -64,6 +64,9 @@ if (isset($_GET['feed'])) {
 /* =========================================================
    詳細 / 一覧
 ========================================================= */
+$session_user  = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
+$is_admin      = ($session_user === $ADMIN);
+
 $detail_ticker = isset($_GET['ticker']) ? trim($_GET['ticker']) : '';
 $detail_report = null;
 if ($detail_ticker !== '') {
@@ -222,7 +225,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,'Inter',sa
 <div style="padding:0 24px;">
     <div class="detail-actions">
         <button class="btn-teal" type="button" onclick="copyReport()">📋 Markdownコピー</button>
+        <?php if ($is_admin): ?>
         <a class="btn-outline" href="finreport.php?ticker=<?php echo urlencode($detail_report['ticker']); ?>">🔄 再生成</a>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -266,6 +271,7 @@ function copyReport() {
 
 <script>
 var frReports = <?php echo json_encode(array_values($reports), JSON_UNESCAPED_UNICODE); ?>;
+var IS_ADMIN   = <?php echo $is_admin ? 'true' : 'false'; ?>;
 var PAGE_SIZE  = 20;
 var curPage    = 0;
 
@@ -292,7 +298,7 @@ function renderReports(from, to) {
             + (summary ? '<div class="summary-block">' + esc(summary) + '</div>' : '')
             + '<div class="card-links">'
             + '<a class="card-link" href="' + esc(detailUrl) + '" onclick="event.stopPropagation()">📄 詳細を見る</a>'
-            + '<a class="card-link" href="finreport.php?ticker=' + encodeURIComponent(ticker) + '" onclick="event.stopPropagation()">🔄 再生成</a>'
+            + (IS_ADMIN ? '<a class="card-link" href="finreport.php?ticker=' + encodeURIComponent(ticker) + '" onclick="event.stopPropagation()">🔄 再生成</a>' : '')
             + '</div>'
             + '</div>';
         list.insertAdjacentHTML('beforeend', html);
