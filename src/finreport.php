@@ -10,7 +10,6 @@ if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_domain',   AIGM_COOKIE_DOMAIN);
     ini_set('session.cookie_secure',   '1');
     ini_set('session.cookie_httponly', '1');
-    ini_set('session.cookie_samesite', 'Lax');
     session_cache_expire(60 * 24 * 30);
     session_start();
     if (isset($_COOKIE[session_name()])) {
