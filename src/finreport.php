@@ -178,13 +178,22 @@ function fr_slug($ticker) {
 }
 function fr_data_file($ticker) {
     global $DATA_DIR;
-    return $DATA_DIR . '/finreport_' . fr_slug($ticker) . '.json';
+    return $DATA_DIR . '/finreport_' . fr_slug($ticker) . '_' . date('Ymd') . '.json';
 }
 function fr_load($ticker) {
-    $f = fr_data_file($ticker);
-    if (!file_exists($f)) return null;
-    $d = json_decode(file_get_contents($f), true);
-    return is_array($d) ? $d : null;
+    global $DATA_DIR;
+    $slug  = fr_slug($ticker);
+    $files = glob($DATA_DIR . '/finreport_' . $slug . '_*.json');
+    if (!$files) $files = array();
+    $old = $DATA_DIR . '/finreport_' . $slug . '.json';
+    if (file_exists($old)) $files[] = $old;
+    if (empty($files)) return null;
+    rsort($files);
+    foreach ($files as $f) {
+        $d = json_decode(file_get_contents($f), true);
+        if (is_array($d) && !empty($d['report'])) return $d;
+    }
+    return null;
 }
 function fr_save($ticker, $data) {
     global $DATA_DIR;

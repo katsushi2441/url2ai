@@ -18,9 +18,14 @@ $reports = array();
 if (is_dir($DATA_DIR)) {
     $files = glob($DATA_DIR . '/finreport_*.json');
     if ($files) {
+        rsort($files);
+        $ticker_seen = array();
         foreach ($files as $f) {
             $d = json_decode(file_get_contents($f), true);
             if (!is_array($d) || empty($d['ticker']) || empty($d['report'])) { continue; }
+            $slug = preg_replace('/[^a-zA-Z0-9_\-]/', '_', strtolower($d['ticker']));
+            if (isset($ticker_seen[$slug])) { continue; }
+            $ticker_seen[$slug] = true;
             $reports[] = $d;
         }
         usort($reports, function($a, $b) {
