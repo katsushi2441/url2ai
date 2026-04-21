@@ -379,12 +379,12 @@ input[type=text]:focus{border-color:var(--accent)}
                     <input type="text" name="ticker" id="ticker-input"
                            placeholder="例: BTC, ETH, SOL, NVIDIA, 7203.T"
                            value="<?php echo h($ticker); ?>">
+                    <?php if ($is_admin): ?>
                     <button type="button" class="btn btn-primary" id="btn-gen"
                             onclick="submitGen()">
                         <span class="btn-label">📊 レポート生成</span>
                         <span class="spinner"></span>
                     </button>
-                    <?php if ($is_admin): ?>
                     <button type="button" class="btn btn-secondary" id="btn-regen"
                             onclick="submitRegen()">
                         <span class="btn-label">🔄 再生成</span>
