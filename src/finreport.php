@@ -379,18 +379,14 @@ input[type=text]:focus{border-color:var(--accent)}
                     <input type="text" name="ticker" id="ticker-input"
                            placeholder="例: BTC, ETH, SOL, NVIDIA, 7203.T"
                            value="<?php echo h($ticker); ?>">
-                    <?php if ($is_admin): ?>
-                    <button type="button" class="btn btn-primary" id="btn-gen"
-                            onclick="submitGen()">
+                    <button type="button" class="btn btn-primary" id="btn-gen"<?php if (!$is_admin): ?> disabled title="ログインが必要です"<?php endif; ?> onclick="submitGen()">
                         <span class="btn-label">📊 レポート生成</span>
                         <span class="spinner"></span>
                     </button>
-                    <button type="button" class="btn btn-secondary" id="btn-regen"
-                            onclick="submitRegen()">
+                    <button type="button" class="btn btn-secondary" id="btn-regen"<?php if (!$is_admin): ?> disabled title="ログインが必要です"<?php endif; ?> onclick="submitRegen()">
                         <span class="btn-label">🔄 再生成</span>
                         <span class="spinner"></span>
                     </button>
-                    <?php endif; ?>
                 </div>
                 <?php if ($flash_error): ?>
                 <div class="msg-error"><?php echo h($flash_error); ?></div>
