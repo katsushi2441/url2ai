@@ -72,7 +72,6 @@ function fr_x_get($url, $token) {
     if (!$res) { $res = '{}'; }
     return json_decode($res, true);
 }
-
 if (isset($_GET['fr_logout'])) {
     session_destroy();
     setcookie(session_name(), '', time() - 3600, '/',
@@ -81,7 +80,6 @@ if (isset($_GET['fr_logout'])) {
     exit;
 }
 if (isset($_GET['fr_login'])) {
-    session_regenerate_id(true);
     $verifier  = fr_gen_verifier();
     $challenge = fr_gen_challenge($verifier);
     $state     = md5(uniqid('', true));
@@ -96,7 +94,19 @@ if (isset($_GET['fr_login'])) {
         'code_challenge'        => $challenge,
         'code_challenge_method' => 'S256',
     );
-    header('Location: https://twitter.com/i/oauth2/authorize?' . http_build_query($params));
+    session_write_close();
+    $auth_url = 'https://twitter.com/i/oauth2/authorize?' . http_build_query($params);
+    $ua = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
+    if (strpos($ua, 'Android') !== false) {
+        $intent_url = 'intent://twitter.com/i/oauth2/authorize?' . http_build_query($params)
+            . '#Intent;scheme=https;package=com.android.chrome;'
+            . 'S.browser_fallback_url=' . urlencode($auth_url) . ';end';
+        echo '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>';
+        echo '<script>window.location.href=' . json_encode($intent_url) . ';</script>';
+        echo '</body></html>';
+    } else {
+        header('Location: ' . $auth_url);
+    }
     exit;
 }
 if (isset($_GET['code']) && isset($_GET['state']) && isset($_SESSION['fr_oauth_state'])) {
@@ -195,7 +205,22 @@ if (isset($_GET['ticker']) && $_GET['ticker'] !== '') {
     $saved  = fr_load($ticker);
 }
 
-/* POST 生成 */
+/* POST レポート生成（あれば表示、なければ生成） */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'view_or_generate') {
+    $ticker = isset($_POST['ticker']) ? trim($_POST['ticker']) : '';
+    if ($ticker === '') { header('Location: ' . $x_redirect_uri); exit; }
+    if (fr_load($ticker)) {
+        header('Location: ' . $x_redirect_uri . '?ticker=' . urlencode($ticker)); exit;
+    }
+    if (!$is_admin) {
+        header('Location: ' . $x_redirect_uri . '?ticker=' . urlencode($ticker)); exit;
+    }
+    // なければ生成へ fall through
+    $_POST['action'] = 'generate';
+    $action = 'generate';
+}
+
+/* POST 再生成 */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin && $action === 'generate') {
     $ticker = isset($_POST['ticker']) ? trim($_POST['ticker']) : '';
     if ($ticker === '') {
@@ -340,17 +365,18 @@ input[type=text]:focus{border-color:var(--accent)}
         </div>
         <div class="section-body">
             <form method="POST" id="form-gen">
-                <input type="hidden" name="action" value="generate">
+                <input type="hidden" name="action" id="form-action" value="view_or_generate">
                 <div class="row">
                     <input type="text" name="ticker" id="ticker-input"
                            placeholder="例: BTC, ETH, SOL, NVIDIA, 7203.T"
                            value="<?php echo h($ticker); ?>">
-                    <button type="button" class="btn btn-secondary" id="btn-view"
-                            onclick="viewReport()">
-                        📊 レポート表示
+                    <button type="button" class="btn btn-primary" id="btn-gen"
+                            onclick="submitGen()">
+                        <span class="btn-label">📊 レポート生成</span>
+                        <span class="spinner"></span>
                     </button>
                     <?php if ($is_admin): ?>
-                    <button type="button" class="btn btn-primary" id="btn-regen"
+                    <button type="button" class="btn btn-secondary" id="btn-regen"
                             onclick="submitRegen()">
                         <span class="btn-label">🔄 再生成</span>
                         <span class="spinner"></span>
@@ -421,14 +447,20 @@ input[type=text]:focus{border-color:var(--accent)}
 </div>
 
 <script>
-function viewReport() {
+function submitGen() {
     var ticker = document.getElementById('ticker-input').value.trim();
     if (!ticker) { return; }
-    window.location.href = 'finreport.php?ticker=' + encodeURIComponent(ticker);
+    document.getElementById('form-action').value = 'view_or_generate';
+    var btn = document.getElementById('btn-gen');
+    var msg = document.getElementById('loading-msg');
+    if (btn) { btn.disabled = true; btn.classList.add('loading'); }
+    if (msg) { msg.style.display = 'block'; }
+    document.getElementById('form-gen').submit();
 }
 function submitRegen() {
     var ticker = document.getElementById('ticker-input').value.trim();
     if (!ticker) { return; }
+    document.getElementById('form-action').value = 'generate';
     var btn = document.getElementById('btn-regen');
     var msg = document.getElementById('loading-msg');
     if (btn) { btn.disabled = true; btn.classList.add('loading'); }
@@ -436,7 +468,7 @@ function submitRegen() {
     document.getElementById('form-gen').submit();
 }
 document.getElementById('ticker-input').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') viewReport();
+    if (e.key === 'Enter') submitGen();
 });
 
 <?php if ($saved && !empty($saved['report'])): ?>
