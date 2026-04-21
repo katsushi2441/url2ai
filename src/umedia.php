@@ -537,6 +537,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 header{background:var(--surface);border-bottom:1px solid var(--border);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .logo{font-size:1.1rem;font-weight:700;letter-spacing:-.02em}
 .logo span{color:var(--accent)}
+.logo-group{display:flex;align-items:center;gap:6px}
+.u2a-badge{background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;letter-spacing:.03em}
 .userbar{display:flex;align-items:center;gap:.75rem;font-size:.8rem;color:var(--muted)}
 .userbar strong{color:var(--green)}
 .btn-sm{background:none;border:1px solid var(--border2);color:var(--muted);padding:.2rem .7rem;border-radius:4px;font-size:.75rem;cursor:pointer;text-decoration:none;transition:all .15s}
@@ -597,7 +599,7 @@ textarea.insight-area{background:#f0f9ff;min-height:160px;font-family:var(--sans
 <body>
 
 <header>
-    <div class="logo">U<span>Media</span></div>
+    <div class="logo-group"><div class="logo">U<span>Media</span></div><span class="u2a-badge">URL2AI</span>Media</div>
     <div class="userbar">
         <?php if ($logged_in): ?>
         <span>@<strong><?php echo h($username); ?></strong></span>

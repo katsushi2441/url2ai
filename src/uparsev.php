@@ -174,6 +174,69 @@ $is_admin     = ($session_user === $ADMIN);
 
 function h($s) { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
 
+function pv_format_parse_html($text) {
+    $display = h($text);
+    $display = preg_replace('/^(■\s*構文：.+)$/mu', '<strong class="parse-heading">$1</strong>', $display);
+    $display = preg_replace('/^(■\s*意味・機能：.+)$/mu', '<strong class="parse-heading parse-meaning">$1</strong>', $display);
+    $display = preg_replace('/^(■\s*例文：.+)$/mu', '<strong class="parse-heading">$1</strong>', $display);
+    return $display;
+}
+
+/* =========================================================
+   RSS フィード出力 (?feed)
+========================================================= */
+if (isset($_GET['feed'])) {
+    $rss_posts = array();
+    if (file_exists($DATA_DIR)) {
+        $files = glob($DATA_DIR . '/xinsight_*.json');
+        if ($files) {
+            foreach ($files as $f) {
+                $d = json_decode(file_get_contents($f), true);
+                if (!is_array($d) || empty($d['parse_result'])) { continue; }
+                $rss_posts[] = $d;
+            }
+            usort($rss_posts, function($a, $b) {
+                $ta = isset($a['saved_at']) ? $a['saved_at'] : '';
+                $tb = isset($b['saved_at']) ? $b['saved_at'] : '';
+                return strcmp($tb, $ta);
+            });
+        }
+    }
+    $rss_items = array_slice($rss_posts, 0, 20);
+    header('Access-Control-Allow-Origin: https://exbridge.jp');
+    header('Content-Type: application/rss+xml; charset=UTF-8');
+    echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+    echo '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">' . "\n";
+    echo '<channel>' . "\n";
+    echo '<title>構文解析タイムライン | ' . $SITE_NAME . '</title>' . "\n";
+    echo '<link>' . $BASE_URL . '/' . $THIS_FILE . '</link>' . "\n";
+    echo '<description>X投稿の文法構文を解析し、例文を自動生成したタイムライン。</description>' . "\n";
+    echo '<language>ja</language>' . "\n";
+    echo '<atom:link href="' . $BASE_URL . '/' . $THIS_FILE . '?feed" rel="self" type="application/rss+xml"/>' . "\n";
+    foreach ($rss_items as $p) {
+        $tweet_id = isset($p['tweet_id'])     ? $p['tweet_id']     : '';
+        $parse    = isset($p['parse_result']) ? $p['parse_result'] : '';
+        $thread   = isset($p['thread_text'])  ? $p['thread_text']  : '';
+        $date_raw = isset($p['saved_at'])     ? $p['saved_at']     : '';
+        $uname    = isset($p['username'])     ? $p['username']     : '';
+        $seo_text = $parse !== '' ? $parse : $thread;
+        $title    = mb_substr(str_replace("\n", ' ', $seo_text), 0, 50) . '...';
+        $desc     = mb_substr(str_replace("\n", ' ', $seo_text), 0, 200);
+        $link     = $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($tweet_id);
+        $pub_date = $date_raw ? date('r', strtotime($date_raw)) : date('r');
+        echo '<item>' . "\n";
+        echo '<title><![CDATA[' . $title . ']]></title>' . "\n";
+        echo '<link>' . htmlspecialchars($link) . '</link>' . "\n";
+        echo '<guid isPermaLink="true">' . htmlspecialchars($link) . '</guid>' . "\n";
+        echo '<description><![CDATA[' . $desc . ($uname ? "\n\n@" . $uname : '') . ']]></description>' . "\n";
+        echo '<pubDate>' . $pub_date . '</pubDate>' . "\n";
+        echo '</item>' . "\n";
+    }
+    echo '</channel>' . "\n";
+    echo '</rss>' . "\n";
+    exit;
+}
+
 /* =========================================================
    データ読み込み（parse_result が存在するものだけ）
 ========================================================= */
@@ -306,6 +369,8 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
 
 /* 構文解析ブロック（折りたたみ） */
 .parse-block{background:#f0f9ff;border-left:3px solid #0891b2;border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:12px;font-size:13px;line-height:1.9;color:#333;white-space:pre-wrap;max-height:100px;overflow:hidden;position:relative;cursor:pointer;}
+.parse-block strong{display:block;margin:.15rem 0;color:#0369a1;font-weight:700;}
+.parse-block .parse-meaning{color:#0f766e;}
 .parse-block::after{content:'';position:absolute;bottom:0;left:0;right:0;height:28px;background:linear-gradient(transparent,#f0f9ff);pointer-events:none;}
 .parse-block.expanded{max-height:none;}
 .parse-block.expanded::after{display:none;}
@@ -328,7 +393,8 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
 .detail-section-title{font-size:12px;font-weight:700;color:#0891b2;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:20px;}
 .detail-thread{font-size:14px;line-height:1.8;color:#555;white-space:pre-wrap;margin-bottom:8px;}
 .detail-parse{background:#f0f9ff;border-left:3px solid #0891b2;border-radius:0 8px 8px 0;padding:14px 16px;font-size:14px;line-height:1.9;color:#222;white-space:pre-wrap;margin-bottom:8px;}
-.detail-parse strong{color:#0891b2;font-weight:700;}
+.detail-parse strong{display:block;margin:.2rem 0;color:#0891b2;font-weight:700;}
+.detail-parse .parse-meaning{color:#0f766e;}
 .detail-url-box{background:#f7f7f7;border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#555;word-break:break-all;}
 .detail-url-box a{color:#0891b2;}
 
@@ -359,11 +425,11 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
     <div style="font-size:22px">🔍</div>
     <?php if ($detail_post): ?>
     <h1><a href="<?php echo h($THIS_FILE); ?>">UParseV</a></h1>
-    <span class="badge">Parse</span>
+    <span class="badge">URL2AI</span>Parse
     <a class="back-btn" href="<?php echo h($THIS_FILE); ?>">← 一覧</a>
     <?php else: ?>
     <h1>UParseV</h1>
-    <span class="badge">Parse</span>
+    <span class="badge">URL2AI</span>Parse
     <div class="userbar">
         <?php if ($logged_in): ?>
         <span>@<strong><?php echo h($session_user); ?></strong></span>
@@ -394,9 +460,7 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
 
         <div class="detail-section-title">🔍 構文解析＆例文</div>
         <div class="detail-parse"><?php
-            $display = h(isset($detail_post['parse_result']) ? $detail_post['parse_result'] : '');
-            $display = preg_replace('/^(&#9632;.+)$/mu', '<strong>$1</strong>', $display);
-            echo $display;
+            echo pv_format_parse_html(isset($detail_post['parse_result']) ? $detail_post['parse_result'] : '');
         ?></div>
 
         <?php if (!empty($detail_post['thread_text'])): ?>
@@ -464,6 +528,14 @@ function pvEsc(s) {
     return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function pvFormatParse(s) {
+    var html = pvEsc(s || '');
+    html = html.replace(/^(■\s*構文：.+)$/gm, '<strong class="parse-heading">$1</strong>');
+    html = html.replace(/^(■\s*意味・機能：.+)$/gm, '<strong class="parse-heading parse-meaning">$1</strong>');
+    html = html.replace(/^(■\s*例文：.+)$/gm, '<strong class="parse-heading">$1</strong>');
+    return html;
+}
+
 function renderPvPosts(from, to) {
     var list = document.getElementById('post-list');
     if (!list) return;
@@ -484,7 +556,7 @@ function renderPvPosts(from, to) {
         var parseHtml = '';
         if (parse) {
             parseHtml = '<div class="parse-block" id="parse-' + pvEsc(tid) + '" onclick="toggleParse(\'' + pvEsc(tid) + '\')">'
-                + pvEsc(parse)
+                + pvFormatParse(parse)
                 + '</div>'
                 + '<button type="button" class="expand-btn" id="expbtn-' + pvEsc(tid) + '" onclick="toggleParse(\'' + pvEsc(tid) + '\')">続きを見る ▼</button>';
         }

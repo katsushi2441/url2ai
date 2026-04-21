@@ -394,11 +394,11 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
     <div style="font-size:22px">🎵</div>
     <?php if ($detail_post): ?>
     <h1><a href="<?php echo h($THIS_FILE); ?>">USongV</a></h1>
-    <span class="badge">Songs</span>
+    <span class="badge">URL2AI</span>Song
     <a class="back-btn" href="<?php echo h($THIS_FILE); ?>">← 一覧</a>
     <?php else: ?>
     <h1>USongV</h1>
-    <span class="badge">Songs</span>
+    <span class="badge">URL2AI</span>Song
     <a href="<?php echo h($THIS_FILE . '?feed'); ?>" class="rss-link" title="RSSフィード">
         <svg width="10" height="10" viewBox="0 0 8 8"><circle cx="1.5" cy="6.5" r="1.5" fill="#c44f00"/><path d="M0 4.5A3.5 3.5 0 013.5 8" stroke="#c44f00" stroke-width="1.2" fill="none"/><path d="M0 2A6 6 0 016 8" stroke="#c44f00" stroke-width="1.2" fill="none"/></svg>
         RSS
@@ -459,7 +459,7 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
         var _dpUrl = '<?php echo $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($detail_post['tweet_id']); ?>';
         function copyDetail() {
             var lines = [];
-            if (_dp.lyrics) { lines.push('#AIボカロ歌詞'); lines.push(_dp.lyrics); }
+            if (_dp.lyrics) { lines.push(<?php echo json_encode('#URL2AI ボカロ歌詞'); ?>); lines.push(_dp.lyrics); }
             lines.push('');
             if (_dp.tweet_url) lines.push(_dp.tweet_url);
             lines.push(_dpUrl);

@@ -110,10 +110,10 @@ if ($detail_report) {
 <meta property="og:url" content="<?php echo h($page_url); ?>">
 <meta property="og:site_name" content="<?php echo h($SITE_NAME); ?>">
 <meta property="og:locale" content="ja_JP">
-<meta property="og:image" content="<?php echo $BASE_URL; ?>/images/finreport.png">
+<meta property="og:image" content="<?php echo $BASE_URL; ?>/images/finreport.png?v=<?php echo date('Ymd'); ?>">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@xb_bittensor">
-<meta name="twitter:image" content="<?php echo $BASE_URL; ?>/images/finreport.png">
+<meta name="twitter:image" content="<?php echo $BASE_URL; ?>/images/finreport.png?v=<?php echo date('Ymd'); ?>">
 <meta name="twitter:title" content="<?php echo $page_title; ?>">
 <meta name="twitter:description" content="<?php echo $page_description; ?>">
 <link rel="alternate" type="application/rss+xml" title="<?php echo h($SITE_NAME); ?> RSS" href="<?php echo $BASE_URL . '/' . $THIS_FILE . '?feed'; ?>">
@@ -134,6 +134,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,'Inter',sa
 .header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 20px;position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:12px;}
 .logo{font-size:17px;font-weight:700;color:var(--text);}
 .logo span{color:var(--accent);}
+.logo-group{display:flex;align-items:center;gap:6px}
+.u2a-badge{background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;letter-spacing:.03em}
 .badge{background:var(--accent);color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;}
 .back-btn{margin-left:auto;font-size:13px;color:var(--accent);text-decoration:none;padding:5px 12px;border:1px solid var(--accent);border-radius:6px;}
 .back-btn:hover{background:var(--accent-bg);}
@@ -198,10 +200,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,'Inter',sa
 <div class="header">
     <div style="font-size:22px">📊</div>
     <?php if ($detail_report): ?>
-    <div class="logo"><a href="<?php echo h($THIS_FILE); ?>" style="text-decoration:none;color:inherit;">Fin<span>ReportV</span></a></div>
+    <div class="logo-group"><div class="logo"><a href="<?php echo h($THIS_FILE); ?>" style="text-decoration:none;color:inherit;">Fin<span>ReportV</span></a></div><span class="u2a-badge">URL2AI</span></div>
     <a class="back-btn" href="<?php echo h($THIS_FILE); ?>">← 一覧</a>
     <?php else: ?>
-    <div class="logo">Fin<span>ReportV</span></div>
+    <div class="logo-group"><div class="logo">Fin<span>ReportV</span></div><span class="u2a-badge">URL2AI</span></div>
     <span class="badge">AI投資レポート</span>
     <a href="<?php echo h($THIS_FILE . '?feed'); ?>" class="rss-link" title="RSSフィード">
         <svg width="10" height="10" viewBox="0 0 8 8"><circle cx="1.5" cy="6.5" r="1.5" fill="#c44f00"/><path d="M0 4.5A3.5 3.5 0 013.5 8" stroke="#c44f00" stroke-width="1.2" fill="none"/><path d="M0 2A6 6 0 016 8" stroke="#c44f00" stroke-width="1.2" fill="none"/></svg>

@@ -557,7 +557,7 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
     <div style="font-size:22px">🦉</div>
     <?php if ($detail_post): ?>
     <h1 style="font-size:17px;font-weight:700;color:#111;"><a href="oss.php" style="text-decoration:none;color:inherit;">OSS</a></h1>
-    <span class="badge">AI</span>
+    <span class="badge">URL2AI</span>
     <a class="back-btn" href="oss.php">← 一覧</a>
     <?php elseif ($filter_tag): ?>
     <h1 style="font-size:17px;font-weight:700;color:#111;"><a href="oss.php" style="text-decoration:none;color:inherit;">OSS</a></h1>
@@ -565,7 +565,7 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
     <a class="back-btn" href="oss.php">← 一覧</a>
     <?php else: ?>
     <h1>OSS</h1>
-    <span class="badge">AI</span>
+    <span class="badge">URL2AI</span>
     <?php endif; ?>
     <div class="userbar">
         <?php if ($logged_in): ?>

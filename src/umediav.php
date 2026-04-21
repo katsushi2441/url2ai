@@ -222,6 +222,14 @@ if (isset($_GET['feed'])) {
         echo '<guid isPermaLink="true">' . htmlspecialchars($link) . '</guid>' . "\n";
         echo '<description><![CDATA[' . $desc . ($uname ? "\n\n@" . $uname : '') . ']]></description>' . "\n";
         echo '<pubDate>' . $pub_date . '</pubDate>' . "\n";
+        /* メディア（最初の1件）を enclosure で出力 */
+        if (!empty($p['media'])) {
+            $fm = $p['media'][0];
+            if (!empty($fm['url'])) {
+                $fm_type = ($fm['type'] === 'video' || $fm['type'] === 'gif') ? 'video/mp4' : 'image/jpeg';
+                echo '<enclosure url="' . htmlspecialchars($fm['url']) . '" length="0" type="' . $fm_type . '"/>' . "\n";
+            }
+        }
         echo '</item>' . "\n";
     }
     echo '</channel>' . "\n";
@@ -451,11 +459,11 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
     <div style="font-size:22px">📸</div>
     <?php if ($detail_post): ?>
     <h1><a href="<?php echo h($THIS_FILE); ?>">UMediaV</a></h1>
-    <span class="badge">Media</span>
+    <span class="badge">URL2AI</span>Media
     <a class="back-btn" href="<?php echo h($THIS_FILE); ?>">← 一覧</a>
     <?php else: ?>
     <h1>UMediaV</h1>
-    <span class="badge">Media</span>
+    <span class="badge">URL2AI</span>Media
     <div class="userbar">
         <?php if ($logged_in): ?>
         <span>@<strong><?php echo h($session_user); ?></strong></span>

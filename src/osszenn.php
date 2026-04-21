@@ -4,7 +4,7 @@ date_default_timezone_set("Asia/Tokyo");
 $DATA_FILE    = __DIR__ . '/data/oss_posts.json';
 $BASE_URL     = 'https://aiknowledgecms.exbridge.jp';
 $THIS_FILE    = 'osszenn.php';
-$SITE_NAME    = 'OSSZenn';
+$SITE_NAME    = 'OSS Zenn';
 $ADMIN        = 'xb_bittensor';
 
 /* X API キー読み込み */
@@ -256,9 +256,9 @@ if (isset($_GET['feed'])) {
     echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
     echo '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">' . "\n";
     echo '<channel>' . "\n";
-    echo '<title>OSSZenn | Zenn RSS Feed</title>' . "\n";
+    echo '<title>OSS Zenn | Zenn RSS Feed</title>' . "\n";
     echo '<link>' . $BASE_URL . '/osszenn.php</link>' . "\n";
-    echo '<description>OSSZennで収集したZenn RSS由来の記事一覧。関連するOSS情報とあわせて配信。</description>' . "\n";
+    echo '<description>OSS Zennで収集したZenn RSS由来の記事一覧。関連するOSS情報とあわせて配信。</description>' . "\n";
     echo '<language>ja</language>' . "\n";
     echo '<atom:link href="' . $BASE_URL . '/osszenn.php?feed" rel="self" type="application/rss+xml"/>' . "\n";
     foreach ($rss_items as $p) {
@@ -572,7 +572,7 @@ if ($detail_post) {
     $zenn_desc    = !empty($zenn_titles_for_desc) ? '関連Zenn記事: ' . implode('、', $zenn_titles_for_desc) : '';
     $full_desc    = $base_desc . ($zenn_desc ? ' ' . mb_substr($zenn_desc, 0, 80) : '');
 
-    $page_title       = htmlspecialchars($detail_post['title']) . ' | OSSZenn';
+    $page_title       = htmlspecialchars($detail_post['title']) . ' | OSS Zenn';
     $page_description = htmlspecialchars(mb_substr($full_desc, 0, 160));
     $page_url         = $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($detail_post['id']);
     $page_type        = 'article';
@@ -604,13 +604,13 @@ if ($detail_post) {
     $jsonld = array(
         '@context'      => 'https://schema.org',
         '@type'         => 'TechArticle',
-        'headline'      => $detail_post['title'] . ' | OSSZenn',
+        'headline'      => $detail_post['title'] . ' | OSS Zenn',
         'description'   => mb_substr($full_desc, 0, 160),
         'url'           => $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($detail_post['id']),
         'datePublished' => isset($detail_post['created_at']) ? $detail_post['created_at'] : '',
         'dateModified'  => date('Y-m-d'),
         'author'        => array('@type' => 'Person', 'name' => 'xb_bittensor'),
-        'publisher'     => array('@type' => 'Organization', 'name' => 'OSSZenn',
+        'publisher'     => array('@type' => 'Organization', 'name' => 'OSS Zenn',
                                  'url'   => $BASE_URL . '/osszenn.php'),
         'keywords'      => $keywords,
         'sameAs'        => isset($detail_post['github_url']) ? $detail_post['github_url'] : '',
@@ -619,7 +619,7 @@ if ($detail_post) {
         'mentions'      => $jsonld_mentions,
     );
 } elseif ($filter_tag) {
-    $page_title       = '#' . htmlspecialchars($filter_tag) . ' の OSS一覧 | OSSZenn';
+    $page_title       = '#' . htmlspecialchars($filter_tag) . ' の OSS一覧 | OSS Zenn';
     $page_description = htmlspecialchars($filter_tag) . ' に関連するAI系OSSプロジェクトとZenn記事の一覧です。';
     $page_url         = $BASE_URL . '/' . $THIS_FILE . '?tag=' . urlencode($filter_tag);
     $page_type        = 'website';
@@ -631,22 +631,22 @@ if ($detail_post) {
         'name'        => $page_title,
         'description' => $page_description,
         'url'         => $page_url,
-        'publisher'   => array('@type' => 'Organization', 'name' => 'OSSZenn', 'url' => $BASE_URL . '/osszenn.php')
+        'publisher'   => array('@type' => 'Organization', 'name' => 'OSS Zenn', 'url' => $BASE_URL . '/osszenn.php')
     );
 } else {
-    $page_title       = 'OSSZenn | AI系OSSとZenn記事まとめ';
+    $page_title       = 'OSS Zenn | AI系OSSとZenn記事まとめ';
     $page_description = 'GitHub TrendingのAI系OSSに関連するZenn記事と投稿者まとめ。Zenn最新記事順で表示。毎日更新。';
     $page_url         = $BASE_URL . '/' . $THIS_FILE;
     $page_type        = 'website';
     $published_time   = '';
-    $keywords         = 'OSSZenn, AI, OSS, GitHub, Zenn, オープンソース, 機械学習, LLM, エージェント';
+    $keywords         = 'OSS Zenn, AI, OSS, GitHub, Zenn, オープンソース, 機械学習, LLM, エージェント';
     $jsonld = array(
         '@context'    => 'https://schema.org',
         '@type'       => 'CollectionPage',
         'name'        => $page_title,
         'description' => $page_description,
         'url'         => $page_url,
-        'publisher'   => array('@type' => 'Organization', 'name' => 'OSSZenn', 'url' => $BASE_URL . '/osszenn.php')
+        'publisher'   => array('@type' => 'Organization', 'name' => 'OSS Zenn', 'url' => $BASE_URL . '/osszenn.php')
     );
 }
 ?>
@@ -1091,18 +1091,17 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
 <div class="header">
     <div style="font-size:22px">🦉</div>
     <?php if ($detail_post): ?>
-    <h1 style="font-size:17px;font-weight:700;color:#111;"><a href="osszenn.php" style="text-decoration:none;color:inherit;">OSSZenn</a></h1>
+    <h1 style="font-size:17px;font-weight:700;color:#111;"><a href="osszenn.php" style="text-decoration:none;color:inherit;">OSS Zenn</a></h1>
     <span class="badge-zenn">Zenn</span>
     <a class="back-btn" href="osszenn.php">← 一覧</a>
     <?php elseif ($filter_tag): ?>
-    <h1 style="font-size:17px;font-weight:700;color:#111;"><a href="osszenn.php" style="text-decoration:none;color:inherit;">OSSZenn</a></h1>
+    <h1 style="font-size:17px;font-weight:700;color:#111;"><a href="osszenn.php" style="text-decoration:none;color:inherit;">OSS Zenn</a></h1>
     <span class="badge">#<?php echo htmlspecialchars($filter_tag); ?></span>
     <span class="badge-zenn">Zenn</span>
     <a class="back-btn" href="osszenn.php">← 一覧</a>
     <?php else: ?>
-    <h1>OSSZenn</h1>
-    <span class="badge">AI</span>
-    <span class="badge-zenn">Zenn</span>
+    <h1>OSS Zenn</h1>
+    <span class="badge">URL2AI</span>
     <?php endif; ?>
     <div class="userbar">
         <?php if ($logged_in): ?>
@@ -1130,7 +1129,7 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
     <div class="detail-header">
         <h1><?php echo htmlspecialchars($detail_post['title']); ?></h1>
         <div class="detail-meta">
-            <span style="background:#3ea8ff;color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;">OSSZenn</span>
+            <span style="background:#3ea8ff;color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;">OSS Zenn</span>
             <?php if (!empty($detail_post['zenn_articles'])): ?>
             <span style="color:#3ea8ff;font-size:12px;">📘 Zenn記事 <?php echo count($detail_post['zenn_articles']); ?>件</span>
             <?php endif; ?>
@@ -1201,6 +1200,7 @@ var detailPageUrl = '<?php echo $BASE_URL; ?>/osszenn.php?id=<?php echo urlencod
 
 function buildDetailText(post) {
     var lines = [];
+    lines.push('#URL2AI osszenn');
     lines.push(post.title);
     lines.push('');
     if (post.post_text) {
@@ -1506,6 +1506,7 @@ function getDetailUrl(post) {
 
 function buildPostText(post) {
     var lines = [];
+    lines.push('#URL2AI osszenn');
     lines.push(post.title);
     lines.push('');
     if (post.post_text) {

@@ -242,7 +242,9 @@ if ($detail_post) {
 <?php if ($page_type === 'article' && $published_time): ?>
 <meta property="article:published_time" content="<?php echo h($published_time); ?>">
 <?php endif; ?>
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="<?php echo $BASE_URL; ?>/images/ustory.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="<?php echo $BASE_URL; ?>/images/ustory.png">
 <meta name="twitter:site" content="@xb_bittensor">
 <meta name="twitter:title" content="<?php echo h($page_title); ?>">
 <meta name="twitter:description" content="<?php echo h($page_description); ?>">
@@ -338,11 +340,11 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
     <div style="font-size:22px">📖</div>
     <?php if ($detail_post): ?>
     <h1><a href="<?php echo h($THIS_FILE); ?>">UStoryV</a></h1>
-    <span class="badge">Stories</span>
+    <span class="badge">URL2AI</span>Story
     <a class="back-btn" href="<?php echo h($THIS_FILE); ?>">← 一覧</a>
     <?php else: ?>
     <h1>UStoryV</h1>
-    <span class="badge">Stories</span>
+    <span class="badge">URL2AI</span>Story
     <div class="userbar">
         <?php if ($logged_in): ?>
         <span>@<strong><?php echo h($session_user); ?></strong></span>
@@ -402,7 +404,7 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
         var _dpUrl = '<?php echo $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($detail_post['tweet_id']); ?>';
         function copyDetail() {
             var lines = [];
-            if (_dp.story) { lines.push('#AI短編小説'); lines.push(_dp.story); }
+            if (_dp.story) { lines.push(<?php echo json_encode('#URL2AI 短編小説'); ?>); lines.push(_dp.story); }
             lines.push('');
             if (_dp.tweet_url) lines.push(_dp.tweet_url);
             lines.push(_dpUrl);

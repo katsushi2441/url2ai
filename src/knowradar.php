@@ -422,6 +422,8 @@ body{background:#f8fafc;color:#0f172a;font-family:'Inter',-apple-system,sans-ser
 .header{background:#fff;border-bottom:1px solid #e2e8f0;padding:14px 20px;position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:12px;}
 .logo{font-size:19px;font-weight:700;letter-spacing:-.03em;color:#0f172a;}
 .logo span{color:#6366f1;}
+.logo-group{display:flex;align-items:center;gap:6px}
+.u2a-badge{background:#6366f1;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;letter-spacing:.03em}
 .tagline{font-size:11px;color:#94a3b8;letter-spacing:.04em;}
 .userbar{margin-left:auto;display:flex;align-items:center;gap:.75rem;font-size:.8rem;color:#64748b;}
 .userbar strong{color:#059669;}
@@ -505,7 +507,7 @@ body{background:#f8fafc;color:#0f172a;font-family:'Inter',-apple-system,sans-ser
 <body>
 
 <div class="header">
-    <div class="logo">Know<span>Rader</span></div>
+    <div class="logo-group"><div class="logo">Know<span>Rader</span></div><span class="u2a-badge">URL2AI</span></div>
     <div class="tagline">URL2AI Ecosystem Portal</div>
     <div class="userbar">
         <?php if ($logged_in): ?>
