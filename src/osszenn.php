@@ -581,6 +581,12 @@ if ($detail_post) {
         ? implode(', ', $detail_post['tags']) . ', Zenn, OSS, GitHub, AI'
         : 'Zenn, OSS, GitHub, AI';
 
+    /* GitHub OG画像URL生成 (owner/repo を抽出) */
+    $og_image = '';
+    if (!empty($detail_post['github_url']) && preg_match('#github\.com/([^/]+/[^/?#]+)#', $detail_post['github_url'], $gm)) {
+        $og_image = 'https://opengraph.githubassets.com/1/' . $gm[1];
+    }
+
     /* Zenn記事著者のXアカウントを収集 */
     $zenn_authors = array();
     if (!empty($detail_post['zenn_articles'])) {
@@ -619,6 +625,7 @@ if ($detail_post) {
         'mentions'      => $jsonld_mentions,
     );
 } elseif ($filter_tag) {
+    $og_image         = '';
     $page_title       = '#' . htmlspecialchars($filter_tag) . ' の OSS一覧 | OSS Zenn';
     $page_description = htmlspecialchars($filter_tag) . ' に関連するAI系OSSプロジェクトとZenn記事の一覧です。';
     $page_url         = $BASE_URL . '/' . $THIS_FILE . '?tag=' . urlencode($filter_tag);
@@ -634,6 +641,7 @@ if ($detail_post) {
         'publisher'   => array('@type' => 'Organization', 'name' => 'OSS Zenn', 'url' => $BASE_URL . '/osszenn.php')
     );
 } else {
+    $og_image         = '';
     $page_title       = 'OSS Zenn | AI系OSSとZenn記事まとめ';
     $page_description = 'GitHub TrendingのAI系OSSに関連するZenn記事と投稿者まとめ。Zenn最新記事順で表示。毎日更新。';
     $page_url         = $BASE_URL . '/' . $THIS_FILE;
@@ -676,7 +684,13 @@ if ($detail_post) {
 <?php endforeach; ?>
 <?php endif; ?>
 <?php endif; ?>
+<?php if (!empty($og_image)): ?>
+<meta property="og:image" content="<?php echo htmlspecialchars($og_image); ?>">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="<?php echo htmlspecialchars($og_image); ?>">
+<?php else: ?>
 <meta name="twitter:card" content="summary">
+<?php endif; ?>
 <meta name="twitter:site" content="@xb_bittensor">
 <meta name="twitter:title" content="<?php echo $page_title; ?>">
 <meta name="twitter:description" content="<?php echo $page_description; ?>">
