@@ -5,8 +5,8 @@ After=network.target
 [Service]
 Type=simple
 User=kojima
-WorkingDirectory=/home/kojima/bittensorman/aidexx/aiknowledgecms/url2ai/src
-ExecStart=/usr/bin/python3 oss_worker.py
+WorkingDirectory=/home/kojima/work/url2ai/src
+ExecStart=/usr/bin/python3 /home/kojima/work/url2ai/src/oss_worker.py
 Restart=always
 RestartSec=10
 StandardOutput=append:/home/kojima/oss_worker.log

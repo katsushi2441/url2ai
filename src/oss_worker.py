@@ -70,13 +70,16 @@ SKIP_GITHUB_USERS = [
 ]
 # ==========================
 
+_handlers = [logging.StreamHandler(sys.stdout)]
+try:
+    _handlers.insert(0, logging.FileHandler(LOG_FILE))
+except Exception:
+    pass
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[
-        logging.FileHandler(LOG_FILE),
-        logging.StreamHandler(sys.stdout)
-    ]
+    handlers=_handlers
 )
 log = logging.getLogger(__name__)
 
@@ -384,8 +387,13 @@ def post_to_paragraph(title, content, status='draft'):
         log.warning('Paragraph投稿レスポンスエラー: %s', result.stdout[:100])
         return {}
 
-def update_paragraph_url(post_id, paragraph_url):
-    payload = json.dumps({'action': 'paragraph_update', 'id': post_id, 'paragraph_url': paragraph_url})
+def update_paragraph_url(post_id, paragraph_url='', paragraph_post_id=''):
+    payload = json.dumps({
+        'action': 'paragraph_update',
+        'id': post_id,
+        'paragraph_url': paragraph_url,
+        'paragraph_post_id': paragraph_post_id,
+    })
     cmd = ['curl', '-s', '--max-time', '10', API_URL,
            '-H', 'Content-Type: application/json', '-d', payload]
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -494,12 +502,13 @@ def run_job(period='daily', top_n=3):
             success += 1
 
             para_res = post_to_paragraph(paragraph_title, paragraph_content, status='published')
-            para_url = para_res.get('url') or para_res.get('id', '')
-            if para_url:
-                log.info('Paragraph投稿完了: %s', para_url)
+            para_url = para_res.get('url') or ''
+            para_post_id = str(para_res.get('id') or para_res.get('postId') or '')
+            if para_url or para_post_id:
+                log.info('Paragraph投稿完了: %s', para_url or para_post_id)
                 post_id = res.get('id', '')
                 if post_id:
-                    update_paragraph_url(post_id, para_url)
+                    update_paragraph_url(post_id, para_url, para_post_id)
             else:
                 log.warning('Paragraph投稿失敗: %s', para_res)
 
