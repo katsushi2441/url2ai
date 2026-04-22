@@ -355,6 +355,52 @@ h1 {
     margin-top: 8px;
 }
 
+.system-list {
+    background: rgba(255,255,255,0.92);
+    border: 1px solid #E5E7EB;
+    border-radius: 18px;
+    padding: 10px;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.05);
+}
+
+.system-row {
+    display: grid;
+    grid-template-columns: minmax(160px, 220px) minmax(120px, 180px) 1fr;
+    gap: 16px;
+    padding: 16px 18px;
+    border-radius: 14px;
+    align-items: start;
+}
+
+.system-row + .system-row {
+    border-top: 1px solid #E5E7EB;
+}
+
+.system-file {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    color: #0F172A;
+    font-weight: 700;
+}
+
+.system-kind {
+    font-size: 12px;
+    font-weight: 700;
+    color: #1D4ED8;
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    padding: 6px 10px;
+    border-radius: 999px;
+    display: inline-flex;
+    justify-content: center;
+}
+
+.system-desc {
+    color: #475569;
+    line-height: 1.75;
+    font-size: 14px;
+}
+
 @media (max-width: 680px) {
     header {
         padding: 14px 18px;
@@ -370,6 +416,11 @@ h1 {
 
     .hero p {
         font-size: 16px;
+    }
+
+    .system-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
     }
 }
 </style>
@@ -411,8 +462,8 @@ h1 {
         </div>
         <div class="stats">
             <div class="stat">
-                <strong>14</strong>
-                <span>公開システム</span>
+                <strong>31</strong>
+                <span>src/ 配下の PHP システム</span>
             </div>
             <div class="stat">
                 <strong>URL</strong>
@@ -576,6 +627,47 @@ h1 {
                 </div>
             </div>
 
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>🗂️ All PHP Systems</h3>
+        <div class="intro-box" style="margin-bottom:18px;">
+            URL2AI は単一プロダクトではなく、`src/` 配下に複数の PHP システムを持つ実運用スタックです。
+            公開コンテンツ、ビューア、分析デモ、配信補助、運用系スクリプトまで含めて一覧化しています。
+        </div>
+        <div class="system-list">
+            <div class="system-row"><div class="system-file">ainews.php</div><div class="system-kind">Public</div><div class="system-desc">AI News Radar。本日のAIニュース投稿と記事をAIが読み、考察コンテンツへ変換。</div></div>
+            <div class="system-row"><div class="system-file">aitech.php</div><div class="system-kind">Public</div><div class="system-desc">AITech Links。技術系URLの要約・タグ付け・リンク集化を行うシステム。</div></div>
+            <div class="system-row"><div class="system-file">analyze.php</div><div class="system-kind">Ops</div><div class="system-desc">分析補助エンドポイント。内部の解析処理や検証用途で使う補助スクリプト。</div></div>
+            <div class="system-row"><div class="system-file">config.php</div><div class="system-kind">Core</div><div class="system-desc">全PHPシステム共通の設定ローダー。config.yaml を読み込み各サービスへ設定を渡します。</div></div>
+            <div class="system-row"><div class="system-file">finreport.php</div><div class="system-kind">Demo</div><div class="system-desc">FinReport 無料デモ。GPT Researcher + Ollama gemma4 による Markdown 投資レポート生成。</div></div>
+            <div class="system-row"><div class="system-file">finreportv.php</div><div class="system-kind">Viewer</div><div class="system-desc">FinReport の保存済みレポートを閲覧・再利用するビューア。</div></div>
+            <div class="system-row"><div class="system-file">knowradar.php</div><div class="system-kind">Portal</div><div class="system-desc">URL2AI 全体を横断表示するエコシステムポータル。</div></div>
+            <div class="system-row"><div class="system-file">nextpost.php</div><div class="system-kind">Ops</div><div class="system-desc">次に投稿する候補を扱う運用系ページ。SNS配信フローの管理に利用。</div></div>
+            <div class="system-row"><div class="system-file">oss.php</div><div class="system-kind">Public</div><div class="system-desc">OSS Timeline。GitHub のAI系OSSを収集し、要約と考察を付けて公開。</div></div>
+            <div class="system-row"><div class="system-file">osszenn.php</div><div class="system-kind">Public</div><div class="system-desc">OSS と Zenn 記事をつなぐ知識導線システム。</div></div>
+            <div class="system-row"><div class="system-file">saveainews.php</div><div class="system-kind">Ops</div><div class="system-desc">AI News Radar の保存処理を担当する補助スクリプト。</div></div>
+            <div class="system-row"><div class="system-file">saveaitech.php</div><div class="system-kind">Ops</div><div class="system-desc">AITech Links の保存処理を担当する補助スクリプト。</div></div>
+            <div class="system-row"><div class="system-file">saveoss.php</div><div class="system-kind">Ops</div><div class="system-desc">OSS 系コンテンツの保存処理を担当する補助スクリプト。</div></div>
+            <div class="system-row"><div class="system-file">udebate.php</div><div class="system-kind">Public</div><div class="system-desc">UDebate。肯定・否定AIの議論を生成する対話型システム。</div></div>
+            <div class="system-row"><div class="system-file">udebatev.php</div><div class="system-kind">Viewer</div><div class="system-desc">UDebate の生成結果を閲覧するビューア。</div></div>
+            <div class="system-row"><div class="system-file">uimage.php</div><div class="system-kind">Demo</div><div class="system-desc">UImage 無料デモ。テキスト、URL、X投稿から画像を生成。</div></div>
+            <div class="system-row"><div class="system-file">uimagev.php</div><div class="system-kind">Viewer</div><div class="system-desc">UImage 生成画像の公開ビューア兼RSS配信ページ。</div></div>
+            <div class="system-row"><div class="system-file">umedia.php</div><div class="system-kind">Public</div><div class="system-desc">UMedia。X投稿の画像・動画を含めてAIが考察するシステム。</div></div>
+            <div class="system-row"><div class="system-file">umediav.php</div><div class="system-kind">Viewer</div><div class="system-desc">UMedia の保存済みコンテンツを一覧・詳細表示するビューア。</div></div>
+            <div class="system-row"><div class="system-file">uparse.php</div><div class="system-kind">Public</div><div class="system-desc">UParse。投稿文の構文解析と例文生成を行うシステム。</div></div>
+            <div class="system-row"><div class="system-file">uparsev.php</div><div class="system-kind">Viewer</div><div class="system-desc">UParse 結果のビューア。</div></div>
+            <div class="system-row"><div class="system-file">updf2md.php</div><div class="system-kind">Demo</div><div class="system-desc">UPDF2MD のWeb UI。PDF to Markdown と universal Markdown conversion の導線ページ。</div></div>
+            <div class="system-row"><div class="system-file">usong.php</div><div class="system-kind">Public</div><div class="system-desc">USong。X投稿や話題からAI作詞を行うシステム。</div></div>
+            <div class="system-row"><div class="system-file">usongv.php</div><div class="system-kind">Viewer</div><div class="system-desc">USong 結果のビューア。</div></div>
+            <div class="system-row"><div class="system-file">ustory.php</div><div class="system-kind">Public</div><div class="system-desc">UStory。X投稿を短編小説へ再構成するシステム。</div></div>
+            <div class="system-row"><div class="system-file">ustoryv.php</div><div class="system-kind">Viewer</div><div class="system-desc">UStory の保存済み作品を表示するビューア。</div></div>
+            <div class="system-row"><div class="system-file">xauth.php</div><div class="system-kind">Core</div><div class="system-desc">X OAuth 認証まわりを扱う共通認証システム。</div></div>
+            <div class="system-row"><div class="system-file">xinsight.php</div><div class="system-kind">Public</div><div class="system-desc">XInsight。X投稿に対する深いAI考察を返すシステム。</div></div>
+            <div class="system-row"><div class="system-file">xinsightv.php</div><div class="system-kind">Viewer</div><div class="system-desc">XInsight の生成結果ビューア。</div></div>
+            <div class="system-row"><div class="system-file">xview.php</div><div class="system-kind">Public</div><div class="system-desc">X投稿や関連コンテンツを表示・確認する補助ビューア。</div></div>
+            <div class="system-row"><div class="system-file">zenn2oss.php</div><div class="system-kind">Public</div><div class="system-desc">Zenn と OSS の接続を扱う補助システム。知識導線の拡張用。</div></div>
         </div>
     </div>
 

@@ -793,7 +793,7 @@ h1 {
             <p>
                 `updf2md` は、アップロードした PDF を Markdown に変換する公開デモです。
                 テキストベース PDF は高速に処理し、複雑なレイアウトや OCR 必要ページの情報も一緒に返します。
-                MCP サーバーや AI ワークフローに組み込む前提で、実際の変換体験をそのまま見せるページです。
+                URL2AI エコシステムの flagship product のひとつとして、MCP サーバーや AI ワークフローに組み込む前提で、実際の変換体験をそのまま見せるページです。
             </p>
         </section>
         <aside class="hero-side">
@@ -808,11 +808,13 @@ h1 {
                 <h3>Hosted MCP / x402 Endpoint</h3>
                 <p>
                     このページは無料デモですが、UPDF2MD 自体は hosted MCP / paid API としても公開しています。
-                    `pdf_url` を渡すだけで PDF to Markdown 変換ができる x402 endpoint を用意しており、document extraction や agent workflow にそのまま組み込めます。
+                    `pdf_url` を渡す PDF to Markdown 変換だけでなく、`ticker` を渡して Markdown 投資レポートを生成する Bankr x402 AI エージェントとしても使えます。
+                    document extraction や agent workflow にそのまま組み込める構成です。
                 </p>
                 <ul>
                     <li>Free demo for humans</li>
                     <li>Hosted endpoint for MCP / agents</li>
+                    <li>`mode: ticker` で FinReport 系の Markdown レポート生成にも対応</li>
                     <li>Pay-per-request via Bankr x402 Cloud</li>
                 </ul>
             </div>
@@ -864,12 +866,14 @@ h1 {
             </div>
             <div class="promo-note">
                 Web デモは無料で試せます。継続利用やエージェント連携を行う場合は、URL2AI の hosted MCP / paid API を利用する想定です。
+                PDF 変換はこのページで、Markdown 投資レポートは <a href="<?php echo udm_escape(AIGM_BASE_URL . '/finreport.php'); ?>">FinReport</a> で無料確認できます。
                 MCP 利用者は Bankr docs から x402 Cloud / CLI の導線を確認し、その後 hosted endpoint へ接続してください。
             </div>
             <div class="pricing-box">
                 <h3>Pricing</h3>
                 <ul>
                     <li>Web demo: free</li>
+                    <li>FinReport web demo: free</li>
                     <li>Hosted MCP / x402 endpoint: paid</li>
                     <li>Current price: 0.001 USDC per request</li>
                     <li>Billing is handled by Bankr x402 and the client receives a 402 Payment Required challenge before execution</li>
@@ -879,6 +883,7 @@ h1 {
                 <h3>For MCP Users</h3>
                 <ol>
                     <li>このページで PDF to Markdown の変換結果を確認する</li>
+                    <li><a href="<?php echo udm_escape(AIGM_BASE_URL . '/finreport.php'); ?>">FinReport</a> で `ticker` / 企業名からの Markdown レポート出力を確認する</li>
                     <li><a href="https://docs.bankr.bot/" target="_blank" rel="noopener">Bankr Docs</a> から x402 Cloud / CLI の流れを確認する</li>
                     <li>URL2AI の hosted endpoint を MCP サーバーや agent workflow へ接続する</li>
                 </ol>
@@ -895,8 +900,13 @@ bankr x402 schema https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021ee
 bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md \
   -X POST \
   -H 'content-type: application/json' \
-  -d '{"pdf_url":"https://example.com/document.pdf"}'</div>
+  -d '{"pdf_url":"https://example.com/document.pdf"}'
+bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md \
+  -X POST \
+  -H 'content-type: application/json' \
+  -d '{"mode":"ticker","ticker":"NVIDIA"}'</div>
             <div class="submit-row" style="margin-top:14px;">
+                <a class="ghost" href="<?php echo udm_escape(AIGM_BASE_URL . '/finreport.php'); ?>">FinReport Demo</a>
                 <a class="ghost" href="https://docs.bankr.bot/" target="_blank" rel="noopener">Bankr Docs</a>
                 <a class="ghost" href="https://github.com/katsushi2441/url2ai" target="_blank" rel="noopener">URL2AI on GitHub</a>
             </div>
