@@ -6,7 +6,7 @@ Turn any URL into AI-generated content including stories, debates, lyrics, and i
 
 - Overview Page: [url2ai.html](https://aiknowledgecms.exbridge.jp/url2ai.html)
 - Ecosystem Portal: [knowradar.php](https://aiknowledgecms.exbridge.jp/knowradar.php)
-- UPDF2MD Demo: [updf2md.php](https://aiknowledgecms.exbridge.jp/updf2md.php)
+- FinReport Demo: [finreport.php](https://aiknowledgecms.exbridge.jp/finreport.php)
 - UImage Generator: [uimage.php](https://aiknowledgecms.exbridge.jp/uimage.php)
 - UImage Viewer: [uimagev.php](https://aiknowledgecms.exbridge.jp/uimagev.php)
 - URL2AI Token: [Bankr launch page](https://bankr.bot/launches/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3)
@@ -17,7 +17,9 @@ URL2AI also ships hosted MCP-ready endpoints for agent workflows. The current li
 
 If you see the `URL2AI` token referenced in Bankr or project materials, it represents the broader URL2AI ecosystem rather than a single product. `UPDF2MD` is one flagship product inside that ecosystem alongside UStory, UParse, UDebate, UMedia, XInsight, KnowRadar, and other URL-native AI tools.
 
-- Free Web demo: [UPDF2MD Demo](https://aiknowledgecms.exbridge.jp/updf2md.php)
+- Free Web demos:
+  - [FinReport](https://aiknowledgecms.exbridge.jp/finreport.php)
+  - [UImage](https://aiknowledgecms.exbridge.jp/uimage.php)
 - Bankr docs: [docs.bankr.bot](https://docs.bankr.bot/)
 - URL2AI token launch: [bankr.bot/launches/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3](https://bankr.bot/launches/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3)
 - Token address: `0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3`
@@ -89,7 +91,7 @@ URL2AI is an AI engine that transforms X (Twitter) post URLs and web URLs into m
 | 📚 OSSZenn | OSS × Zenn | Matches GitHub OSS with related Zenn articles |
 | 📰 AI News Radar | News analysis | Analyzes X news posts together with linked articles |
 | 🌐 KnowRadar | Portal | Unified portal showing all modules with RSS feeds |
-| 📄 UPDF2MD | PDF to Markdown | Public demo + hosted MCP / paid API for PDF-to-Markdown conversion |
+| 📄 UPDF2MD | Markdown conversion | Hosted MCP / paid API for PDF-to-Markdown and ticker-to-Markdown conversion |
 | 🎨 UImage | Image generation | Generates an image from an X post URL with admin-side generation and a public viewer + RSS |
 
 UImage is the web interface for the URL2AI ERNIE Image API, powered by ERNIE-Image-Turbo (Apache 2.0) and hosted on a local RTX 3090 for low-latency image generation. It is built for URL-to-image workflows from X posts, with a public viewer, RSS distribution, reusable social posting assets, and a live Bankr x402 endpoint for AI agents.
