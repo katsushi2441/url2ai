@@ -201,8 +201,177 @@ function fr_save($ticker, $data) {
     file_put_contents(fr_data_file($ticker), json_encode($data, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT));
 }
 
+function fr_find_latest_file($ticker) {
+    global $DATA_DIR;
+    $slug  = fr_slug($ticker);
+    $files = glob($DATA_DIR . '/finreport_' . $slug . '_*.json');
+    if (!$files) $files = array();
+    $old = $DATA_DIR . '/finreport_' . $slug . '.json';
+    if (file_exists($old)) $files[] = $old;
+    if (empty($files)) return null;
+    rsort($files);
+    return $files[0];
+}
+
+function fr_update_latest($ticker, $updates) {
+    $path = fr_find_latest_file($ticker);
+    if (!$path || !is_array($updates)) return false;
+    $data = fr_read_json_file($path);
+    if (!$data) return false;
+    foreach ($updates as $key => $value) {
+        $data[$key] = $value;
+    }
+    file_put_contents($path, json_encode($data, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT));
+    return $data;
+}
+
+function fr_json_response($data, $status_code) {
+    http_response_code($status_code);
+    header('Content-Type: application/json; charset=UTF-8');
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    exit;
+}
+
+function fr_read_json_file($path) {
+    if (!is_file($path)) return null;
+    $raw = @file_get_contents($path);
+    if ($raw === false || $raw === '') return null;
+    $data = json_decode($raw, true);
+    if (!is_array($data) || empty($data['report'])) return null;
+    return $data;
+}
+
+function fr_created_ts($item) {
+    if (!empty($item['created_at'])) {
+        $ts = strtotime($item['created_at']);
+        if ($ts !== false) return $ts;
+    }
+    return time();
+}
+
+function fr_load_all_reports($with_report, $limit, $since_ts) {
+    global $DATA_DIR, $BASE_URL;
+    $files = glob($DATA_DIR . '/finreport_*.json');
+    if (!$files) $files = array();
+    rsort($files);
+
+    $items = array();
+    foreach ($files as $path) {
+        $data = fr_read_json_file($path);
+        if (!$data) continue;
+
+        $created_ts = fr_created_ts($data);
+        if ($since_ts > 0 && $created_ts <= $since_ts) continue;
+
+        $ticker = isset($data['ticker']) ? trim($data['ticker']) : '';
+        if ($ticker === '') continue;
+
+        $item = array(
+            'id'         => fr_slug($ticker) . '-' . date('YmdHis', $created_ts),
+            'ticker'     => $ticker,
+            'slug'       => fr_slug($ticker),
+            'summary'    => isset($data['summary']) ? $data['summary'] : '',
+            'sources'    => isset($data['sources']) && is_array($data['sources']) ? $data['sources'] : array(),
+            'created_at' => date('c', $created_ts),
+            'created_ts' => $created_ts,
+            'detail_url' => $BASE_URL . '/finreportv.php?ticker=' . urlencode($ticker),
+            'paragraph_url' => isset($data['paragraph_url']) ? $data['paragraph_url'] : '',
+            'paragraph_post_id' => isset($data['paragraph_post_id']) ? $data['paragraph_post_id'] : '',
+            'paragraph_posted_at' => isset($data['paragraph_posted_at']) ? $data['paragraph_posted_at'] : '',
+        );
+        if ($with_report) {
+            $item['report'] = isset($data['report']) ? $data['report'] : '';
+        }
+        $items[] = $item;
+        if ($limit > 0 && count($items) >= $limit) break;
+    }
+    return $items;
+}
+
 $flash_error = isset($_SESSION['fr_flash_error']) ? $_SESSION['fr_flash_error'] : '';
 if (isset($_SESSION['fr_flash_error'])) unset($_SESSION['fr_flash_error']);
+
+if (isset($_GET['api']) && $_GET['api'] !== '') {
+    $api = trim($_GET['api']);
+    if ($api === 'recent') {
+        $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 20;
+        if ($limit < 1) $limit = 20;
+        if ($limit > 100) $limit = 100;
+        $with_report = !empty($_GET['with_report']) && $_GET['with_report'] !== '0';
+        $since_ts = isset($_GET['since']) ? (int) $_GET['since'] : 0;
+        $items = fr_load_all_reports($with_report, $limit, $since_ts);
+        fr_json_response(array(
+            'ok'          => true,
+            'count'       => count($items),
+            'generated_at'=> date('c'),
+            'items'       => $items,
+        ), 200);
+    }
+
+    if ($api === 'detail') {
+        $ticker = isset($_GET['ticker']) ? trim($_GET['ticker']) : '';
+        if ($ticker === '') {
+            fr_json_response(array('ok' => false, 'error' => 'ticker is required'), 400);
+        }
+        $saved = fr_load($ticker);
+        if (!$saved) {
+            fr_json_response(array('ok' => false, 'error' => 'report not found'), 404);
+        }
+        $created_ts = fr_created_ts($saved);
+        fr_json_response(array(
+            'ok' => true,
+            'item' => array(
+                'id'         => fr_slug($ticker) . '-' . date('YmdHis', $created_ts),
+                'ticker'     => $saved['ticker'],
+                'slug'       => fr_slug($saved['ticker']),
+                'summary'    => isset($saved['summary']) ? $saved['summary'] : '',
+                'report'     => isset($saved['report']) ? $saved['report'] : '',
+                'sources'    => isset($saved['sources']) && is_array($saved['sources']) ? $saved['sources'] : array(),
+                'created_at' => date('c', $created_ts),
+                'created_ts' => $created_ts,
+                'detail_url' => $BASE_URL . '/finreportv.php?ticker=' . urlencode($saved['ticker']),
+                'paragraph_url' => isset($saved['paragraph_url']) ? $saved['paragraph_url'] : '',
+                'paragraph_post_id' => isset($saved['paragraph_post_id']) ? $saved['paragraph_post_id'] : '',
+                'paragraph_posted_at' => isset($saved['paragraph_posted_at']) ? $saved['paragraph_posted_at'] : '',
+            ),
+        ), 200);
+    }
+
+    if ($api === 'mark_paragraph') {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            fr_json_response(array('ok' => false, 'error' => 'POST required'), 405);
+        }
+        $raw = file_get_contents('php://input');
+        $body = json_decode($raw, true);
+        if (!is_array($body)) {
+            fr_json_response(array('ok' => false, 'error' => 'invalid json'), 400);
+        }
+        $ticker = isset($body['ticker']) ? trim($body['ticker']) : '';
+        $paragraph_url = isset($body['paragraph_url']) ? trim($body['paragraph_url']) : '';
+        $paragraph_post_id = isset($body['paragraph_post_id']) ? trim((string)$body['paragraph_post_id']) : '';
+        if ($ticker === '' || ($paragraph_url === '' && $paragraph_post_id === '')) {
+            fr_json_response(array('ok' => false, 'error' => 'ticker and paragraph_url or paragraph_post_id are required'), 400);
+        }
+        $updated = fr_update_latest($ticker, array(
+            'paragraph_url' => $paragraph_url,
+            'paragraph_post_id' => $paragraph_post_id,
+            'paragraph_posted_at' => date('c'),
+        ));
+        if (!$updated) {
+            fr_json_response(array('ok' => false, 'error' => 'report not found'), 404);
+        }
+        fr_json_response(array(
+            'ok' => true,
+            'ticker' => $updated['ticker'],
+            'paragraph_url' => $updated['paragraph_url'],
+            'paragraph_post_id' => isset($updated['paragraph_post_id']) ? $updated['paragraph_post_id'] : '',
+            'paragraph_posted_at' => isset($updated['paragraph_posted_at']) ? $updated['paragraph_posted_at'] : '',
+        ), 200);
+    }
+
+    fr_json_response(array('ok' => false, 'error' => 'unknown api'), 404);
+}
 
 $ticker      = '';
 $saved       = null;

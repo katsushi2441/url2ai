@@ -1,0 +1,19 @@
+[Unit]
+Description=FinReport to Paragraph Watcher
+After=network.target
+
+[Service]
+Type=simple
+User=kojima
+WorkingDirectory=/home/kojima/work/url2ai/src
+Environment=FINREP2PG_STATUS=published
+Environment=FINREP2PG_INTERVAL=300
+EnvironmentFile=-/home/kojima/work/url2ai/src/finrep2pg.env
+ExecStart=/usr/bin/python3 /home/kojima/work/url2ai/src/finrep2pg.py --status ${FINREP2PG_STATUS} --interval ${FINREP2PG_INTERVAL}
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/kojima/finrep2pg.log
+StandardError=append:/home/kojima/finrep2pg.log
+
+[Install]
+WantedBy=multi-user.target

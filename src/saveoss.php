@@ -355,20 +355,19 @@ if ($action === 'manual_register') {
 if ($action === 'paragraph_update') {
     $post_id      = isset($input['id'])            ? trim($input['id'])            : '';
     $para_url     = isset($input['paragraph_url']) ? trim($input['paragraph_url']) : '';
-    if (!$post_id || !$para_url) {
+    $para_post_id = isset($input['paragraph_post_id']) ? trim((string)$input['paragraph_post_id']) : '';
+    if (!$post_id || (!$para_url && !$para_post_id)) {
         http_response_code(400);
-        echo json_encode(array('error' => 'id and paragraph_url required'));
+        echo json_encode(array('error' => 'id and paragraph_url or paragraph_post_id required'));
         exit;
     }
-    $posts = array();
-    if (file_exists($DATA_FILE)) {
-        $posts = json_decode(file_get_contents($DATA_FILE), true);
-        if (!$posts) $posts = array();
-    }
+    $posts = oss_load_all_posts();
     $found = false;
     foreach ($posts as &$p) {
         if ($p['id'] === $post_id) {
             $p['paragraph_url'] = $para_url;
+            $p['paragraph_post_id'] = $para_post_id;
+            oss_save_post($p);
             $found = true;
             break;
         }
@@ -379,7 +378,6 @@ if ($action === 'paragraph_update') {
         echo json_encode(array('error' => 'post not found'));
         exit;
     }
-    file_put_contents($DATA_FILE, json_encode($posts, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     echo json_encode(array('status' => 'ok'));
     exit;
 }
@@ -404,11 +402,7 @@ if ($action === 'paragraph_post') {
         echo json_encode(array('error' => 'PARAGRAPH_API_KEY not configured'));
         exit;
     }
-    $posts = array();
-    if (file_exists($DATA_FILE)) {
-        $posts = json_decode(file_get_contents($DATA_FILE), true);
-        if (!$posts) $posts = array();
-    }
+    $posts = oss_load_all_posts();
     $target = null;
     foreach ($posts as $p) {
         if ($p['id'] === $post_id) { $target = $p; break; }
@@ -451,9 +445,10 @@ if ($action === 'paragraph_post') {
     ));
     $res     = @file_get_contents('https://public.api.paragraph.com/api/v1/posts', false, stream_context_create($opts));
     $res_arr = $res ? json_decode($res, true) : array();
-    $para_url = isset($res_arr['url']) ? $res_arr['url'] : (isset($res_arr['id']) ? $res_arr['id'] : '');
+    $para_url = isset($res_arr['url']) ? $res_arr['url'] : '';
+    $para_post_id = isset($res_arr['id']) ? (string)$res_arr['id'] : (isset($res_arr['postId']) ? (string)$res_arr['postId'] : '');
 
-    if (!$para_url) {
+    if (!$para_url && !$para_post_id) {
         http_response_code(500);
         echo json_encode(array('error' => 'Paragraph API failed', 'detail' => $res_arr));
         exit;
@@ -463,12 +458,17 @@ if ($action === 'paragraph_post') {
     foreach ($posts as &$p) {
         if ($p['id'] === $post_id) {
             $p['paragraph_url'] = $para_url;
+            $p['paragraph_post_id'] = $para_post_id;
+            oss_save_post($p);
             break;
         }
     }
     unset($p);
-    file_put_contents($DATA_FILE, json_encode($posts, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-    echo json_encode(array('status' => 'ok', 'paragraph_url' => $para_url), JSON_UNESCAPED_UNICODE);
+    echo json_encode(array(
+        'status' => 'ok',
+        'paragraph_url' => $para_url,
+        'paragraph_post_id' => $para_post_id,
+    ), JSON_UNESCAPED_UNICODE);
     exit;
 }
 
