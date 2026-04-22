@@ -351,6 +351,150 @@ if ($action === 'manual_register') {
     exit;
 }
 
+// ========== Paragraph URL更新（Pythonワーカーから） ==========
+if ($action === 'paragraph_update') {
+    $post_id      = isset($input['id'])            ? trim($input['id'])            : '';
+    $para_url     = isset($input['paragraph_url']) ? trim($input['paragraph_url']) : '';
+    if (!$post_id || !$para_url) {
+        http_response_code(400);
+        echo json_encode(array('error' => 'id and paragraph_url required'));
+        exit;
+    }
+    $posts = array();
+    if (file_exists($DATA_FILE)) {
+        $posts = json_decode(file_get_contents($DATA_FILE), true);
+        if (!$posts) $posts = array();
+    }
+    $found = false;
+    foreach ($posts as &$p) {
+        if ($p['id'] === $post_id) {
+            $p['paragraph_url'] = $para_url;
+            $found = true;
+            break;
+        }
+    }
+    unset($p);
+    if (!$found) {
+        http_response_code(404);
+        echo json_encode(array('error' => 'post not found'));
+        exit;
+    }
+    file_put_contents($DATA_FILE, json_encode($posts, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+    echo json_encode(array('status' => 'ok'));
+    exit;
+}
+
+// ========== Paragraphへ投稿（管理画面から） ==========
+if ($action === 'paragraph_post') {
+    session_start();
+    $session_user = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
+    if ($session_user !== $ADMIN) {
+        http_response_code(403);
+        echo json_encode(array('error' => 'unauthorized'));
+        exit;
+    }
+    $post_id = isset($input['id']) ? trim($input['id']) : '';
+    if (!$post_id) {
+        http_response_code(400);
+        echo json_encode(array('error' => 'id required'));
+        exit;
+    }
+    if (!PARAGRAPH_API_KEY) {
+        http_response_code(500);
+        echo json_encode(array('error' => 'PARAGRAPH_API_KEY not configured'));
+        exit;
+    }
+    $posts = array();
+    if (file_exists($DATA_FILE)) {
+        $posts = json_decode(file_get_contents($DATA_FILE), true);
+        if (!$posts) $posts = array();
+    }
+    $target = null;
+    foreach ($posts as $p) {
+        if ($p['id'] === $post_id) { $target = $p; break; }
+    }
+    if (!$target) {
+        http_response_code(404);
+        echo json_encode(array('error' => 'post not found'));
+        exit;
+    }
+
+    // Ollamaで記事生成
+    $title   = isset($target['title'])      ? $target['title']      : '';
+    $github  = isset($target['github_url']) ? $target['github_url'] : '';
+    $context = isset($target['analysis'])   ? $target['analysis']   : '';
+
+    $title_prompt = "Write one concise English title for a technical OSS article on Paragraph.xyz.\n- 90 characters or fewer\n- Clear and technical, not clickbait\n- Output title only\n\nOSS: {$title}\nGitHub: {$github}";
+    $para_title = call_ollama($title_prompt);
+    if (!$para_title) $para_title = $title;
+
+    $content_prompt = "Write an English Markdown article about the following OSS for engineers (500-900 words).\nSections: ## What It Does / ## Why It Matters / ## Key Technical Points / ## When To Use It / ## Final Thoughts\nAdd GitHub link near end. No hashtags. Calm technical tone.\n\nOSS: {$title}\nGitHub: {$github}\nContext:\n{$context}";
+    $para_content = call_ollama($content_prompt);
+    if (!$para_content) {
+        http_response_code(500);
+        echo json_encode(array('error' => 'Ollama content generation failed'));
+        exit;
+    }
+
+    // Paragraph API呼び出し
+    $payload = json_encode(array(
+        'title'    => $para_title,
+        'markdown' => $para_content,
+        'status'   => 'published',
+    ), JSON_UNESCAPED_UNICODE);
+    $opts = array('http' => array(
+        'method'        => 'POST',
+        'header'        => "Authorization: Bearer " . PARAGRAPH_API_KEY . "\r\nContent-Type: application/json\r\n",
+        'content'       => $payload,
+        'timeout'       => 60,
+        'ignore_errors' => true,
+    ));
+    $res     = @file_get_contents('https://public.api.paragraph.com/api/v1/posts', false, stream_context_create($opts));
+    $res_arr = $res ? json_decode($res, true) : array();
+    $para_url = isset($res_arr['url']) ? $res_arr['url'] : (isset($res_arr['id']) ? $res_arr['id'] : '');
+
+    if (!$para_url) {
+        http_response_code(500);
+        echo json_encode(array('error' => 'Paragraph API failed', 'detail' => $res_arr));
+        exit;
+    }
+
+    // paragraph_urlをJSONに保存
+    foreach ($posts as &$p) {
+        if ($p['id'] === $post_id) {
+            $p['paragraph_url'] = $para_url;
+            break;
+        }
+    }
+    unset($p);
+    file_put_contents($DATA_FILE, json_encode($posts, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+    echo json_encode(array('status' => 'ok', 'paragraph_url' => $para_url), JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// ========== 重複チェック ==========
+if ($action === 'check') {
+    $url = isset($input['github_url']) ? trim($input['github_url']) : '';
+    if (!$url) {
+        http_response_code(400);
+        echo json_encode(array('error' => 'github_url required'));
+        exit;
+    }
+    $posts = array();
+    if (file_exists($DATA_FILE)) {
+        $posts = json_decode(file_get_contents($DATA_FILE), true);
+        if (!$posts) $posts = array();
+    }
+    foreach ($posts as $p) {
+        if ($p['github_url'] === $url) {
+            echo json_encode(array('exists' => true));
+            exit;
+        }
+    }
+    echo json_encode(array('exists' => false));
+    exit;
+}
+
 // ========== 登録（Pythonワーカーから・actionなし） ==========
 if ($action !== '') {
     http_response_code(400);

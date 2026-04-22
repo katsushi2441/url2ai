@@ -58,3 +58,6 @@ define('AIGM_GTAG_ID',       isset($_aigm_config['site']['gtag_id'])       ? $_a
 
 /* FinReport */
 define('FINREPORT_API', isset($_aigm_config['finreport']['api_url']) ? $_aigm_config['finreport']['api_url'] : 'http://exbridge.ddns.net:8013/report');
+
+/* Paragraph */
+define('PARAGRAPH_API_KEY', isset($_aigm_config['paragraph']['api_key']) ? $_aigm_config['paragraph']['api_key'] : '');

@@ -3,55 +3,7 @@ require_once __DIR__ . '/config.php';
 date_default_timezone_set('Asia/Tokyo');
 header('Content-Type: application/json; charset=UTF-8');
 
-define('DATA_DIR',  __DIR__ . '/data');
-define('DATA_FILE', DATA_DIR . '/ainews_posts.json'); // 旧形式（移行用）
-
-function an_normalize_utf8_text($text) {
-    if (!is_string($text) || $text === '') {
-        return '';
-    }
-    if (!mb_check_encoding($text, 'UTF-8')) {
-        $converted = @mb_convert_encoding($text, 'UTF-8', 'UTF-8, SJIS-win, EUC-JP, ISO-2022-JP, ASCII');
-        if (is_string($converted) && $converted !== '') {
-            $text = $converted;
-        }
-    }
-    $text = @iconv('UTF-8', 'UTF-8//IGNORE', $text);
-    if ($text === false) {
-        return '';
-    }
-    return preg_replace('/\p{C}+/u', ' ', $text);
-}
-
-function an_post_file($id) {
-    return DATA_DIR . '/ainews_' . preg_replace('/[^a-zA-Z0-9]/', '', $id) . '.json';
-}
-
-function an_load_all_posts() {
-    $posts = array();
-    $files = glob(DATA_DIR . '/ainews_*.json');
-    if ($files) {
-        foreach ($files as $f) {
-            $p = json_decode(file_get_contents($f), true);
-            if (is_array($p) && !empty($p['id'])) {
-                $posts[] = $p;
-            }
-        }
-    }
-    if (file_exists(DATA_FILE)) {
-        $old = json_decode(file_get_contents(DATA_FILE), true);
-        if (is_array($old)) {
-            $existing_ids = array();
-            foreach ($posts as $p) { $existing_ids[$p['id']] = true; }
-            foreach ($old as $p) {
-                if (is_array($p) && !empty($p['id']) && !isset($existing_ids[$p['id']])) {
-                    $posts[] = $p;
-                }
-            }
-        }
-    }
-    return $posts;
-}
+define('DATA_FILE', __DIR__ . '/data/ainews_posts.json');
 
 session_start();
 $session_user = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
@@ -64,25 +16,25 @@ $input     = json_decode(file_get_contents('php://input'), true);
 if (!$input) { $input = array(); }
 $action    = isset($input['action'])    ? $input['action']          : '';
 $tweet_url = isset($input['tweet_url']) ? trim($input['tweet_url']) : '';
-$post_id   = isset($input['post_id'])   ? trim($input['post_id'])   : '';
 
-if (!in_array($action, array('register', 'reanalyze')) || $tweet_url === '') {
+if ($action !== 'register' || $tweet_url === '') {
     echo json_encode(array('status' => 'error', 'error' => '無効なリクエスト'));
     exit;
 }
 
-/* 再考察モード：既存データを保持しつつollamaのみ再実行 */
-$existing_post = null;
-foreach (an_load_all_posts() as $p) {
-    if (isset($p['tweet_url']) && $p['tweet_url'] === $tweet_url) {
-        $existing_post = $p;
-        break;
-    }
+/* 既存データ読み込み */
+$posts = array();
+if (file_exists(DATA_FILE)) {
+    $posts = json_decode(file_get_contents(DATA_FILE), true);
+    if (!is_array($posts)) { $posts = array(); }
 }
 
-if ($action === 'register' && $existing_post) {
-    echo json_encode(array('status' => 'duplicate', 'title' => isset($existing_post['title']) ? $existing_post['title'] : $tweet_url));
-    exit;
+/* 重複チェック */
+foreach ($posts as $p) {
+    if (isset($p['tweet_url']) && $p['tweet_url'] === $tweet_url) {
+        echo json_encode(array('status' => 'duplicate', 'title' => isset($p['title']) ? $p['title'] : $tweet_url));
+        exit;
+    }
 }
 
 /* fxtwitter でX投稿取得 */
@@ -209,21 +161,14 @@ $prompt = "以下はX投稿と記事内容です。
 $payload = json_encode(array(
     'model'   => OLLAMA_MODEL,
     'prompt'  => $prompt,
-    'stream'  => false,
-    'options' => array(
-        'num_ctx'     => 4096,
-        'temperature' => 0.4,
-        'top_k'       => 40,
-        'top_p'       => 0.9,
-    )
+    'stream'  => false
 ), JSON_UNESCAPED_UNICODE);
 
 $ollama_opts = array('http' => array(
     'method'  => 'POST',
     'header'  => "Content-Type: application/json\r\n",
     'content' => $payload,
-    'timeout' => 120,
-    'ignore_errors' => true
+    'timeout' => 120
 ));
 
 $res = @file_get_contents(OLLAMA_API, false, stream_context_create($ollama_opts));
@@ -233,12 +178,10 @@ $tags    = array();
 
 if ($res) {
     $data = json_decode($res, true);
-    $response = isset($data['response']) ? an_normalize_utf8_text(trim($data['response'])) : '';
+    $response = isset($data['response']) ? trim($data['response']) : '';
 
     if (preg_match('/考察[:：]\s*(.+?)(?=タグ[:：]|$)/su', $response, $sm)) {
-        $summary = an_normalize_utf8_text(trim($sm[1]));
-    } else {
-        $summary = an_normalize_utf8_text(mb_substr($response, 0, 400));
+        $summary = trim($sm[1]);
     }
 
     if (preg_match('/タグ[:：]\s*(.+)/u', $response, $tm2)) {
@@ -255,32 +198,21 @@ if ($summary === '') {
 }
 
 /* 保存 */
-if ($existing_post) {
-    $id    = $existing_post['id'];
-    $title = !empty($existing_post['title']) ? $existing_post['title'] : $title;
-    $new_post = array_merge($existing_post, array(
-        'summary'     => $summary,
-        'tags'        => $tags,
-        'reanalyzed_at' => date('Y-m-d H:i:s')
-    ));
-} else {
-    $id       = md5($tweet_url . date('YmdHis'));
-    $new_post = array(
-        'id'         => $id,
-        'tweet_url'  => $tweet_url,
-        'author'     => $author,
-        'title'      => $title,
-        'summary'    => $summary,
-        'tags'       => $tags,
-        'created_at' => date('Y-m-d H:i:s')
-    );
-}
+$id = md5($tweet_url . date('YmdHis'));
 
-$post_file = an_post_file($id);
-if (file_put_contents($post_file, json_encode($new_post, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX) === false) {
-    echo json_encode(array('status' => 'error', 'error' => '保存に失敗しました'));
-    exit;
-}
+$new_post = array(
+    'id'         => $id,
+    'tweet_url'  => $tweet_url,
+    'author'     => $author,
+    'title'      => $title,
+    'summary'    => $summary,
+    'tags'       => $tags,
+    'created_at' => date('Y-m-d H:i:s')
+);
+
+array_unshift($posts, $new_post);
+
+file_put_contents(DATA_FILE, json_encode($posts, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 
 echo json_encode(array('status' => 'ok', 'title' => $title), JSON_UNESCAPED_UNICODE);
 exit;

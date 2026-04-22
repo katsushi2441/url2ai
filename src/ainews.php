@@ -1,8 +1,7 @@
 <?php
 session_start();
 date_default_timezone_set('Asia/Tokyo');
-$DATA_DIR  = __DIR__ . '/data';
-$DATA_FILE = $DATA_DIR . '/ainews_posts.json'; // 旧形式（移行用）
+$DATA_FILE = __DIR__ . '/data/ainews_posts.json';
 $BASE_URL  = 'https://aiknowledgecms.exbridge.jp';
 $THIS_FILE = 'ainews.php';
 $SITE_NAME = 'AI News Radar';
@@ -70,33 +69,10 @@ $is_admin     = ($session_user === $ADMIN);
 $logged_in    = ($session_user !== '');
 
 $posts = array();
-$an_post_files = glob($DATA_DIR . '/ainews_*.json');
-if ($an_post_files) {
-    foreach ($an_post_files as $pf) {
-        $p = json_decode(file_get_contents($pf), true);
-        if (is_array($p) && !empty($p['id'])) {
-            $posts[] = $p;
-        }
-    }
-}
 if (file_exists($DATA_FILE)) {
-    $old = json_decode(file_get_contents($DATA_FILE), true);
-    if (is_array($old)) {
-        $existing_ids = array();
-        foreach ($posts as $p) { $existing_ids[$p['id']] = true; }
-        foreach ($old as $p) {
-            if (is_array($p) && !empty($p['id']) && !isset($existing_ids[$p['id']])) {
-                $posts[] = $p;
-            }
-        }
-    }
+    $posts = json_decode(file_get_contents($DATA_FILE), true);
+    if (!is_array($posts)) { $posts = array(); }
 }
-usort($posts, function($a, $b) {
-    return strcmp(
-        isset($b['created_at']) ? $b['created_at'] : '',
-        isset($a['created_at']) ? $a['created_at'] : ''
-    );
-});
 
 /* =========================================================
    RSS フィード出力 (?feed)
@@ -692,9 +668,6 @@ function renderPosts(from, to) {
             + '<div class="btn-group">'
             + '<button class="copy-btn" type="button" onclick="copyPost(' + idx + ')">コピー</button>'
             + '<a class="copy-btn" id="x-btn-' + idx + '" href="#" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;">𝕏</a>'
-            <?php if ($is_admin): ?>
-            + '<button class="copy-btn" type="button" id="reanalyze-btn-' + idx + '" onclick="reanalyzePost(' + idx + ')">🔄 再考察</button>'
-            <?php endif; ?>
             + '</div></div>'
             + '<div class="post-title"><a href="' + THIS_FILE + '?id=' + encodeURIComponent(post.id) + '">' + esc(post.title) + '</a></div>'
             + summaryHtml
@@ -809,33 +782,6 @@ function adminRegister() {
 document.getElementById('admin-url-input').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') adminRegister();
 });
-
-function reanalyzePost(idx) {
-    var post = posts[idx];
-    if (!post) return;
-    var btn = document.getElementById('reanalyze-btn-' + idx);
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ 考察中...'; }
-
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', 'saveainews.php', true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState !== 4) return;
-        if (btn) { btn.disabled = false; btn.textContent = '🔄 再考察'; }
-        try {
-            var res = JSON.parse(xhr.responseText);
-            if (res.status === 'ok') {
-                showToast('再考察完了: ' + res.title);
-                setTimeout(function() { location.reload(); }, 1200);
-            } else {
-                showToast('エラー: ' + (res.error || '不明'));
-            }
-        } catch(e) {
-            showToast('通信エラー');
-        }
-    };
-    xhr.send(JSON.stringify({ action: 'reanalyze', tweet_url: post.tweet_url }));
-}
 <?php endif; ?>
 
 function showToast(msg) {

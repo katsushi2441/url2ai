@@ -13,7 +13,6 @@ function detect_system($url){
     /* 順序重要: 長いパターンを先に */
     if(strpos($u, "uparsev") !== false || strpos($u, "uparse") !== false)      return "uparse";
     if(strpos($u, "udebate") !== false)                                          return "udebate";
-    if(strpos($u, "uimagev") !== false || strpos($u, "uimage") !== false)        return "uimage";
     if(strpos($u, "umediav") !== false || strpos($u, "umedia") !== false)        return "umedia";
     if(strpos($u, "usongv")  !== false || strpos($u, "usong")  !== false)        return "usong";
     if(strpos($u, "ustoryv") !== false || strpos($u, "ustory") !== false)        return "ustory";
@@ -39,7 +38,6 @@ $SYSTEM_META = array(
     "uparse"      => array("label" => "UParse",          "color" => "#0f766e"),
     "usong"       => array("label" => "USong",           "color" => "#db2777"),
     "umedia"      => array("label" => "UMedia",          "color" => "#0891b2"),
-    "uimage"      => array("label" => "UImage",          "color" => "#fb7185"),
     "udebate"     => array("label" => "UDebate",         "color" => "#6d28d9"),
     "xinsight"    => array("label" => "XInsight",        "color" => "#2563eb"),
     "xview"       => array("label" => "XView",           "color" => "#0f766e"),

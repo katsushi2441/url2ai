@@ -533,6 +533,34 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
 }
 .detail-x-btn:hover { background: #333; }
 
+.para-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    color: #166534;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.para-badge:hover { background: #dcfce7; }
+.para-post-btn {
+    background: none;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+.para-post-btn:hover { border-color: #16a34a; color: #16a34a; }
+.para-post-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 #copy-toast {
     position: fixed;
     bottom: 30px;
@@ -741,6 +769,7 @@ if ($filter_tag) {
 <script>
 var posts    = <?php echo json_encode(array_values($filtered_posts), JSON_UNESCAPED_UNICODE); ?>;
 var BASE_URL = '<?php echo $BASE_URL; ?>';
+var IS_ADMIN = <?php echo $is_admin ? 'true' : 'false'; ?>;
 var PAGE_SIZE = 30;
 var currentPage = 0;
 
@@ -769,6 +798,7 @@ function renderPosts(from, to) {
             + '<div class="btn-group">'
             + '<button class="copy-btn" onclick="copyPost(' + idx + ')">コピー</button>'
             + '<a class="x-btn" id="x-btn-' + idx + '" href="#" target="_blank" rel="noopener">𝕏</a>'
+            + buildParaBtn(post, idx)
             + '</div></div>'
             + '<div class="post-title"><a href="oss.php?id=' + encodeURIComponent(post.id) + '">' + esc(post.title) + '</a></div>'
             + postText
@@ -921,6 +951,47 @@ document.getElementById('admin-url-input').addEventListener('keydown', function(
     if (e.key === 'Enter') adminRegister();
 });
 <?php endif; ?>
+
+function buildParaBtn(post, idx) {
+    if (post.paragraph_url) {
+        return '<a class="para-badge" href="' + esc(post.paragraph_url) + '" target="_blank" rel="noopener">✅ Paragraph</a>';
+    }
+    if (IS_ADMIN) {
+        return '<button class="para-post-btn" id="para-btn-' + idx + '" onclick="paraPost(' + idx + ')">📝 Paragraph</button>';
+    }
+    return '';
+}
+
+function paraPost(idx) {
+    var post = posts[idx];
+    if (!post) return;
+    var btn = document.getElementById('para-btn-' + idx);
+    btn.disabled = true;
+    btn.textContent = '生成中...';
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', 'saveoss.php', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState !== 4) return;
+        try {
+            var res = JSON.parse(xhr.responseText);
+            if (res.status === 'ok' && res.paragraph_url) {
+                post.paragraph_url = res.paragraph_url;
+                btn.outerHTML = '<a class="para-badge" href="' + esc(res.paragraph_url) + '" target="_blank" rel="noopener">✅ Paragraph</a>';
+                showToast('Paragraphに投稿しました');
+            } else {
+                btn.disabled = false;
+                btn.textContent = '📝 Paragraph';
+                showToast('投稿失敗: ' + (res.error || '不明'));
+            }
+        } catch(e) {
+            btn.disabled = false;
+            btn.textContent = '📝 Paragraph';
+            showToast('通信エラー');
+        }
+    };
+    xhr.send(JSON.stringify({ action: 'paragraph_post', id: post.id }));
+}
 
 function showToast(msg) {
     var t = document.getElementById('copy-toast');
