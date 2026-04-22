@@ -14,6 +14,25 @@ TODAY = datetime.now().strftime("%Y年%m月%d日")
 YEAR = datetime.now().strftime("%Y")
 
 
+def normalize_symbol(value: str) -> str:
+    text = value.strip()
+    if text.startswith("$"):
+        text = text[1:]
+    return text.strip()
+
+
+def looks_like_crypto_symbol(value: str) -> bool:
+    raw = value.strip()
+    normalized = normalize_symbol(raw)
+    if not normalized:
+        return False
+    if raw.startswith("$"):
+        return True
+    if len(normalized) <= 6 and normalized.upper() == normalized and normalized.isalnum():
+        return True
+    return False
+
+
 REPORT_PROMPT = """\
 あなたは金融投資アナリストです。本日は{today}です。
 以下の直近1週間のWeb調査データをもとに、{ticker} の投資家向けレポートを**日本語Markdown**で作成してください。
@@ -121,14 +140,26 @@ async def scrape_url(url: str, timeout: int = 8) -> str:
 
 
 async def gather_context(ticker: str) -> tuple[str, list[str]]:
+    symbol = normalize_symbol(ticker)
     queries = [
-        f"{ticker} 最新ニュース {YEAR} 株価 業績",
-        f"{ticker} IR 決算 投資家向け情報 {YEAR}",
-        f"{ticker} site:finance.yahoo.co.jp OR site:nikkei.com {YEAR}",
-        f"{ticker} 競合比較 市場シェア トレンド {YEAR}",
-        f"{ticker} リスク 規制 課題 {YEAR}",
-        f"{ticker} cryptocurrency price analysis {YEAR}" if len(ticker) <= 6 else f"{ticker} 事業戦略 成長 {YEAR}",
+        f"{symbol} 最新ニュース {YEAR} 株価 業績",
+        f"{symbol} IR 決算 投資家向け情報 {YEAR}",
+        f"{symbol} site:finance.yahoo.co.jp OR site:nikkei.com {YEAR}",
+        f"{symbol} 競合比較 市場シェア トレンド {YEAR}",
+        f"{symbol} リスク 規制 課題 {YEAR}",
+        f"{symbol} cryptocurrency price analysis {YEAR}" if len(symbol) <= 6 else f"{symbol} 事業戦略 成長 {YEAR}",
     ]
+
+    if looks_like_crypto_symbol(ticker):
+        queries.extend(
+            [
+                f"{symbol} token Base Bankr x402 {YEAR}",
+                f"${symbol} crypto token news {YEAR}",
+                f"{symbol} bankr bot launch {YEAR}",
+                f"{symbol} project tokenomics roadmap {YEAR}",
+                f"site:bankr.bot {symbol} {YEAR}",
+            ]
+        )
 
     loop = asyncio.get_event_loop()
     search_tasks = [loop.run_in_executor(None, lambda q=query: search_web(q, max_results=5)) for query in queries]
