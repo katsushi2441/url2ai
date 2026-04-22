@@ -956,6 +956,9 @@ function buildParaBtn(post, idx) {
     if (post.paragraph_url) {
         return '<a class="para-badge" href="' + esc(post.paragraph_url) + '" target="_blank" rel="noopener">✅ Paragraph</a>';
     }
+    if (post.paragraph_post_id) {
+        return '<span class="para-badge">✅ Paragraph</span>';
+    }
     if (IS_ADMIN) {
         return '<button class="para-post-btn" id="para-btn-' + idx + '" onclick="paraPost(' + idx + ')">📝 Paragraph</button>';
     }
@@ -975,9 +978,14 @@ function paraPost(idx) {
         if (xhr.readyState !== 4) return;
         try {
             var res = JSON.parse(xhr.responseText);
-            if (res.status === 'ok' && res.paragraph_url) {
+            if (res.status === 'ok' && (res.paragraph_url || res.paragraph_post_id)) {
                 post.paragraph_url = res.paragraph_url;
-                btn.outerHTML = '<a class="para-badge" href="' + esc(res.paragraph_url) + '" target="_blank" rel="noopener">✅ Paragraph</a>';
+                post.paragraph_post_id = res.paragraph_post_id || '';
+                if (res.paragraph_url) {
+                    btn.outerHTML = '<a class="para-badge" href="' + esc(res.paragraph_url) + '" target="_blank" rel="noopener">✅ Paragraph</a>';
+                } else {
+                    btn.outerHTML = '<span class="para-badge">✅ Paragraph</span>';
+                }
                 showToast('Paragraphに投稿しました');
             } else {
                 btn.disabled = false;
