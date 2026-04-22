@@ -9,6 +9,8 @@ import pdf_inspector
 from fastapi import APIRouter, FastAPI, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
+from finreport.core import generate_report_data
+
 
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8020"))
@@ -33,6 +35,19 @@ class ConvertResponse(BaseModel):
     saved_markdown_path: str | None = None
     saved_metadata_path: str | None = None
     markdown: str | None = None
+
+
+class ReportRequest(BaseModel):
+    ticker: str
+
+
+class ReportResponse(BaseModel):
+    ok: bool
+    ticker: str
+    markdown: str
+    summary: str
+    sources: list[str]
+    generated_at: str
 
 
 def parse_pages(value: str | None) -> list[int] | None:
@@ -153,6 +168,18 @@ async def convert_pdf(
         saved_metadata_path=saved_metadata_path,
         markdown=result.markdown if include_markdown else None,
     )
+
+
+@router.post("/report", response_model=ReportResponse)
+async def generate_ticker_report(req: ReportRequest) -> ReportResponse:
+    try:
+        result = await generate_report_data(req.ticker)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    return ReportResponse(**result)
 
 
 def create_app() -> FastAPI:

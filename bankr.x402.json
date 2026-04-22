@@ -4,7 +4,7 @@
   "services": {
     "updf2md": {
       "price": "0.001",
-      "description": "PDF to Markdown conversion endpoint for MCP tools, AI agents, and document extraction workflows. Converts a public PDF URL into Markdown and returns OCR/layout metadata.",
+      "description": "Universal Markdown conversion endpoint for MCP tools and AI agents. It converts public PDF URLs or ticker symbols into agent-ready Markdown, returning OCR/layout metadata for PDFs and report context for ticker-based workflows.",
       "methods": [
         "POST"
       ],
@@ -12,9 +12,17 @@
         "input": {
           "type": "object",
           "properties": {
+            "mode": {
+              "type": "string",
+              "description": "Optional mode selector: pdf or ticker."
+            },
             "pdf_url": {
               "type": "string",
               "description": "Publicly reachable HTTP(S) URL of the PDF document to convert to Markdown."
+            },
+            "ticker": {
+              "type": "string",
+              "description": "Ticker, asset symbol, company name, or project name to turn into a Markdown investment report."
             },
             "pages": {
               "type": "string",
@@ -26,7 +34,18 @@
             }
           },
           "required": [
-            "pdf_url"
+          ],
+          "anyOf": [
+            {
+              "required": [
+                "pdf_url"
+              ]
+            },
+            {
+              "required": [
+                "ticker"
+              ]
+            }
           ]
         },
         "output": {
@@ -35,6 +54,17 @@
             "markdown": {
               "type": "string",
               "description": "Converted Markdown output."
+            },
+            "summary": {
+              "type": "string",
+              "description": "Short summary returned for ticker-based report generation."
+            },
+            "sources": {
+              "type": "array",
+              "description": "Source URLs used for ticker-based report generation.",
+              "items": {
+                "type": "string"
+              }
             },
             "pdf_type": {
               "type": "string",

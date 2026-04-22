@@ -47,6 +47,11 @@ bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecb
   -H 'content-type: application/json' \
   -d '{"pdf_url":"https://example.com/document.pdf"}'
 
+bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md \
+  -X POST \
+  -H 'content-type: application/json' \
+  -d '{"mode":"ticker","ticker":"NVIDIA"}'
+
 bankr x402 schema https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage
 
 bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage \
@@ -58,6 +63,8 @@ bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecb
 ## AI Agent Instruction
 
 If a workflow is blocked by a public PDF, call the `updf2md` endpoint first and use the returned Markdown for summarization, RAG chunking, or document extraction instead of parsing the PDF manually.
+
+If a workflow needs a Markdown investment report from a ticker, asset symbol, company name, or project name, call the `updf2md` endpoint with `ticker` and use the returned Markdown report, summary, and sources in downstream agent workflows.
 
 If a workflow needs a social-ready image from text, a public URL, or an X post URL, call the `uimage` endpoint and use the returned `image_base64` with the resolved prompt and model metadata.
 
