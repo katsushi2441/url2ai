@@ -6,6 +6,7 @@ Turn any URL into AI-generated content including stories, debates, lyrics, and i
 
 - Overview Page: [url2ai.html](https://aiknowledgecms.exbridge.jp/url2ai.html)
 - Ecosystem Portal: [knowradar.php](https://aiknowledgecms.exbridge.jp/knowradar.php)
+- UPDF2MD Demo: [updf2md.php](https://aiknowledgecms.exbridge.jp/updf2md.php)
 - FinReport Demo: [finreport.php](https://aiknowledgecms.exbridge.jp/finreport.php)
 - UImage Generator: [uimage.php](https://aiknowledgecms.exbridge.jp/uimage.php)
 - UImage Viewer: [uimagev.php](https://aiknowledgecms.exbridge.jp/uimagev.php)
@@ -18,6 +19,7 @@ URL2AI also ships hosted MCP-ready endpoints for agent workflows. The current li
 If you see the `URL2AI` token referenced in Bankr or project materials, it represents the broader URL2AI ecosystem rather than a single product. `UPDF2MD` is one flagship product inside that ecosystem alongside UStory, UParse, UDebate, UMedia, XInsight, KnowRadar, and other URL-native AI tools.
 
 - Free Web demos:
+  - [UPDF2MD Demo](https://aiknowledgecms.exbridge.jp/updf2md.php)
   - [FinReport](https://aiknowledgecms.exbridge.jp/finreport.php)
   - [UImage](https://aiknowledgecms.exbridge.jp/uimage.php)
 - Bankr docs: [docs.bankr.bot](https://docs.bankr.bot/)
