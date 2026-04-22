@@ -34,12 +34,8 @@ if (file_exists($x_keys_file)) {
         }
     }
 }
-$x_client_id     = isset($x_keys['X_API_KEY'])             ? $x_keys['X_API_KEY']             : '';
-$x_client_secret = isset($x_keys['X_API_SECRET'])          ? $x_keys['X_API_SECRET']          : '';
-$o1_key          = isset($x_keys['X_API_KEY'])              ? $x_keys['X_API_KEY']              : '';
-$o1_secret       = isset($x_keys['X_API_KEY_SECRET'])       ? $x_keys['X_API_KEY_SECRET']       : '';
-$o1_token        = isset($x_keys['X_ACCESS_TOKEN'])         ? $x_keys['X_ACCESS_TOKEN']         : '';
-$o1_token_secret = isset($x_keys['X_ACCESS_TOKEN_SECRET'])  ? $x_keys['X_ACCESS_TOKEN_SECRET']  : '';
+$x_client_id     = isset($x_keys['X_API_KEY'])    ? $x_keys['X_API_KEY']    : '';
+$x_client_secret = isset($x_keys['X_API_SECRET']) ? $x_keys['X_API_SECRET'] : '';
 $x_redirect_uri  = $BASE_URL . '/' . $THIS_FILE;
 
 function np_b64url($d){return rtrim(strtr(base64_encode($d),'+/','-_'),'=');}
@@ -60,7 +56,7 @@ if(isset($_GET['np_logout'])){session_destroy();setcookie(session_name(),'',time
 if(isset($_GET['np_login'])){
     $ver=np_verifier();$chal=np_challenge($ver);$state=md5(uniqid('',true));
     $_SESSION['np_ver']=$ver;$_SESSION['np_state']=$state;
-    $p=array('response_type'=>'code','client_id'=>$x_client_id,'redirect_uri'=>$x_redirect_uri,'scope'=>'tweet.read users.read offline.access','state'=>$state,'code_challenge'=>$chal,'code_challenge_method'=>'S256');
+    $p=array('response_type'=>'code','client_id'=>$x_client_id,'redirect_uri'=>$x_redirect_uri,'scope'=>'tweet.read tweet.write users.read offline.access','state'=>$state,'code_challenge'=>$chal,'code_challenge_method'=>'S256');
     header('Location: https://twitter.com/i/oauth2/authorize?'.http_build_query($p));exit;
 }
 if(isset($_GET['code'],$_GET['state'],$_SESSION['np_state'])&&$_GET['state']===$_SESSION['np_state']){
@@ -89,26 +85,6 @@ $is_admin     = ($session_user === $ADMIN);
 
 function h($s){return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
 
-/* OAuth1.0a */
-function np_oauth1_header($method,$url,$ok,$os,$ot,$ots){
-    $oauth=array('oauth_consumer_key'=>$ok,'oauth_nonce'=>md5(uniqid(mt_rand(),true)),'oauth_signature_method'=>'HMAC-SHA1','oauth_timestamp'=>(string)time(),'oauth_token'=>$ot,'oauth_version'=>'1.0');
-    ksort($oauth);
-    $base=$method.'&'.rawurlencode($url).'&'.rawurlencode(http_build_query($oauth));
-    $key=rawurlencode($os).'&'.rawurlencode($ots);
-    $oauth['oauth_signature']=base64_encode(hash_hmac('sha1',$base,$key,true));
-    $parts=array();foreach($oauth as $k=>$v){$parts[]=rawurlencode($k).'="'.rawurlencode($v).'"';}
-    return 'OAuth '.implode(', ',$parts);
-}
-function np_post_tweet($text,$reply_id,$quote_url,$ok,$os,$ot,$ots){
-    $url='https://api.twitter.com/2/tweets';
-    $payload=array('text'=>$text);
-    if($reply_id!==''){$payload['reply']=array('in_reply_to_tweet_id'=>$reply_id);}
-    if($quote_url!==''&&preg_match('/(\d{10,20})/',$quote_url,$m)){$payload['quote_tweet_id']=$m[1];}
-    $auth=np_oauth1_header('POST',$url,$ok,$os,$ot,$ots);
-    $opts=array('http'=>array('method'=>'POST','header'=>"Authorization: $auth\r\nContent-Type: application/json\r\nUser-Agent: NextPost/1.0\r\n",'content'=>json_encode($payload),'timeout'=>20,'ignore_errors'=>true));
-    $r=@file_get_contents($url,false,stream_context_create($opts));
-    return json_decode($r?$r:'{}',true);
-}
 
 /* 手動ネタ操作 */
 function np_item_file($id){global $DATA_DIR;return $DATA_DIR.'/nextpost_'.preg_replace('/[^a-zA-Z0-9_\-]/','',  $id).'.json';}
@@ -483,10 +459,10 @@ textarea:focus,input[type=text]:focus{border-color:var(--accent)}
 <button type="button" class="ptab" id="ptab-reply" onclick="setPT('reply')">reply</button>
 <button type="button" class="ptab" id="ptab-quote" onclick="setPT('quote')">quote</button>
 </div>
-<div id="g-reply" class="form-row" style="display:none"><label class="form-label">reply to id</label><input type="text" name="reply_to_id" placeholder="1234567890123456789"></div>
-<div id="g-quote" class="form-row" style="display:none"><label class="form-label">quote url</label><input type="text" name="quote_url" placeholder="https://x.com/..."></div>
+<div id="g-reply" class="form-row" style="display:none"><label class="form-label">reply to id</label><input type="text" id="p-reply-id" name="reply_to_id" placeholder="1234567890123456789"></div>
+<div id="g-quote" class="form-row" style="display:none"><label class="form-label">quote url</label><input type="text" id="p-quote-url" name="quote_url" placeholder="https://x.com/..."></div>
 <div class="form-row"><label class="form-label">text</label><textarea name="post_text" id="p-text" rows="6" oninput="upC('p-text','p-c')"></textarea><div class="cnt" id="p-c">0 / 280</div></div>
-<div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn-s" onclick="closeModal('m-post')">cancel</button><button type="submit" class="btn btn-g">post to X</button></div>
+<div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn-s" onclick="closeModal('m-post')">cancel</button><button type="button" class="btn btn-g" onclick="postViaIntent()">post to X</button></div>
 </form></div></div>
 
 <!-- edit modal -->
@@ -512,6 +488,18 @@ function filterSys(){var v=document.getElementById('sys-filter').value;document.
 function openPost(id,body,type,src,df){document.getElementById('p-item-id').value=id;document.getElementById('p-src').value=src;document.getElementById('p-file').value=df;document.getElementById('p-text').value=body;upC('p-text','p-c');setPT(type);openModal('m-post');}
 function setPT(t){document.getElementById('p-type').value=t;['tweet','reply','quote'].forEach(function(x){document.getElementById('ptab-'+x).className='ptab'+(x===t?' on':'');});document.getElementById('g-reply').style.display=t==='reply'?'':'none';document.getElementById('g-quote').style.display=t==='quote'?'':'none';var ti={tweet:'post to X',reply:'reply to X',quote:'quote post to X'};document.getElementById('ptitle').textContent=ti[t]||'post to X';}
 function openEdit(id,body,tags,memo){document.getElementById('e-id').value=id;document.getElementById('e-body').value=body;document.getElementById('e-tags').value=tags;document.getElementById('e-memo').value=memo;upC('e-body','e-c');openModal('m-edit');}
+function postViaIntent(){
+    var text=document.getElementById('p-text').value.trim();
+    if(!text){alert('text is empty');return;}
+    var type=document.getElementById('p-type').value;
+    var replyId=document.getElementById('p-reply-id').value.trim();
+    var quoteUrl=document.getElementById('p-quote-url').value.trim();
+    var url='https://twitter.com/intent/tweet?text='+encodeURIComponent(text);
+    if(type==='reply'&&replyId){url+='&in_reply_to='+encodeURIComponent(replyId);}
+    if(type==='quote'&&quoteUrl){url+='&url='+encodeURIComponent(quoteUrl);}
+    window.open(url,'_blank','width=600,height=500,noopener,noreferrer');
+    closeModal('m-post');
+}
 </script>
 </body>
 </html>
