@@ -783,26 +783,27 @@ h1 {
 <div class="shell">
     <div class="topbar">
         <a class="crumb" href="<?php echo udm_escape(AIGM_BASE_URL . '/url2ai.html'); ?>">← URL2AI に戻る</a>
-        <div class="tagline">PDF to Markdown Demo for MCP Promotion</div>
+        <div class="tagline">Universal Markdown Conversion Demo for MCP and x402</div>
     </div>
 
     <div class="hero">
         <section class="hero-main">
-            <div class="eyebrow">UPDF2MD • PDF to Markdown</div>
-            <h1>PDFをそのまま<br>Markdownへ変換</h1>
+            <div class="eyebrow">UPDF2MD • Universal Markdown Conversion</div>
+            <h1>PDFからレポートまで<br>Markdownへ変換</h1>
             <p>
-                `updf2md` は、アップロードした PDF を Markdown に変換する公開デモです。
-                テキストベース PDF は高速に処理し、複雑なレイアウトや OCR 必要ページの情報も一緒に返します。
-                URL2AI エコシステムの flagship product のひとつとして、MCP サーバーや AI ワークフローに組み込む前提で、実際の変換体験をそのまま見せるページです。
+                `UPDF2MD` は、PDF to Markdown から始まった URL2AI の flagship product で、
+                いまは AI エージェント向けの universal Markdown conversion tool へ広げています。
+                このページでは PDF 変換を無料で体験でき、同じ x402 endpoint では `ticker` や企業名から Markdown 投資レポートを生成するワークフローにも対応しています。
+                document extraction、research、RAG、agent workflow の入口として使える構成です。
             </p>
         </section>
         <aside class="hero-side">
             <h2 style="margin:0 0 14px;font-size:24px;letter-spacing:-0.03em;">デモで見せるポイント</h2>
             <ul class="hero-list">
-                <li><strong>Upload</strong> Web から PDF を投げるだけで変換開始</li>
+                <li><strong>PDF Demo</strong> Web から PDF を投げるだけで Markdown 変換</li>
                 <li><strong>Metadata</strong> `pdf_type`, `pages_needing_ocr`, table/column 情報を表示</li>
-                <li><strong>Download</strong> 生成 Markdown をその場で `.md` として保存</li>
-                <li><strong>MCP Ready</strong> PDF 解析パイプラインの入口として使える構成</li>
+                <li><strong>Report Flow</strong> 同じ x402 endpoint で Markdown 投資レポート生成にも対応</li>
+                <li><strong>MCP Ready</strong> 文書解析や research パイプラインの入口として使える構成</li>
             </ul>
             <div class="mcp-promo">
                 <h3>Hosted MCP / x402 Endpoint</h3>
@@ -827,7 +828,7 @@ h1 {
             <p class="helper">
                 最大 <?php echo udm_escape(udm_format_bytes($MAX_UPLOAD_BYTES)); ?> までの PDF をアップロードできます。
                 もしくはネット上の PDF URL を指定できます。
-                バックエンドの変換 API を通じて Markdown 化します。
+                ここでは PDF の Markdown 化を無料で確認できますが、UPDF2MD 自体はこの先 `ticker` / 企業名 / structured input を Markdown へ変換する universal endpoint として拡張しています。
             </p>
 
             <?php if ($ERROR_MESSAGE !== ''): ?>
@@ -868,6 +869,22 @@ h1 {
                 Web デモは無料で試せます。継続利用やエージェント連携を行う場合は、URL2AI の hosted MCP / paid API を利用する想定です。
                 PDF 変換はこのページで、Markdown 投資レポートは <a href="<?php echo udm_escape(AIGM_BASE_URL . '/finreport.php'); ?>">FinReport</a> で無料確認できます。
                 MCP 利用者は Bankr docs から x402 Cloud / CLI の導線を確認し、その後 hosted endpoint へ接続してください。
+            </div>
+            <div class="pricing-box" style="margin-top:14px;">
+                <h3>Try FinReport Free Demo</h3>
+                <ul>
+                    <li>`ticker` / 企業名 / プロジェクト名から Markdown 投資レポートを生成</li>
+                    <li>GPT Researcher + Ollama gemma4 による出力品質を無料で確認</li>
+                    <li>出力確認後は同じ `updf2md` x402 endpoint を paid AI agent として利用可能</li>
+                </ul>
+                <p class="helper" style="margin-top:12px;">
+                    FinReport は GPT Researcher を使ってWeb調査コンテキストを組み立て、
+                    Ollama gemma4 で Markdown 投資レポートへ変換しています。
+                    まずは無料デモで品質を見て、その後に Bankr x402 AI エージェントとして自動化へ接続できます。
+                </p>
+                <div class="submit-row" style="margin-top:14px;">
+                    <a class="button" href="<?php echo udm_escape(AIGM_BASE_URL . '/finreport.php'); ?>">Open FinReport Demo</a>
+                </div>
             </div>
             <div class="pricing-box">
                 <h3>Pricing</h3>
@@ -917,12 +934,14 @@ bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecb
             <?php if (!is_array($RESULT)): ?>
                 <p class="helper">
                     変換後はここに PDF タイプ、処理時間、OCR が必要なページ、Markdown プレビューが表示されます。
+                    x402 側では同じ `updf2md` endpoint で Markdown 投資レポートの生成にも対応しています。
                 </p>
                 <div class="chip-row">
                     <span class="chip">/pdf/convert API</span>
+                    <span class="chip">/pdf/report API</span>
                     <span class="chip">Markdown preview</span>
                     <span class="chip">.md download</span>
-                    <span class="chip">MCP promotion demo</span>
+                    <span class="chip">Universal conversion</span>
                 </div>
             <?php else: ?>
                 <div class="stats">
