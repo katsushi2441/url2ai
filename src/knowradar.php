@@ -266,6 +266,19 @@ $services = array(
         'desc'     => 'X投稿URLから画像を生成して公開表示',
     ),
     array(
+        'id'       => 'pimage',
+        'name'     => 'PImage',
+        'name_ja'  => 'プロンプト画像',
+        'emoji'    => '🧩',
+        'color'    => '#2563eb',
+        'bg'       => '#eff6ff',
+        'view_url' => $BASE_URL . '/pimagev.php',
+        'edit_url' => $BASE_URL . '/pimage.php',
+        'feed_url' => '',
+        'image_url'=> $BASE_URL . '/images/uimage.png',
+        'desc'     => '保存済みプロンプトを選択し、ERNIE-Image-Turboで画像生成',
+    ),
+    array(
         'id'       => 'osszenn',
         'name'     => 'OSSZenn',
         'name_ja'  => 'OSS × Zenn',
@@ -328,6 +341,7 @@ function kr_detect_system($url) {
     if (strpos($u, 'ainews')    !== false)                                        return 'ainews';
     if (strpos($u, 'udebate')   !== false)                                        return 'udebate';
     if (strpos($u, 'uimagev')   !== false || strpos($u, 'uimage')   !== false)   return 'uimage';
+    if (strpos($u, 'pimagev')   !== false || strpos($u, 'pimage')   !== false)   return 'pimage';
     if (strpos($u, 'umediav')   !== false || strpos($u, 'umedia')   !== false)   return 'umedia';
     if (strpos($u, 'usongv')    !== false || strpos($u, 'usong')    !== false)   return 'usong';
     if (strpos($u, 'ustoryv')   !== false || strpos($u, 'ustory')   !== false)   return 'ustory';

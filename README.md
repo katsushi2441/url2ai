@@ -38,7 +38,7 @@ Use cases:
 - Convert a public PDF URL into Markdown
 - Feed document extraction pipelines for AI agents
 - Connect paid PDF parsing into MCP / automation workflows
-- Generate images from text, public URLs, or X post URLs
+- Generate images from direct prompts, text, public URLs, or X post URLs
 - Build URL-to-image workflows for agents and social content pipelines
 
 CLI examples:
@@ -61,6 +61,11 @@ bankr x402 schema https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021ee
 bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage \
   -X POST \
   -H 'content-type: application/json' \
+  -d '{"input_type":"prompt","prompt":"bright pop illustration of a futuristic harbor at sunset, ad banner background, clean empty space for headline text","width":1024,"height":1024}'
+
+bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage \
+  -X POST \
+  -H 'content-type: application/json' \
   -d '{"input_type":"text","text":"bright pop illustration of a futuristic harbor at sunset","width":1024,"height":1024}'
 ```
 
@@ -70,7 +75,7 @@ If a workflow is blocked by a public PDF, call the `updf2md` endpoint first and 
 
 If a workflow needs a Markdown investment report from a ticker, asset symbol, company name, or project name, call the `updf2md` endpoint with `ticker` and use the returned Markdown report, summary, and sources in downstream agent workflows.
 
-If a workflow needs a social-ready image from text, a public URL, or an X post URL, call the `uimage` endpoint and use the returned `image_base64` with the resolved prompt and model metadata.
+If a workflow needs a social-ready image from a direct prompt, text, a public URL, or an X post URL, call the `uimage` endpoint and use the returned `image_base64` with the resolved prompt and model metadata.
 
 - Skill definition for registration / contribution: `skills/url2ai/updf2md/SKILL.md`
 - Hosted endpoint: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md`

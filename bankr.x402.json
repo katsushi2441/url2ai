@@ -80,7 +80,7 @@
     },
     "uimage": {
       "price": "0.01",
-      "description": "URL2AI ERNIE Image API for AI agents and MCP workflows. Generates an image from text, a public URL, or an X post URL using ERNIE-Image-Turbo.",
+      "description": "URL2AI ERNIE Image API for AI agents and MCP workflows. Generates an image from a direct prompt, text, a public URL, or an X post URL using ERNIE-Image-Turbo.",
       "methods": [
         "POST"
       ],
@@ -90,7 +90,11 @@
           "properties": {
             "input_type": {
               "type": "string",
-              "description": "One of text, url, or x_post."
+              "description": "One of prompt, text, url, or x_post."
+            },
+            "prompt": {
+              "type": "string",
+              "description": "Direct image generation prompt. When input_type=prompt, this prompt is sent to the image backend as-is."
             },
             "text": {
               "type": "string",

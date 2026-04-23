@@ -1,7 +1,8 @@
-type InputType = "text" | "url" | "x_post";
+type InputType = "text" | "url" | "x_post" | "prompt";
 
 type UImageRequest = {
   input_type?: InputType;
+  prompt?: string;
   text?: string;
   url?: string;
   tweet_url?: string;
@@ -193,6 +194,7 @@ async function generateImage(prompt: string, width: number, height: number): Pro
 
 function resolveInputType(body: UImageRequest): InputType | null {
   if (body.input_type) return body.input_type;
+  if (body.prompt) return "prompt";
   if (body.tweet_url) return "x_post";
   if (body.url) return "url";
   if (body.text) return "text";
@@ -214,7 +216,7 @@ export default async function handler(req: Request): Promise<Response> {
   const inputType = resolveInputType(body);
   if (!inputType) {
     return json(
-      { error: "Provide one of: text, url, tweet_url, or input_type" },
+      { error: "Provide one of: prompt, text, url, tweet_url, or input_type" },
       { status: 400 },
     );
   }
@@ -225,8 +227,14 @@ export default async function handler(req: Request): Promise<Response> {
   try {
     let sourceText = "";
     let sourceUrl = "";
+    let prompt = "";
 
-    if (inputType === "text") {
+    if (inputType === "prompt") {
+      prompt = (body.prompt || "").trim();
+      if (!prompt) {
+        return json({ error: "prompt is required for input_type=prompt" }, { status: 400 });
+      }
+    } else if (inputType === "text") {
       sourceText = (body.text || "").trim();
       if (!sourceText) {
         return json({ error: "text is required for input_type=text" }, { status: 400 });
@@ -245,7 +253,9 @@ export default async function handler(req: Request): Promise<Response> {
       sourceText = await fetchXThread(sourceUrl);
     }
 
-    const prompt = await generatePrompt(sourceText);
+    if (!prompt) {
+      prompt = await generatePrompt(sourceText);
+    }
     const imageResult = await generateImage(prompt, width, height);
 
     return json({
