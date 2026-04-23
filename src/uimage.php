@@ -24,6 +24,7 @@ $VIEW_FILE = 'uimagev.php';
 $SITE_NAME = 'UImage';
 $ADMIN = AIGM_ADMIN;
 $API_URL = getenv('UIMAGE_API_URL') ?: 'http://exbridge.ddns.net:8011/generate';
+$UIMAGE_X402_URL = 'https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage';
 
 $x_keys_file = __DIR__ . '/x_api_keys.sh';
 $x_keys = array();
@@ -166,6 +167,15 @@ $username = isset($_SESSION['session_username']) ? $_SESSION['session_username']
 $is_admin = ($username === $ADMIN);
 
 function h($s) { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+function ui_x402_payload_json($input_type, $content) {
+    $payload = array(
+        'input_type' => $input_type,
+        'content' => $content,
+        'width' => 1024,
+        'height' => 1024,
+    );
+    return json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+}
 function ui_extract_tweet_id($input) {
     $input = html_entity_decode((string) $input, ENT_QUOTES, 'UTF-8');
     $input = preg_replace('/[\x{00A0}\x{3000}\s]+/u', ' ', $input);
@@ -461,6 +471,10 @@ textarea.code-area{width:100%;border:1px solid var(--border2);border-radius:6px;
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .msg-error{color:var(--red);font-size:.8rem;margin-top:.4rem}
 .hint{font-size:.82rem;color:var(--muted);line-height:1.8}
+.x402-box{margin-top:.75rem;padding:.85rem 1rem;border:1px solid #bfdbfe;background:#eff6ff;border-radius:10px}
+.x402-box strong{color:#1d4ed8}
+.x402-box code,.x402-box pre{font-family:var(--mono)}
+.x402-box pre{margin-top:.55rem;padding:.75rem;border-radius:8px;background:#dbeafe;overflow:auto;font-size:.78rem;line-height:1.6;color:#1e293b}
 .spinner{display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading .spinner{display:inline-block}
@@ -545,6 +559,10 @@ textarea.code-area{width:100%;border:1px solid var(--border2);border-radius:6px;
                 <div class="hint" style="margin-top:.6rem">
                     X投稿URLを入力すると、URL2AI ERNIE Image が ERNIE-Image-Turbo でスレッド取得から画像生成まで一気に実行します。現在生成できるのは <strong><?php echo h($ADMIN); ?></strong> のみです。
                 </div>
+                <div class="x402-box">
+                    <div class="hint"><strong>Bankr x402 AIエージェントでも使えます。</strong> X投稿URLをそのまま渡す場合は `input_type` に `x_post` を使います。endpoint: <code><?php echo h($UIMAGE_X402_URL); ?></code></div>
+                    <pre><?php echo h(ui_x402_payload_json('x_post', $tweet_url !== '' ? $tweet_url : 'https://x.com/user/status/...')); ?></pre>
+                </div>
             </form>
         </div>
     </div>
@@ -605,6 +623,12 @@ textarea.code-area{width:100%;border:1px solid var(--border2);border-radius:6px;
                 URL2AI ERNIE Image は ERNIE-Image-Turbo に渡すプロンプトを内部で自動生成しています。
             </div>
             <?php endif; ?>
+            <?php endif; ?>
+            <?php if (!empty($detail_post['tweet_url'])): ?>
+            <div class="x402-box">
+                <div class="hint"><strong>この生成データでそのまま Bankr x402 AIエージェントを呼べます。</strong> 下の JSON を `UImage` endpoint に送ると、同じ入力ソースで再利用できます。</div>
+                <pre id="uimage_copy"><?php echo h(ui_x402_payload_json('x_post', $detail_post['tweet_url'])); ?></pre>
+            </div>
             <?php endif; ?>
         </div>
     </div>

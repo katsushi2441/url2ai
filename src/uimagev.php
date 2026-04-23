@@ -17,6 +17,7 @@ $BASE_URL = 'https://aiknowledgecms.exbridge.jp';
 $THIS_FILE = 'uimagev.php';
 $SITE_NAME = 'UImageV';
 $ADMIN = 'xb_bittensor';
+$UIMAGE_X402_URL = 'https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage';
 
 $x_keys_file = __DIR__ . '/x_api_keys.sh';
 $x_keys = array();
@@ -151,6 +152,15 @@ $session_user = isset($_SESSION['session_username']) ? $_SESSION['session_userna
 $is_admin = ($session_user === $ADMIN);
 
 function h($s) { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+function uiv_x402_payload_json($tweet_url) {
+    $payload = array(
+        'input_type' => 'x_post',
+        'content' => $tweet_url,
+        'width' => 1024,
+        'height' => 1024,
+    );
+    return json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+}
 
 $posts = array();
 if (file_exists($DATA_DIR)) {
@@ -281,6 +291,10 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
 .detail-image{display:block;width:100%;border-radius:14px;border:1px solid #e5e7eb;box-shadow:0 10px 30px rgba(15,23,42,.08)}
 .detail-url-box{background:#f7f7f7;border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#555;word-break:break-all}
 .detail-url-box a{color:#ec4899}
+.x402-box{background:#fdf2f8;border:1px solid #fbcfe8;border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.x402-box strong{color:#be185d}
+.x402-box code,.x402-box pre{font-family:'JetBrains Mono',monospace}
+.x402-box pre{margin-top:8px;background:#fff;border:1px solid #fbcfe8;border-radius:8px;padding:12px;overflow:auto;font-size:12px;line-height:1.6;color:#374151;white-space:pre-wrap}
 .empty{text-align:center;color:#bbb;padding:80px 20px;font-size:15px}
 .empty a{color:#ec4899;text-decoration:none}
 .rss-badge{font-size:10px;font-weight:700;color:#c44f00;background:#fff5ef;border:1px solid #f5d0b8;border-radius:4px;padding:2px 7px;text-decoration:none;display:inline-flex;align-items:center;gap:3px}
@@ -348,6 +362,13 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
     </div>
     <div class="detail-body">
         <div class="detail-section-title">🎨 Generated Image by URL2AI ERNIE Image</div>
+        <?php if (!empty($detail_post['tweet_url'])): ?>
+        <div class="x402-box">
+            <div><strong>Bankr x402 AIエージェントでの使い方</strong></div>
+            <div style="margin-top:6px;font-size:13px;color:#555;">この X投稿URL を `UImage` endpoint に `input_type: "x_post"` で渡します。endpoint: <code><?php echo h($UIMAGE_X402_URL); ?></code></div>
+            <pre><?php echo h(uiv_x402_payload_json($detail_post['tweet_url'])); ?></pre>
+        </div>
+        <?php endif; ?>
         <img class="detail-image" src="<?php echo h($BASE_URL . '/' . $detail_post['uimage_path']); ?>" alt="Generated image">
 
         <?php if ($logged_in): ?>
@@ -389,6 +410,13 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
             <div class="post-time"><?php echo h(isset($p['uimage_saved_at']) ? $p['uimage_saved_at'] : ''); ?></div>
         </div>
         <a class="post-id" href="uimagev.php?id=<?php echo urlencode($p['tweet_id']); ?>">#<?php echo h($p['tweet_id']); ?></a>
+        <?php if (!empty($p['tweet_url'])): ?>
+        <div class="x402-box">
+            <div><strong>Bankr x402 AIエージェントでの使い方</strong></div>
+            <div style="margin-top:6px;font-size:13px;color:#555;">この X投稿URL を `UImage` endpoint に送ります。</div>
+            <pre><?php echo h(uiv_x402_payload_json($p['tweet_url'])); ?></pre>
+        </div>
+        <?php endif; ?>
         <a href="uimagev.php?id=<?php echo urlencode($p['tweet_id']); ?>"><img class="preview-image" src="<?php echo h($BASE_URL . '/' . $p['uimage_path']); ?>" alt="Generated image"></a>
         <div class="card-links">
             <?php if (!empty($p['tweet_url'])): ?>
