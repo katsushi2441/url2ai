@@ -46,6 +46,7 @@ _conf = _load_config()
 
 PARAGRAPH_API_KEY = _conf.get('paragraph', {}).get('api_key', '') or os.environ.get('PARAGRAPH_API_KEY', '')
 PARAGRAPH_API_URL = 'https://public.api.paragraph.com/api/v1/posts'
+BANKR_DISCOVER_URL = 'https://bankr.bot/discover/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3'
 
 # 1日4回実行する時刻（24h）
 DAILY_HOURS  = [6, 12, 18, 0]
@@ -361,7 +362,10 @@ Rules:
 OSS title: {title}
 GitHub URL: {url}
 {context}""".format(title=title, url=url, context=context)
-    return ollama_request(prompt)
+    content = ollama_request(prompt)
+    if not content:
+        return content
+    return content.rstrip() + '\n\n---\nBankr / URL2AI:\n- Discover URL2AI on Bankr: ' + BANKR_DISCOVER_URL + '\n'
 
 
 def post_to_paragraph(title, content, status='draft'):

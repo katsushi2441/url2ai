@@ -1,0 +1,17 @@
+[Unit]
+Description=FinReport Worker - Daily market news to FinReport + Paragraph
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/kojima/work/url2ai/src
+ExecStart=/usr/bin/python3 /home/kojima/work/url2ai/src/finreport_worker.py --interval 3600
+Restart=always
+RestartSec=20
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=append:/home/kojima/finreport_worker.log
+StandardError=append:/home/kojima/finreport_worker.log
+
+[Install]
+WantedBy=multi-user.target

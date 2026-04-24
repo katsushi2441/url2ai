@@ -6,6 +6,7 @@ header('Access-Control-Allow-Origin: *');
 $ADMIN     = 'xb_bittensor';
 $DATA_DIR  = __DIR__ . '/data';
 $DATA_FILE = $DATA_DIR . '/oss_posts.json'; // 旧形式（移行用）
+$BANKR_DISCOVER_URL = 'https://bankr.bot/discover/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3';
 
 function oss_post_file($id) {
     global $DATA_DIR;
@@ -52,6 +53,58 @@ function oss_delete_post($id) {
         return unlink($file);
     }
     return false;
+}
+
+function paragraph_api_get_json($url, $headers = array()) {
+    $opts = array('http' => array(
+        'method' => 'GET',
+        'header' => implode("\r\n", $headers) . "\r\n",
+        'timeout' => 30,
+        'ignore_errors' => true,
+    ));
+    $res = @file_get_contents($url, false, stream_context_create($opts));
+    if (!$res) {
+        return null;
+    }
+    $decoded = json_decode($res, true);
+    return is_array($decoded) ? $decoded : null;
+}
+
+function paragraph_resolve_post_url_from_publication($paragraph_post_id) {
+    $publication_slug = trim((string) PARAGRAPH_PUBLICATION_SLUG);
+    $paragraph_post_id = trim((string) $paragraph_post_id);
+    if ($publication_slug === '' || $paragraph_post_id === '') {
+        return '';
+    }
+
+    $publication = paragraph_api_get_json(
+        'https://public.api.paragraph.com/api/v1/publications/slug/' . rawurlencode($publication_slug)
+    );
+    if (!is_array($publication) || empty($publication['id'])) {
+        return '';
+    }
+
+    $publication_id = (string) $publication['id'];
+    $publication_slug_clean = isset($publication['slug']) ? ltrim((string)$publication['slug'], '@') : ltrim($publication_slug, '@');
+    $custom_domain = isset($publication['customDomain']) ? trim((string)$publication['customDomain']) : '';
+    $base_url = $custom_domain !== '' ? rtrim($custom_domain, '/') : ('https://paragraph.com/@' . $publication_slug_clean);
+
+    $posts_data = paragraph_api_get_json(
+        'https://public.api.paragraph.com/api/v1/publications/' . rawurlencode($publication_id) . '/posts?limit=100'
+    );
+    if (!is_array($posts_data) || empty($posts_data['items']) || !is_array($posts_data['items'])) {
+        return '';
+    }
+
+    foreach ($posts_data['items'] as $item) {
+        $post_id = isset($item['id']) ? (string)$item['id'] : '';
+        $post_slug = isset($item['slug']) ? trim((string)$item['slug']) : '';
+        if ($post_id === $paragraph_post_id && $post_slug !== '') {
+            return $base_url . '/' . ltrim($post_slug, '/');
+        }
+    }
+
+    return '';
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -429,6 +482,7 @@ if ($action === 'paragraph_post') {
         echo json_encode(array('error' => 'Ollama content generation failed'));
         exit;
     }
+    $para_content = rtrim($para_content) . "\n\n---\nBankr / URL2AI:\n- Discover URL2AI on Bankr: " . $BANKR_DISCOVER_URL . "\n";
 
     // Paragraph API呼び出し
     $payload = json_encode(array(
@@ -445,8 +499,12 @@ if ($action === 'paragraph_post') {
     ));
     $res     = @file_get_contents('https://public.api.paragraph.com/api/v1/posts', false, stream_context_create($opts));
     $res_arr = $res ? json_decode($res, true) : array();
-    $para_url = isset($res_arr['url']) ? $res_arr['url'] : '';
+    $para_url = isset($res_arr['url']) ? $res_arr['url'] : (isset($res_arr['canonicalUrl']) ? $res_arr['canonicalUrl'] : '');
     $para_post_id = isset($res_arr['id']) ? (string)$res_arr['id'] : (isset($res_arr['postId']) ? (string)$res_arr['postId'] : '');
+
+    if (!$para_url && $para_post_id) {
+        $para_url = paragraph_resolve_post_url_from_publication($para_post_id);
+    }
 
     if (!$para_url && !$para_post_id) {
         http_response_code(500);
