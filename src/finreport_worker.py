@@ -74,7 +74,7 @@ OLLAMA_MODEL = os.environ.get(
     CONF.get("ollama", {}).get("default_model", "gemma4:e4b"),
 )
 FINREPORT_PARAGRAPH_STATUS = os.environ.get("FINREPORT_PARAGRAPH_STATUS", "published")
-RUN_HOUR_JST = int(os.environ.get("FINREPORT_WORKER_HOUR", "9"))
+RUN_HOURS_JST = [3, 9, 15, 21]
 MAX_ITEMS_PER_DAY = int(os.environ.get("FINREPORT_WORKER_MAX_ITEMS", "4"))
 BANKR_DISCOVER_URL = "https://bankr.bot/discover/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3"
 
@@ -112,12 +112,13 @@ def http_text(url: str, timeout: int = 60) -> str:
 
 def load_state() -> dict:
     if not os.path.exists(STATE_PATH):
-        return {"last_run_date": "", "processed_news_ids": [], "queries_today": []}
+        return {"last_run_date": "", "last_run_slot": "", "processed_news_ids": [], "queries_today": []}
     with open(STATE_PATH, encoding="utf-8") as fh:
         data = json.load(fh)
     if not isinstance(data, dict):
-        return {"last_run_date": "", "processed_news_ids": [], "queries_today": []}
+        return {"last_run_date": "", "last_run_slot": "", "processed_news_ids": [], "queries_today": []}
     data.setdefault("last_run_date", "")
+    data.setdefault("last_run_slot", "")
     data.setdefault("processed_news_ids", [])
     data.setdefault("queries_today", [])
     return data
@@ -346,8 +347,14 @@ def process_candidates(dry_run: bool) -> int:
 
 def should_run_now(now: dt.datetime) -> bool:
     state = load_state()
-    today = now.strftime("%Y-%m-%d")
-    return now.hour >= RUN_HOUR_JST and state.get("last_run_date") != today
+    slot = now.strftime("%Y-%m-%d") + f"-{now.hour:02d}"
+    return now.hour in RUN_HOURS_JST and state.get("last_run_slot") != slot
+
+
+def mark_run_slot(now: dt.datetime) -> None:
+    state = load_state()
+    state["last_run_slot"] = now.strftime("%Y-%m-%d") + f"-{now.hour:02d}"
+    save_state(state)
 
 
 def main() -> int:
@@ -361,12 +368,13 @@ def main() -> int:
         process_candidates(dry_run=args.dry_run)
         return 0
 
-    log(f"watching daily; run_hour={RUN_HOUR_JST} interval={args.interval}s dry_run={args.dry_run}")
+    log(f"watching schedule; run_hours={RUN_HOURS_JST} interval={args.interval}s dry_run={args.dry_run}")
     while True:
         now = dt.datetime.now()
         try:
             if should_run_now(now):
                 process_candidates(dry_run=args.dry_run)
+                mark_run_slot(now)
             else:
                 log("idle")
         except Exception as exc:
