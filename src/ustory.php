@@ -188,9 +188,33 @@ function run_cmd($cmd) {
 }
 
 function extract_tweet_id($input) {
+    $input = html_entity_decode((string) $input, ENT_QUOTES, 'UTF-8');
+    $input = preg_replace('/[\x{00A0}\x{3000}\s]+/u', ' ', $input);
     $input = trim($input);
-    if (preg_match('/(\d{15,20})/', $input, $m)) {
-        return $m[1];
+    if ($input === '') {
+        return '';
+    }
+    if (preg_match('/^\d{15,20}$/', $input)) {
+        return $input;
+    }
+    $decoded = $input;
+    for ($i = 0; $i < 2; $i++) {
+        $next = rawurldecode($decoded);
+        if ($next === $decoded) {
+            break;
+        }
+        $decoded = $next;
+    }
+    $patterns = array(
+        '/(?:https?:\/\/)?(?:www\.)?(?:x|twitter)\.com\/(?:i\/web\/)?[^\/?#]+\/status(?:es)?\/(\d{15,20})/i',
+        '/(?:https?:\/\/)?(?:www\.)?(?:x|twitter)\.com\/i\/status\/(\d{15,20})/i',
+        '/status(?:es)?\/(\d{15,20})/i',
+        '/\b(\d{15,20})\b/',
+    );
+    foreach ($patterns as $pattern) {
+        if (preg_match($pattern, $decoded, $m)) {
+            return $m[1];
+        }
     }
     return '';
 }
