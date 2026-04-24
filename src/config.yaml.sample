@@ -17,3 +17,10 @@ site:
 
 x_api:
   key_file: 
+
+finreport:
+  api_url: 
+
+paragraph:
+  api_key: 
+  publication_slug: 
