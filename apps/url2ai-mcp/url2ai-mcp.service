@@ -1,0 +1,15 @@
+[Unit]
+Description=URL2AI MCP Server
+After=network.target
+
+[Service]
+Type=simple
+User=kojima
+WorkingDirectory=/home/kojima/work/url2ai/apps/url2ai-mcp
+EnvironmentFile=/home/kojima/work/url2ai/apps/url2ai-mcp/.env
+ExecStart=/home/kojima/work/url2ai/apps/url2ai-mcp/.venv/bin/python /home/kojima/work/url2ai/apps/url2ai-mcp/server.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

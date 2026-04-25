@@ -1,0 +1,15 @@
+[Unit]
+Description=ERNIE-Image-Turbo FastAPI Service
+After=network.target
+
+[Service]
+Type=simple
+User=kojima
+WorkingDirectory=/home/kojima/work/url2ai/apps/ernie-image-turbo
+EnvironmentFile=/home/kojima/work/url2ai/apps/ernie-image-turbo/.env
+ExecStart=/home/kojima/work/url2ai/apps/ernie-image-turbo/.venv-cu128/bin/uvicorn server:app --host ${HOST} --port ${PORT}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
