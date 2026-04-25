@@ -490,6 +490,9 @@ if (isset($_GET['api']) && $_GET['api'] !== '') {
             'news_title'   => isset($body['news_title']) ? $body['news_title'] : '',
             'news_link'    => isset($body['news_link']) ? $body['news_link'] : '',
             'news_summary' => isset($body['news_summary']) ? $body['news_summary'] : '',
+            'paragraph_url' => isset($body['paragraph_url']) ? trim((string) $body['paragraph_url']) : '',
+            'paragraph_post_id' => isset($body['paragraph_post_id']) ? trim((string) $body['paragraph_post_id']) : '',
+            'paragraph_posted_at' => isset($body['paragraph_posted_at']) ? trim((string) $body['paragraph_posted_at']) : '',
         );
         fr_save($ticker, $save_data);
         $saved = fr_load($ticker);
@@ -506,9 +509,9 @@ if (isset($_GET['api']) && $_GET['api'] !== '') {
                 'created_at' => date('c', $created_ts),
                 'created_ts' => $created_ts,
                 'detail_url' => $BASE_URL . '/finreportv.php?ticker=' . urlencode($ticker),
-                'paragraph_url' => '',
-                'paragraph_post_id' => '',
-                'paragraph_posted_at' => '',
+                'paragraph_url' => isset($saved['paragraph_url']) ? $saved['paragraph_url'] : '',
+                'paragraph_post_id' => isset($saved['paragraph_post_id']) ? $saved['paragraph_post_id'] : '',
+                'paragraph_posted_at' => isset($saved['paragraph_posted_at']) ? $saved['paragraph_posted_at'] : '',
             ),
         ), 200);
     }

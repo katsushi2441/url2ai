@@ -64,6 +64,7 @@ FINREPORT_MARK_URL = os.environ.get(
     "FINREPORT_MARK_URL",
     f"{SITE_BASE_URL}/finreport.php?api=mark_paragraph",
 )
+FINREPORT_MARK_REMOTE = os.environ.get("FINREPORT_MARK_REMOTE", "").lower() in {"1", "true", "yes"}
 OLLAMA_API = os.environ.get(
     "OLLAMA_API",
     CONF.get("ollama", {}).get("api_url", "https://exbridge.ddns.net/api/generate"),
@@ -75,6 +76,10 @@ OLLAMA_MODEL = os.environ.get(
 PARAGRAPH_API_KEY = os.environ.get(
     "PARAGRAPH_API_KEY",
     CONF.get("paragraph", {}).get("api_key", ""),
+)
+PARAGRAPH_PUBLICATION_SLUG = os.environ.get(
+    "PARAGRAPH_PUBLICATION_SLUG",
+    CONF.get("paragraph", {}).get("publication_slug", ""),
 )
 PARAGRAPH_API_URL = "https://public.api.paragraph.com/api/v1/posts"
 
@@ -216,11 +221,49 @@ def post_to_paragraph(title: str, markdown: str, status: str) -> dict:
     return http_json(PARAGRAPH_API_URL, payload=payload, headers=headers, timeout=60)
 
 
+def resolve_paragraph_post_url(paragraph_post_id: str) -> str:
+    publication_slug = (PARAGRAPH_PUBLICATION_SLUG or "").strip()
+    paragraph_post_id = (paragraph_post_id or "").strip()
+    if not publication_slug or not paragraph_post_id:
+        return ""
+    publication = http_json(
+        "https://public.api.paragraph.com/api/v1/publications/slug/"
+        + urllib.parse.quote(publication_slug),
+        timeout=60,
+    )
+    publication_id = str(publication.get("id") or "")
+    if not publication_id:
+        return ""
+    publication_slug_clean = str(publication.get("slug") or publication_slug).lstrip("@")
+    custom_domain = str(publication.get("customDomain") or "").strip()
+    base_url = custom_domain.rstrip("/") if custom_domain else f"https://paragraph.com/@{publication_slug_clean}"
+    posts_data = http_json(
+        "https://public.api.paragraph.com/api/v1/publications/"
+        + urllib.parse.quote(publication_id)
+        + "/posts?limit=100",
+        timeout=60,
+    )
+    for post in posts_data.get("items", []):
+        if str(post.get("id") or "") == paragraph_post_id and post.get("slug"):
+            return base_url + "/" + str(post["slug"]).lstrip("/")
+    return ""
+
+
 def mark_paragraph_posted(item: dict, para_res: dict) -> dict:
     paragraph_url = para_res.get("url") or para_res.get("canonicalUrl") or ""
     paragraph_post_id = str(para_res.get("id") or para_res.get("postId") or "")
     if not paragraph_url and not paragraph_post_id:
         raise RuntimeError(f"Paragraph response missing url/id: {json.dumps(para_res, ensure_ascii=False)[:300]}")
+    if not paragraph_url and paragraph_post_id:
+        paragraph_url = resolve_paragraph_post_url(paragraph_post_id)
+    if not FINREPORT_MARK_REMOTE:
+        return {
+            "ok": True,
+            "ticker": item.get("ticker", ""),
+            "paragraph_url": paragraph_url,
+            "paragraph_post_id": paragraph_post_id,
+            "remote_mark_skipped": True,
+        }
     payload = {
         "ticker": item.get("ticker", ""),
         "paragraph_url": paragraph_url,

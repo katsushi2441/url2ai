@@ -22,6 +22,7 @@ import os
 import re
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -69,6 +70,11 @@ FINREPORT_SAVE_URL = os.environ.get(
     "FINREPORT_SAVE_URL",
     f"{SITE_BASE_URL}/finreport.php?api=save",
 )
+FINREPORT_MARK_URL = os.environ.get(
+    "FINREPORT_MARK_URL",
+    f"{SITE_BASE_URL}/finreport.php?api=mark_paragraph",
+)
+FINREPORT_REGISTER_REMOTE = os.environ.get("FINREPORT_REGISTER_REMOTE", "1").lower() in {"1", "true", "yes"}
 OLLAMA_API = os.environ.get(
     "OLLAMA_API",
     CONF.get("ollama", {}).get("api_url", "https://exbridge.ddns.net/api/generate"),
@@ -103,9 +109,19 @@ def http_json(url: str, payload: dict | None = None, headers: dict | None = None
         data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         req_headers.setdefault("Content-Type", "application/json")
     req = urllib.request.Request(url, data=data, headers=req_headers)
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        raw = resp.read().decode("utf-8")
-        return json.loads(raw)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read().decode("utf-8")
+            try:
+                return json.loads(raw)
+            except json.JSONDecodeError as exc:
+                snippet = raw[:300].replace("\n", " ")
+                raise RuntimeError(f"non-json response from {url}: {snippet}") from exc
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="ignore")
+        raise RuntimeError(f"HTTP {exc.code} from {url}: {body[:300]}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"network error for {url}: {exc}") from exc
 
 
 def http_text(url: str, timeout: int = 60) -> str:
@@ -211,6 +227,25 @@ def save_finreport(query: str, response: dict, source_item: dict) -> str:
     return path
 
 
+def update_saved_finreport_paragraph(saved_path: str, paragraph_url: str, paragraph_post_id: str) -> None:
+    if not saved_path or not os.path.exists(saved_path):
+        return
+    with open(saved_path, encoding="utf-8") as fh:
+        payload = json.load(fh)
+    payload["paragraph_url"] = paragraph_url
+    payload["paragraph_post_id"] = paragraph_post_id
+    payload["paragraph_posted_at"] = dt.datetime.now().isoformat()
+    with open(saved_path, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, ensure_ascii=False, indent=2)
+
+
+def load_saved_finreport(saved_path: str) -> dict:
+    if not saved_path or not os.path.exists(saved_path):
+        return {}
+    with open(saved_path, encoding="utf-8") as fh:
+        return json.load(fh)
+
+
 def build_finreport_item(query: str, response: dict, saved_path: str) -> dict:
     created_ts = int(os.path.getmtime(saved_path))
     return {
@@ -226,6 +261,7 @@ def build_finreport_item(query: str, response: dict, saved_path: str) -> dict:
         "paragraph_url": "",
         "paragraph_post_id": "",
         "paragraph_posted_at": "",
+        "_saved_path": saved_path,
     }
 
 
@@ -242,6 +278,27 @@ def register_finreport_remote(query: str, response: dict, source_item: dict) -> 
         "news_summary": source_item.get("summary", ""),
     }
     return http_json(FINREPORT_SAVE_URL, payload=payload, timeout=120)
+
+
+def register_saved_finreport_remote(saved_path: str) -> dict:
+    payload = load_saved_finreport(saved_path)
+    if not payload:
+        return {"ok": False, "error": "saved report not found"}
+    return http_json(FINREPORT_SAVE_URL, payload=payload, timeout=120)
+
+
+def mark_saved_finreport_remote(saved_path: str) -> dict:
+    payload = load_saved_finreport(saved_path)
+    if not payload:
+        return {"ok": False, "error": "saved report not found"}
+    mark_payload = {
+        "ticker": payload.get("ticker", ""),
+        "paragraph_url": payload.get("paragraph_url", ""),
+        "paragraph_post_id": payload.get("paragraph_post_id", ""),
+    }
+    if not mark_payload["ticker"] or not (mark_payload["paragraph_url"] or mark_payload["paragraph_post_id"]):
+        return {"ok": False, "error": "ticker and paragraph fields are required"}
+    return http_json(FINREPORT_MARK_URL, payload=mark_payload, timeout=120)
 
 
 def call_ollama(prompt: str) -> str:
@@ -350,14 +407,22 @@ def process_candidates(dry_run: bool) -> int:
         if not result.get("report"):
             log(f"empty report for {query}")
             continue
-        remote_res = register_finreport_remote(query, result, item)
-        remote_item = remote_res.get("item") if isinstance(remote_res, dict) else None
-        if not isinstance(remote_item, dict) or not remote_item.get("id"):
-            log(f"remote register failed for {query}: {remote_res}")
-            continue
         path = save_finreport(query, result, item)
-        log(f"registered report: {query} -> {remote_item.get('detail_url', '')}")
-        generated_items.append(remote_item)
+        local_item = build_finreport_item(query, result, path)
+        report_item = local_item
+        if FINREPORT_REGISTER_REMOTE:
+            try:
+                remote_res = register_finreport_remote(query, result, item)
+                remote_item = remote_res.get("item") if isinstance(remote_res, dict) else None
+                if isinstance(remote_item, dict) and remote_item.get("id"):
+                    report_item = remote_item
+                    report_item["_saved_path"] = path
+                else:
+                    log(f"remote register failed for {query}: {remote_res}")
+            except Exception as exc:
+                log(f"remote register error for {query}: {exc}")
+        log(f"registered report: {query} -> {report_item.get('detail_url', '')}")
+        generated_items.append(report_item)
         queries_today.add(query.lower())
         created += 1
 
@@ -377,7 +442,22 @@ def process_candidates(dry_run: bool) -> int:
                     f"- Discover URL2AI on Bankr: {BANKR_DISCOVER_URL}\n"
                 )
                 res = finrep2pg.post_to_paragraph(title, markdown, FINREPORT_PARAGRAPH_STATUS)
-                finrep2pg.mark_paragraph_posted(item, res)
+                paragraph_url = res.get("url") or res.get("canonicalUrl") or ""
+                paragraph_post_id = str(res.get("id") or res.get("postId") or "")
+                if not paragraph_url and paragraph_post_id:
+                    paragraph_url = finrep2pg.resolve_paragraph_post_url(paragraph_post_id)
+                if paragraph_url or paragraph_post_id:
+                    saved_path = item.get("_saved_path", "")
+                    update_saved_finreport_paragraph(saved_path, paragraph_url, paragraph_post_id)
+                    item["paragraph_url"] = paragraph_url
+                    item["paragraph_post_id"] = paragraph_post_id
+                    if FINREPORT_REGISTER_REMOTE:
+                        remote_res = register_saved_finreport_remote(saved_path)
+                        if not remote_res.get("ok"):
+                            log(f"remote save failed: {remote_res}")
+                        mark_res = mark_saved_finreport_remote(saved_path)
+                        if not mark_res.get("ok"):
+                            log(f"remote paragraph mark failed: {mark_res}")
                 posted += 1
             log(f"paragraph posts created: {posted}")
         except Exception as exc:
