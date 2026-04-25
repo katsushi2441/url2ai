@@ -65,6 +65,10 @@ FINREPORT_API = os.environ.get(
     "FINREPORT_API",
     CONF.get("finreport", {}).get("api_url", "http://exbridge.ddns.net:8014/report"),
 )
+FINREPORT_SAVE_URL = os.environ.get(
+    "FINREPORT_SAVE_URL",
+    f"{SITE_BASE_URL}/finreport.php?api=save",
+)
 OLLAMA_API = os.environ.get(
     "OLLAMA_API",
     CONF.get("ollama", {}).get("api_url", "https://exbridge.ddns.net/api/generate"),
@@ -207,6 +211,39 @@ def save_finreport(query: str, response: dict, source_item: dict) -> str:
     return path
 
 
+def build_finreport_item(query: str, response: dict, saved_path: str) -> dict:
+    created_ts = int(os.path.getmtime(saved_path))
+    return {
+        "id": slugify(query) + "-" + dt.datetime.fromtimestamp(created_ts).strftime("%Y%m%d%H%M%S"),
+        "ticker": query,
+        "slug": slugify(query),
+        "summary": response.get("summary", ""),
+        "report": response.get("report", ""),
+        "sources": response.get("sources", []),
+        "created_at": dt.datetime.fromtimestamp(created_ts).isoformat(),
+        "created_ts": created_ts,
+        "detail_url": f"{SITE_BASE_URL}/finreportv.php?ticker={urllib.parse.quote(query)}",
+        "paragraph_url": "",
+        "paragraph_post_id": "",
+        "paragraph_posted_at": "",
+    }
+
+
+def register_finreport_remote(query: str, response: dict, source_item: dict) -> dict:
+    payload = {
+        "ticker": query,
+        "report": response.get("report", ""),
+        "summary": response.get("summary", ""),
+        "sources": response.get("sources", []),
+        "created_at": dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "news_kind": source_item.get("kind", ""),
+        "news_title": source_item.get("title", ""),
+        "news_link": source_item.get("link", ""),
+        "news_summary": source_item.get("summary", ""),
+    }
+    return http_json(FINREPORT_SAVE_URL, payload=payload, timeout=120)
+
+
 def call_ollama(prompt: str) -> str:
     payload = {"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
     res = http_json(OLLAMA_API, payload=payload, timeout=300)
@@ -293,6 +330,7 @@ def process_candidates(dry_run: bool) -> int:
         return 0
 
     created = 0
+    generated_items: list[dict] = []
     for item in candidates:
         query = item["query"]
         processed_news_ids.add(item["news_id"])
@@ -312,8 +350,14 @@ def process_candidates(dry_run: bool) -> int:
         if not result.get("report"):
             log(f"empty report for {query}")
             continue
+        remote_res = register_finreport_remote(query, result, item)
+        remote_item = remote_res.get("item") if isinstance(remote_res, dict) else None
+        if not isinstance(remote_item, dict) or not remote_item.get("id"):
+            log(f"remote register failed for {query}: {remote_res}")
+            continue
         path = save_finreport(query, result, item)
-        log(f"saved report: {query} -> {path}")
+        log(f"registered report: {query} -> {remote_item.get('detail_url', '')}")
+        generated_items.append(remote_item)
         queries_today.add(query.lower())
         created += 1
 
@@ -324,20 +368,17 @@ def process_candidates(dry_run: bool) -> int:
     if created > 0 and not dry_run:
         try:
             import finrep2pg
-
-            original_builder = finrep2pg.build_bilingual_markdown
-
-            def build_with_bankr_link(item: dict) -> tuple[str, str]:
-                title, markdown = original_builder(item)
-                bankr_section = (
+            posted = 0
+            for item in generated_items:
+                title, markdown = finrep2pg.build_bilingual_markdown(item)
+                markdown = markdown.rstrip() + (
                     "\n\n---\n"
                     "Bankr / URL2AI:\n"
                     f"- Discover URL2AI on Bankr: {BANKR_DISCOVER_URL}\n"
                 )
-                return title, markdown.rstrip() + bankr_section
-
-            finrep2pg.build_bilingual_markdown = build_with_bankr_link
-            posted = finrep2pg.process_new_reports(status=FINREPORT_PARAGRAPH_STATUS, dry_run=False)
+                res = finrep2pg.post_to_paragraph(title, markdown, FINREPORT_PARAGRAPH_STATUS)
+                finrep2pg.mark_paragraph_posted(item, res)
+                posted += 1
             log(f"paragraph posts created: {posted}")
         except Exception as exc:
             log(f"paragraph posting error: {exc}")

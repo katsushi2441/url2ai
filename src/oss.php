@@ -38,6 +38,21 @@ function oss_x_get($url, $token) {
     $r = @file_get_contents($url, false, stream_context_create($opts));
     if (!$r) { $r = '{}'; } return json_decode($r, true);
 }
+function oss_is_valid_paragraph_url($url) {
+    $url = trim((string)$url);
+    if ($url === '') {
+        return false;
+    }
+    $host = parse_url($url, PHP_URL_HOST);
+    if (!$host) {
+        return false;
+    }
+    $host = strtolower($host);
+    if ($host === 'aiknowledgecms.exbridge.jp') {
+        return false;
+    }
+    return (strpos($host, 'paragraph.com') !== false || strpos($host, 'paragraph.xyz') !== false);
+}
 
 if (isset($_GET['oss_logout'])) { session_destroy(); header('Location: ' . $x_redirect_uri); exit; }
 if (isset($_GET['oss_login'])) {
@@ -94,6 +109,12 @@ if (file_exists($DATA_FILE)) {
         }
     }
 }
+foreach ($posts as &$p) {
+    if (!empty($p['paragraph_url']) && !oss_is_valid_paragraph_url($p['paragraph_url'])) {
+        $p['paragraph_url'] = '';
+    }
+}
+unset($p);
 usort($posts, function($a, $b) {
     $ta = isset($a['timestamp']) ? $a['timestamp'] : (isset($a['created_at']) ? strtotime($a['created_at']) : 0);
     $tb = isset($b['timestamp']) ? $b['timestamp'] : (isset($b['created_at']) ? strtotime($b['created_at']) : 0);
@@ -953,7 +974,7 @@ document.getElementById('admin-url-input').addEventListener('keydown', function(
 <?php endif; ?>
 
 function buildParaBtn(post, idx) {
-    if (post.paragraph_url) {
+    if (post.paragraph_url && post.paragraph_url.indexOf('aiknowledgecms.exbridge.jp') === -1 && (post.paragraph_url.indexOf('paragraph.com') !== -1 || post.paragraph_url.indexOf('paragraph.xyz') !== -1)) {
         return '<a class="para-badge" href="' + esc(post.paragraph_url) + '" target="_blank" rel="noopener">✅ Paragraph</a>';
     }
     if (post.paragraph_post_id) {
