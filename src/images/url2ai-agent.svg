@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">URL2AI Agent APIs</title>
+  <desc id="desc">URL2AI and OSS2API agent marketplace logo.</desc>
+  <defs>
+    <linearGradient id="bg" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2563EB"/>
+      <stop offset="0.48" stop-color="#14B8A6"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="128" y1="132" x2="384" y2="380" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.96"/>
+      <stop offset="1" stop-color="#DBEAFE" stop-opacity="0.9"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="392" cy="116" r="46" fill="#FFFFFF" opacity="0.18"/>
+  <circle cx="108" cy="398" r="58" fill="#FFFFFF" opacity="0.12"/>
+  <rect x="112" y="120" width="288" height="272" rx="48" fill="url(#panel)"/>
+  <path d="M170 248h172" stroke="#0F172A" stroke-width="28" stroke-linecap="round"/>
+  <path d="M222 194l-52 54 52 54" fill="none" stroke="#0F172A" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M290 194l52 54-52 54" fill="none" stroke="#0F172A" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M236 330h40" stroke="#2563EB" stroke-width="18" stroke-linecap="round"/>
+  <path d="M304 330h40" stroke="#14B8A6" stroke-width="18" stroke-linecap="round"/>
+  <text x="256" y="444" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="44" font-weight="800" fill="#FFFFFF">URL2AI</text>
+</svg>

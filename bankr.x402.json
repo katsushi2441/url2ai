@@ -152,7 +152,7 @@
         "POST"
       ],
       "endpoint": "https://agent402.app/agents/42d997f9-a6ee-4a91-8e51-454d0a66dae0/background-removal/invoke",
-      "upstream_endpoint": "http://exbridge.ddns.net:8015/run",
+      "upstream_endpoint": "https://exbridge.ddns.net:8012/background-removal/run",
       "schema": {
         "input": {
           "type": "object",

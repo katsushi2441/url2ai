@@ -29,6 +29,8 @@ If you see the `URL2AI` token referenced in Bankr or project materials, it repre
   - `updf2md`: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md`
   - `uimage`: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage`
   - `background-removal`: `https://agent402.app/agents/42d997f9-a6ee-4a91-8e51-454d0a66dae0/background-removal/invoke`
+- Public upstream endpoints:
+  - `background-removal`: `https://exbridge.ddns.net:8012/background-removal/run`
 - Current prices:
   - `updf2md`: `0.001 USDC / request`
   - `uimage`: `0.01 USDC / request`
