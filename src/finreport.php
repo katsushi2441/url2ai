@@ -225,6 +225,56 @@ function fr_update_latest($ticker, $updates) {
     return $data;
 }
 
+function fr_paragraph_api_get_json($url, $headers = array()) {
+    $opts = array('http' => array(
+        'method'        => 'GET',
+        'header'        => implode("\r\n", $headers) . "\r\n",
+        'timeout'       => 30,
+        'ignore_errors' => true,
+    ));
+    $raw = @file_get_contents($url, false, stream_context_create($opts));
+    if (!$raw) return null;
+    $data = json_decode($raw, true);
+    return is_array($data) ? $data : null;
+}
+
+function fr_paragraph_resolve_post_url_from_publication($paragraph_post_id) {
+    $publication_slug = trim((string) PARAGRAPH_PUBLICATION_SLUG);
+    $paragraph_post_id = trim((string) $paragraph_post_id);
+    if ($publication_slug === '' || $paragraph_post_id === '') return '';
+
+    $publication = fr_paragraph_api_get_json(
+        'https://public.api.paragraph.com/api/v1/publications/slug/' . rawurlencode($publication_slug)
+    );
+    if (!is_array($publication) || empty($publication['id'])) return '';
+    $publication_id = (string) $publication['id'];
+    $publication_slug_clean = isset($publication['slug']) ? ltrim((string)$publication['slug'], '@') : ltrim($publication_slug, '@');
+    $custom_domain = isset($publication['customDomain']) ? trim((string)$publication['customDomain']) : '';
+    $base_url = $custom_domain !== '' ? rtrim($custom_domain, '/') : ('https://paragraph.com/@' . $publication_slug_clean);
+    if ($publication_id === '') return '';
+
+    $posts_data = fr_paragraph_api_get_json(
+        'https://public.api.paragraph.com/api/v1/publications/' . rawurlencode($publication_id) . '/posts?limit=100'
+    );
+    if (!is_array($posts_data) || empty($posts_data['items']) || !is_array($posts_data['items'])) return '';
+
+    foreach ($posts_data['items'] as $post) {
+        $post_id = isset($post['id']) ? (string)$post['id'] : '';
+        $post_slug = isset($post['slug']) ? trim((string)$post['slug']) : '';
+        if ($post_id === $paragraph_post_id && $post_slug !== '') {
+            return $base_url . '/' . ltrim($post_slug, '/');
+        }
+    }
+    return '';
+}
+
+function fr_is_valid_paragraph_url($url) {
+    $url = trim((string) $url);
+    if ($url === '') return false;
+    if (strpos($url, 'aiknowledgecms.exbridge.jp') !== false) return false;
+    return (strpos($url, 'paragraph.com') !== false || strpos($url, 'paragraph.xyz') !== false);
+}
+
 function fr_json_response($data, $status_code) {
     http_response_code($status_code);
     header('Content-Type: application/json; charset=UTF-8');
@@ -254,7 +304,6 @@ function fr_load_all_reports($with_report, $limit, $since_ts) {
     global $DATA_DIR, $BASE_URL;
     $files = glob($DATA_DIR . '/finreport_*.json');
     if (!$files) $files = array();
-    rsort($files);
 
     $items = array();
     foreach ($files as $path) {
@@ -284,7 +333,15 @@ function fr_load_all_reports($with_report, $limit, $since_ts) {
             $item['report'] = isset($data['report']) ? $data['report'] : '';
         }
         $items[] = $item;
-        if ($limit > 0 && count($items) >= $limit) break;
+    }
+    usort($items, function ($a, $b) {
+        $a_ts = isset($a['created_ts']) ? (int) $a['created_ts'] : 0;
+        $b_ts = isset($b['created_ts']) ? (int) $b['created_ts'] : 0;
+        if ($a_ts === $b_ts) return 0;
+        return ($a_ts < $b_ts) ? 1 : -1;
+    });
+    if ($limit > 0) {
+        $items = array_slice($items, 0, $limit);
     }
     return $items;
 }
@@ -366,6 +423,177 @@ if (isset($_GET['api']) && $_GET['api'] !== '') {
             'ticker' => $updated['ticker'],
             'paragraph_url' => $updated['paragraph_url'],
             'paragraph_post_id' => isset($updated['paragraph_post_id']) ? $updated['paragraph_post_id'] : '',
+            'paragraph_posted_at' => isset($updated['paragraph_posted_at']) ? $updated['paragraph_posted_at'] : '',
+        ), 200);
+    }
+
+    if ($api === 'paragraph_resolve') {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            fr_json_response(array('ok' => false, 'error' => 'POST required'), 405);
+        }
+        $raw = file_get_contents('php://input');
+        $body = json_decode($raw, true);
+        if (!is_array($body)) {
+            fr_json_response(array('ok' => false, 'error' => 'invalid json'), 400);
+        }
+        $ticker = isset($body['ticker']) ? trim($body['ticker']) : '';
+        if ($ticker === '') {
+            fr_json_response(array('ok' => false, 'error' => 'ticker is required'), 400);
+        }
+        $saved = fr_load($ticker);
+        if (!$saved) {
+            fr_json_response(array('ok' => false, 'error' => 'report not found'), 404);
+        }
+        $paragraph_url = isset($saved['paragraph_url']) ? trim((string) $saved['paragraph_url']) : '';
+        $paragraph_post_id = isset($saved['paragraph_post_id']) ? trim((string) $saved['paragraph_post_id']) : '';
+        if (!fr_is_valid_paragraph_url($paragraph_url) && $paragraph_post_id !== '') {
+            $paragraph_url = fr_paragraph_resolve_post_url_from_publication($paragraph_post_id);
+            if ($paragraph_url !== '') {
+                fr_update_latest($ticker, array(
+                    'paragraph_url' => $paragraph_url,
+                    'paragraph_post_id' => $paragraph_post_id,
+                    'paragraph_posted_at' => !empty($saved['paragraph_posted_at']) ? $saved['paragraph_posted_at'] : date('c'),
+                ));
+            }
+        }
+        fr_json_response(array(
+            'ok' => true,
+            'paragraph_url' => fr_is_valid_paragraph_url($paragraph_url) ? $paragraph_url : '',
+            'paragraph_post_id' => $paragraph_post_id,
+        ), 200);
+    }
+
+    if ($api === 'save') {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            fr_json_response(array('ok' => false, 'error' => 'POST required'), 405);
+        }
+        $raw = file_get_contents('php://input');
+        $body = json_decode($raw, true);
+        if (!is_array($body)) {
+            fr_json_response(array('ok' => false, 'error' => 'invalid json'), 400);
+        }
+        $ticker = isset($body['ticker']) ? trim($body['ticker']) : '';
+        $report = isset($body['report']) ? trim($body['report']) : '';
+        if ($ticker === '' || $report === '') {
+            fr_json_response(array('ok' => false, 'error' => 'ticker and report are required'), 400);
+        }
+        $created_at = isset($body['created_at']) && trim($body['created_at']) !== ''
+            ? trim($body['created_at'])
+            : date('Y-m-d H:i:s');
+        $save_data = array(
+            'ticker'       => $ticker,
+            'report'       => $report,
+            'summary'      => isset($body['summary']) ? $body['summary'] : '',
+            'sources'      => isset($body['sources']) && is_array($body['sources']) ? $body['sources'] : array(),
+            'created_at'   => $created_at,
+            'news_kind'    => isset($body['news_kind']) ? $body['news_kind'] : '',
+            'news_title'   => isset($body['news_title']) ? $body['news_title'] : '',
+            'news_link'    => isset($body['news_link']) ? $body['news_link'] : '',
+            'news_summary' => isset($body['news_summary']) ? $body['news_summary'] : '',
+        );
+        fr_save($ticker, $save_data);
+        $saved = fr_load($ticker);
+        $created_ts = $saved ? fr_created_ts($saved) : time();
+        fr_json_response(array(
+            'ok' => true,
+            'item' => array(
+                'id'         => fr_slug($ticker) . '-' . date('YmdHis', $created_ts),
+                'ticker'     => $ticker,
+                'slug'       => fr_slug($ticker),
+                'summary'    => isset($save_data['summary']) ? $save_data['summary'] : '',
+                'report'     => $report,
+                'sources'    => isset($save_data['sources']) ? $save_data['sources'] : array(),
+                'created_at' => date('c', $created_ts),
+                'created_ts' => $created_ts,
+                'detail_url' => $BASE_URL . '/finreportv.php?ticker=' . urlencode($ticker),
+                'paragraph_url' => '',
+                'paragraph_post_id' => '',
+                'paragraph_posted_at' => '',
+            ),
+        ), 200);
+    }
+
+    if ($api === 'paragraph_post') {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            fr_json_response(array('ok' => false, 'error' => 'POST required'), 405);
+        }
+        $session_user = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
+        if ($session_user !== $ADMIN) {
+            fr_json_response(array('ok' => false, 'error' => 'unauthorized'), 403);
+        }
+        if (!PARAGRAPH_API_KEY) {
+            fr_json_response(array('ok' => false, 'error' => 'PARAGRAPH_API_KEY not configured'), 500);
+        }
+        $raw = file_get_contents('php://input');
+        $body = json_decode($raw, true);
+        if (!is_array($body)) {
+            fr_json_response(array('ok' => false, 'error' => 'invalid json'), 400);
+        }
+        $ticker = isset($body['ticker']) ? trim($body['ticker']) : '';
+        if ($ticker === '') {
+            fr_json_response(array('ok' => false, 'error' => 'ticker is required'), 400);
+        }
+        $saved = fr_load($ticker);
+        if (!$saved || empty($saved['report'])) {
+            fr_json_response(array('ok' => false, 'error' => 'report not found'), 404);
+        }
+
+        $existing_url = isset($saved['paragraph_url']) ? trim((string) $saved['paragraph_url']) : '';
+        $existing_id  = isset($saved['paragraph_post_id']) ? trim((string) $saved['paragraph_post_id']) : '';
+        if (fr_is_valid_paragraph_url($existing_url) || $existing_id !== '') {
+            fr_json_response(array(
+                'ok' => true,
+                'paragraph_url' => fr_is_valid_paragraph_url($existing_url) ? $existing_url : '',
+                'paragraph_post_id' => $existing_id,
+            ), 200);
+        }
+
+        $title = $ticker . ' Investment Report';
+        $summary = isset($saved['summary']) ? trim((string) $saved['summary']) : '';
+        $detail_url = $BASE_URL . '/finreportv.php?ticker=' . urlencode($ticker);
+        $markdown = "# " . $title . "\n\n";
+        if ($summary !== '') {
+            $markdown .= "> " . str_replace("\n", "\n> ", $summary) . "\n\n";
+        }
+        $markdown .= trim((string) $saved['report']) . "\n\n---\n";
+        $markdown .= "Source:\n- FinReport demo: " . $detail_url . "\n";
+        $markdown .= "Bankr / URL2AI:\n- Discover URL2AI on Bankr: https://bankr.bot/discover/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3\n";
+
+        $payload = json_encode(array(
+            'title'    => $title,
+            'markdown' => $markdown,
+            'status'   => 'published',
+        ), JSON_UNESCAPED_UNICODE);
+        $opts = array('http' => array(
+            'method'        => 'POST',
+            'header'        => "Authorization: Bearer " . PARAGRAPH_API_KEY . "\r\nContent-Type: application/json\r\n",
+            'content'       => $payload,
+            'timeout'       => 60,
+            'ignore_errors' => true,
+        ));
+        $res = @file_get_contents('https://public.api.paragraph.com/api/v1/posts', false, stream_context_create($opts));
+        $res_arr = $res ? json_decode($res, true) : array();
+        $para_url = isset($res_arr['url']) ? $res_arr['url'] : (isset($res_arr['canonicalUrl']) ? $res_arr['canonicalUrl'] : '');
+        $para_post_id = isset($res_arr['id']) ? (string)$res_arr['id'] : (isset($res_arr['postId']) ? (string)$res_arr['postId'] : '');
+        if (!$para_url && $para_post_id) {
+            $para_url = fr_paragraph_resolve_post_url_from_publication($para_post_id);
+        }
+        if (!$para_url && !$para_post_id) {
+            fr_json_response(array('ok' => false, 'error' => 'Paragraph API failed', 'detail' => $res_arr), 500);
+        }
+
+        $updated = fr_update_latest($ticker, array(
+            'paragraph_url' => $para_url,
+            'paragraph_post_id' => $para_post_id,
+            'paragraph_posted_at' => date('c'),
+        ));
+        if (!$updated) {
+            fr_json_response(array('ok' => false, 'error' => 'report update failed'), 500);
+        }
+        fr_json_response(array(
+            'ok' => true,
+            'paragraph_url' => $para_url,
+            'paragraph_post_id' => $para_post_id,
             'paragraph_posted_at' => isset($updated['paragraph_posted_at']) ? $updated['paragraph_posted_at'] : '',
         ), 200);
     }
@@ -656,7 +884,8 @@ document.getElementById('report-render').innerHTML = marked.parse(raw);
 function copyShare() {
     var summary = <?php echo json_encode(isset($saved['summary']) ? $saved['summary'] : '', JSON_UNESCAPED_UNICODE); ?>;
     var detailUrl = <?php echo json_encode($BASE_URL . '/finreportv.php?ticker=' . urlencode($saved['ticker']), JSON_UNESCAPED_UNICODE); ?>;
-    var text = '#URL2AI 投資レポート\n\n' + summary + '\n\n' + detailUrl;
+    var ticker = <?php echo json_encode(isset($saved['ticker']) ? $saved['ticker'] : '', JSON_UNESCAPED_UNICODE); ?>;
+    var text = '#URL2AI ' + ticker + ' 投資レポート\n\n' + summary + '\n\n' + detailUrl;
     navigator.clipboard.writeText(text).then(function() {
         alert('コピーしました');
     });

@@ -10,6 +10,12 @@ $SITE_NAME = 'FinReportV';
 $ADMIN     = AIGM_ADMIN;
 
 function h($s) { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+function frv_is_valid_paragraph_url($url) {
+    $url = trim((string) $url);
+    if ($url === '') return false;
+    if (strpos($url, 'aiknowledgecms.exbridge.jp') !== false) return false;
+    return (strpos($url, 'paragraph.com') !== false || strpos($url, 'paragraph.xyz') !== false);
+}
 
 /* =========================================================
    データ読み込み（finreport_*.json）
@@ -83,6 +89,19 @@ if ($detail_ticker !== '') {
     }
 }
 
+if (!$detail_report) {
+    foreach ($reports as &$r) {
+        $r = array(
+            'ticker' => isset($r['ticker']) ? $r['ticker'] : '',
+            'summary' => isset($r['summary']) ? $r['summary'] : '',
+            'created_at' => isset($r['created_at']) ? $r['created_at'] : '',
+            'paragraph_url' => isset($r['paragraph_url']) ? $r['paragraph_url'] : '',
+            'paragraph_post_id' => isset($r['paragraph_post_id']) ? $r['paragraph_post_id'] : '',
+        );
+    }
+    unset($r);
+}
+
 /* SEO */
 if ($detail_report) {
     $page_title       = h($detail_report['ticker']) . ' 投資レポート | ' . $SITE_NAME;
@@ -131,6 +150,7 @@ if ($detail_report) {
     --mono:'JetBrains Mono',monospace;
 }
 body{background:var(--bg);color:var(--text);font-family:-apple-system,'Inter',sans-serif;font-size:14px;}
+body.page-busy{cursor:progress}
 .header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 20px;position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:12px;}
 .logo{font-size:17px;font-weight:700;color:var(--text);}
 .logo span{color:var(--accent);}
@@ -188,11 +208,19 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,'Inter',sa
 .btn-teal:hover{background:var(--accent-h);}
 .btn-outline{background:#f1f5f9;color:var(--text);border:1px solid var(--border);}
 .btn-outline:hover{background:var(--accent-bg);border-color:var(--accent);color:var(--accent);}
+.btn-para{background:#4f46e5;color:#fff;border:none;}
+.btn-para:hover{background:#4338ca;}
+.para-badge{display:inline-flex;align-items:center;gap:5px;padding:8px 16px;border-radius:6px;font-size:.82rem;font-weight:600;text-decoration:none;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;}
+.para-badge:hover{background:#e0e7ff;}
 .sources-list{margin-top:20px;}
 .sources-title{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
 .sources-list ol{padding-left:1.2rem;font-size:.78rem;line-height:1.9;}
 .sources-list a{color:var(--accent);text-decoration:none;word-break:break-all;}
 .sources-list a:hover{text-decoration:underline;}
+#copy-toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(10px);background:#0f172a;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;box-shadow:0 10px 30px rgba(15,23,42,.2);opacity:0;pointer-events:none;transition:all .18s ease;z-index:9999}
+#copy-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#busy-overlay{position:fixed;inset:0;background:rgba(248,250,252,.7);backdrop-filter:blur(1px);z-index:9998;display:none}
+body.page-busy #busy-overlay{display:block}
 </style>
 </head>
 <body>
@@ -234,6 +262,13 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,'Inter',sa
 <div style="padding:0 24px;">
     <div class="detail-actions">
         <button class="btn-teal" type="button" onclick="copyReport()">📋 Markdownコピー</button>
+        <?php if (frv_is_valid_paragraph_url(isset($detail_report['paragraph_url']) ? $detail_report['paragraph_url'] : '')): ?>
+        <a class="para-badge" href="<?php echo h($detail_report['paragraph_url']); ?>" target="_blank" rel="noopener">✅ Paragraph</a>
+        <?php elseif (!empty($detail_report['paragraph_post_id'])): ?>
+        <span class="para-badge">✅ Paragraph</span>
+        <?php elseif ($is_admin): ?>
+        <button class="btn-para" id="para-post-btn" type="button" onclick="postToParagraph('<?php echo h($detail_report['ticker']); ?>')">📝 Paragraph</button>
+        <?php endif; ?>
         <?php if ($is_admin): ?>
         <a class="btn-outline" href="finreport.php?ticker=<?php echo urlencode($detail_report['ticker']); ?>">🔄 再生成</a>
         <?php endif; ?>
@@ -261,8 +296,68 @@ var raw = document.getElementById('report-raw').value;
 document.getElementById('report-render').innerHTML = marked.parse(raw);
 function copyReport() {
     navigator.clipboard.writeText(raw).then(function() {
-        alert('Markdownをコピーしました');
+        showToast('Markdownをコピーしました');
     });
+}
+function showToast(msg) {
+    var t = document.getElementById('copy-toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function() { t.classList.remove('show'); }, 2200);
+}
+function setPageBusy(busy, msg) {
+    if (busy) {
+        document.body.classList.add('page-busy');
+        if (msg) showToast(msg);
+    } else {
+        document.body.classList.remove('page-busy');
+    }
+}
+function postToParagraph(ticker) {
+    var btn = document.getElementById('para-post-btn');
+    if (!btn) return;
+    btn.disabled = true;
+    btn.textContent = '投稿中...';
+    setPageBusy(true, 'Paragraphへ投稿中...');
+    var xhr = new XMLHttpRequest();
+    xhr.timeout = 20000;
+    xhr.open('POST', 'finreport.php?api=paragraph_post', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState !== 4) return;
+        btn.disabled = false;
+        setPageBusy(false);
+        try {
+            var res = JSON.parse(xhr.responseText || '{}');
+            if (xhr.status >= 200 && xhr.status < 300 && res.ok && (res.paragraph_url || res.paragraph_post_id)) {
+                if (res.paragraph_url) {
+                    btn.outerHTML = '<a class="para-badge" href="' + encodeURI(res.paragraph_url) + '" target="_blank" rel="noopener">✅ Paragraph</a>';
+                } else {
+                    btn.outerHTML = '<span class="para-badge">✅ Paragraph</span>';
+                }
+                showToast('Paragraphに投稿しました');
+                return;
+            }
+            showToast((res && res.error) ? res.error : 'Paragraph投稿に失敗しました');
+        } catch (e) {
+            showToast('Paragraph投稿に失敗しました');
+        }
+        btn.textContent = '📝 Paragraph';
+    };
+    xhr.onerror = function() {
+        btn.disabled = false;
+        btn.textContent = '📝 Paragraph';
+        setPageBusy(false);
+        showToast('通信エラー');
+    };
+    xhr.ontimeout = function() {
+        btn.disabled = false;
+        btn.textContent = '📝 Paragraph';
+        setPageBusy(false);
+        showToast('投稿がタイムアウトしました');
+    };
+    xhr.send(JSON.stringify({ ticker: ticker }));
 }
 </script>
 
@@ -274,29 +369,124 @@ function copyReport() {
     </div>
 
     <div id="report-list"></div>
-    <div id="load-sentinel" style="height:1px;"></div>
-    <div id="load-indicator" style="display:none;text-align:center;padding:16px;font-size:13px;color:#888;">読み込み中...</div>
 </div>
 
 <script>
 var frReports = <?php echo json_encode(array_values($reports), JSON_UNESCAPED_UNICODE); ?>;
 var IS_ADMIN   = <?php echo $is_admin ? 'true' : 'false'; ?>;
-var PAGE_SIZE  = 20;
-var curPage    = 0;
 
 function esc(s) {
     return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+function showToast(msg) {
+    var t = document.getElementById('copy-toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function() { t.classList.remove('show'); }, 2200);
+}
+function setPageBusy(busy, msg) {
+    if (busy) {
+        document.body.classList.add('page-busy');
+        if (msg) showToast(msg);
+    } else {
+        document.body.classList.remove('page-busy');
+    }
+}
 
-function renderReports(from, to) {
+function buildFinParaBtn(report, idx) {
+    if (report.paragraph_url && report.paragraph_url.indexOf('aiknowledgecms.exbridge.jp') === -1 && (report.paragraph_url.indexOf('paragraph.com') !== -1 || report.paragraph_url.indexOf('paragraph.xyz') !== -1)) {
+        return '<a class="card-link" href="' + esc(report.paragraph_url) + '" target="_blank" rel="noopener">✅ Paragraph</a>';
+    }
+    if (report.paragraph_post_id) {
+        return '<span class="card-link">✅ Paragraph</span>';
+    }
+    if (IS_ADMIN) {
+        return '<button class="card-link" type="button" id="fr-para-btn-' + idx + '" onclick="frParaPost(' + idx + ')">📝 Paragraph</button>';
+    }
+    return '';
+}
+function frParaPost(idx) {
+    var report = frReports[idx];
+    if (!report) return;
+    var btn = document.getElementById('fr-para-btn-' + idx);
+    if (!btn) return;
+    btn.disabled = true;
+    btn.textContent = '投稿中...';
+    setPageBusy(true, 'Paragraphへ投稿中...');
+    var xhr = new XMLHttpRequest();
+    xhr.timeout = 20000;
+    xhr.open('POST', 'finreport.php?api=paragraph_post', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState !== 4) return;
+        btn.disabled = false;
+        setPageBusy(false);
+        try {
+            var res = JSON.parse(xhr.responseText || '{}');
+            if (xhr.status >= 200 && xhr.status < 300 && res.ok && (res.paragraph_url || res.paragraph_post_id)) {
+                report.paragraph_url = res.paragraph_url || '';
+                report.paragraph_post_id = res.paragraph_post_id || '';
+                if (res.paragraph_url) {
+                    btn.outerHTML = '<a class="card-link" href="' + esc(res.paragraph_url) + '" target="_blank" rel="noopener">✅ Paragraph</a>';
+                } else {
+                    btn.outerHTML = '<span class="card-link">✅ Paragraph</span>';
+                }
+                showToast('Paragraphに投稿しました');
+                return;
+            }
+            showToast((res && res.error) ? res.error : 'Paragraph投稿に失敗しました');
+        } catch (e) {
+            showToast('Paragraph投稿に失敗しました');
+        }
+        btn.textContent = '📝 Paragraph';
+    };
+    xhr.onerror = function() {
+        btn.disabled = false;
+        btn.textContent = '📝 Paragraph';
+        setPageBusy(false);
+        showToast('通信エラー');
+    };
+    xhr.ontimeout = function() {
+        btn.disabled = false;
+        btn.textContent = '📝 Paragraph';
+        setPageBusy(false);
+        showToast('投稿がタイムアウトしました');
+    };
+    xhr.send(JSON.stringify({ ticker: report.ticker }));
+}
+function copyListReport(idx) {
+    var report = frReports[idx];
+    if (!report) return;
+    var btn = document.getElementById('fr-copy-btn-' + idx);
+    var detailUrl = 'https://aiknowledgecms.exbridge.jp/finreportv.php?ticker=' + encodeURIComponent(report.ticker || '');
+    var text = '#URL2AI ' + (report.ticker || '') + ' 投資レポート\n\n' + (report.summary || '') + '\n\n' + detailUrl;
+    navigator.clipboard.writeText(text).then(function() {
+        if (btn) {
+            btn.textContent = '✓ コピー済';
+            setTimeout(function() {
+                btn.textContent = '📋 コピー';
+            }, 2000);
+        }
+        showToast('コピーしました');
+    }, function() {
+        if (btn) {
+            btn.textContent = '📋 コピー';
+        }
+        showToast('コピーに失敗しました');
+    });
+}
+
+function renderReports() {
     var list = document.getElementById('report-list');
     if (!list) return;
-    for (var i = from; i < to && i < frReports.length; i++) {
+    for (var i = 0; i < frReports.length; i++) {
         var r       = frReports[i];
         var ticker  = r.ticker    || '';
         var summary = r.summary   || '';
         var date    = r.created_at || '';
         var detailUrl = 'finreportv.php?ticker=' + encodeURIComponent(ticker);
+        var paraHtml = buildFinParaBtn(r, i);
 
         var html = '<div class="post-card" onclick="location.href=\'' + esc(detailUrl) + '\'">'
             + '<div class="card-top">'
@@ -305,43 +495,27 @@ function renderReports(from, to) {
             + '</div>'
             + '<div class="card-title"><a href="' + esc(detailUrl) + '" onclick="event.stopPropagation()">' + esc(ticker) + ' 投資レポート</a></div>'
             + (summary ? '<div class="summary-block">' + esc(summary) + '</div>' : '')
-            + '<div class="card-links">'
+            + '<div class="card-links" onclick="event.stopPropagation()">'
             + '<a class="card-link" href="' + esc(detailUrl) + '" onclick="event.stopPropagation()">📄 詳細を見る</a>'
+            + '<button class="card-link" type="button" id="fr-copy-btn-' + i + '" onclick="copyListReport(' + i + '); return false;">📋 コピー</button>'
+            + paraHtml
             + (IS_ADMIN ? '<a class="card-link" href="finreport.php?ticker=' + encodeURIComponent(ticker) + '" onclick="event.stopPropagation()">🔄 再生成</a>' : '')
             + '</div>'
             + '</div>';
         list.insertAdjacentHTML('beforeend', html);
     }
-    curPage++;
-}
-
-function loadMore() {
-    var from = curPage * PAGE_SIZE;
-    if (from >= frReports.length) { document.getElementById('load-indicator').style.display = 'none'; return; }
-    renderReports(from, from + PAGE_SIZE);
-}
-
-var sentinel = document.getElementById('load-sentinel');
-if (sentinel) {
-    new IntersectionObserver(function(entries) {
-        if (entries[0].isIntersecting) {
-            document.getElementById('load-indicator').style.display = 'block';
-            setTimeout(function() {
-                loadMore();
-                if (curPage * PAGE_SIZE >= frReports.length) { document.getElementById('load-indicator').style.display = 'none'; }
-            }, 150);
-        }
-    }, { rootMargin: '200px' }).observe(sentinel);
 }
 
 if (frReports.length === 0) {
     document.getElementById('report-list').innerHTML = '<div class="empty">まだレポートがありません。<br><br><a href="finreport.php">FinReportでレポートを生成する →</a></div>';
 } else {
-    loadMore();
+    renderReports();
 }
 </script>
 
 <?php endif; ?>
 
+<div id="busy-overlay"></div>
+<div id="copy-toast">処理中...</div>
 </body>
 </html>
