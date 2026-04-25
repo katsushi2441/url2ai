@@ -479,7 +479,7 @@ h1 {
     <div class="section">
         <h3>🚀 What is URL2AI</h3>
         <div class="intro-box">
-            URL2AIは、記事URL・X投稿URL・GitHub URL などを起点に、AIが情報を取得し、理解し、別の価値ある形式へ変換していく仕組みです。
+            URL2AIは、記事URL・X投稿URL・GitHub URL・画像URL などを起点に、AIが情報を取得し、理解し、別の価値ある形式へ変換していく仕組みです。
             単なる要約ではなく、考察、短編小説、議論、歌詞、構文解析、メディア読解、OSS紹介、Zenn連携、技術リンク集、ニュース解説、そして全体ポータルまでをシリーズとして展開しています。
         </div>
     </div>
@@ -627,6 +627,18 @@ h1 {
                 </div>
             </div>
 
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#14B8A6;">
+                    <div class="card-visual-badge">🖼️ OSS2API <span class="card-visual-id">12</span></div>
+                    <img src="./images/oss2api.png" alt="OSS2API Background Removal" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">12</div>
+                    <h4>OSS2API</h4>
+                    <p>OSSを実用APIへ変換するシリーズ。第一弾として、画像背景の削除・置換・ぼかしを x402 paid endpoint として公開しています。</p>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -674,6 +686,20 @@ h1 {
     </div>
 
     <div class="section">
+        <h3>⚙️ Agent / API Systems</h3>
+        <div class="intro-box" style="margin-bottom:18px;">
+            URL2AI は PHP のWebデモだけでなく、AI agent が直接呼び出せる x402 paid API としても展開しています。
+            OSS2API は、公開OSSをラップして、支払い・メタデータ・運用監視まで含めた agent-ready API にする取り組みです。
+        </div>
+        <div class="system-list">
+            <div class="system-row"><div class="system-file">apps/background-removal</div><div class="system-kind">OSS2API</div><div class="system-desc">imgly/background-removal-js を使った背景削除API。remove / replace / blur に対応し、画像URLまたはbase64入力を処理します。</div></div>
+            <div class="system-row"><div class="system-file">x402/background</div><div class="system-kind">x402</div><div class="system-desc">OSS2API Background Removal を paid agent endpoint として呼び出すための x402 handler。</div></div>
+            <div class="system-row"><div class="system-file">Agent402</div><div class="system-kind">Marketplace</div><div class="system-desc">OSS2API Background Removal を 0.01 USDC/request のサービスとして登録。支払い後に公開APIへプロキシします。</div></div>
+            <div class="system-row"><div class="system-file">PayAPI Market</div><div class="system-kind">Review</div><div class="system-desc">PayAPI Market に OSS2API Background Removal として登録済み。レビュー後、x402 API marketplace 上で discoverable になります。</div></div>
+        </div>
+    </div>
+
+    <div class="section">
         <h3>🔥 Features</h3>
         <ul class="feature-list">
             <li>URLだけで完結（プロンプト不要）</li>
@@ -681,6 +707,7 @@ h1 {
             <li>自動収集・解析・配信</li>
             <li>CMS・RSS・SNS連携</li>
             <li>無料Webデモで出力品質を確認し、使えるものを Bankr x402 の paid AI agent / API として展開</li>
+            <li>OSS2API により、OSSプロジェクトを agent-ready な paid API として公開</li>
             <li>同じ入力から、考察・物語・議論・歌詞など複数の表現へ展開</li>
             <li>シリーズ全体を KnowRader で横断的に把握可能</li>
         </ul>
@@ -745,6 +772,19 @@ h1 {
                     <a href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md" class="button" target="_blank" rel="noopener">View x402 Endpoint</a>
                 </div>
             </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#0D9488;">
+                    <div class="card-visual-badge">🖼️ OSS2API <span class="card-visual-id">X402</span></div>
+                    <img src="./images/oss2api.png" alt="OSS2API Background Removal" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">PAID AGENT</div>
+                    <h4>OSS2API Background Removal</h4>
+                    <p>画像の背景を削除・置換・ぼかし処理する paid endpoint。imgly/background-removal-js をOSS2API化し、Agent402 経由で x402 決済に対応しています。</p>
+                    <a href="https://agent402.app/agents/42d997f9-a6ee-4a91-8e51-454d0a66dae0/background-removal/invoke" class="button" target="_blank" rel="noopener">View Agent402 Endpoint</a>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -752,7 +792,7 @@ h1 {
         <h3>🌍 Vision</h3>
         <p>
         URL2AIは情報を価値に変換するAIインフラです。  
-        Web無料デモで開発・検証し、SNSで実運用し、Bankr x402 で paid AI agent 化し、さらにトークン経済圏へつなげていく。
+        Web無料デモで開発・検証し、SNSで実運用し、Bankr / Agent402 x402 で paid AI agent 化し、さらにOSS2APIとトークン経済圏へつなげていく。
         コンテンツは消費されるものではなく、再生成され続ける資産へ。
         </p>
     </div>
