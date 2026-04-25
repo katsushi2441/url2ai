@@ -1,3 +1,9 @@
 apps/url2ai-mcp/.venv/
 apps/url2ai-mcp/__pycache__/
 *.pyc
+__pycache__/
+node_modules/
+apps/background-removal/node_modules/
+tools/browser-use/.venv/
+tools/browser-use/.env
+tools/browser-use/.browser-profile/

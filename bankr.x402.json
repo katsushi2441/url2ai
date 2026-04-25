@@ -144,6 +144,87 @@
           }
         }
       }
+    },
+    "background-removal": {
+      "price": "0.01",
+      "description": "OSS2API Background Removal endpoint for AI agents. Removes, replaces, or blurs image backgrounds using imgly/background-removal-js through an x402-ready gateway.",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "https://agent402.app/agents/42d997f9-a6ee-4a91-8e51-454d0a66dae0/background-removal/invoke",
+      "upstream_endpoint": "http://exbridge.ddns.net:8015/run",
+      "schema": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "image_url": {
+              "type": "string",
+              "description": "Publicly reachable HTTP(S) URL of the input image."
+            },
+            "image_base64": {
+              "type": "string",
+              "description": "Base64 or data URL encoded input image."
+            },
+            "mode": {
+              "type": "string",
+              "description": "remove, replace, or blur."
+            },
+            "background_color": {
+              "type": "string",
+              "description": "CSS color used for replace mode when no background image is provided."
+            },
+            "background_image_url": {
+              "type": "string",
+              "description": "Optional public background image URL for replace mode."
+            },
+            "background_image_base64": {
+              "type": "string",
+              "description": "Optional base64 or data URL background image for replace mode."
+            },
+            "blur_sigma": {
+              "type": "number",
+              "description": "Blur strength from 1 to 80 for blur mode."
+            },
+            "output_format": {
+              "type": "string",
+              "description": "png, webp, or jpeg."
+            },
+            "response": {
+              "type": "string",
+              "description": "binary or json. json returns image_base64."
+            }
+          },
+          "anyOf": [
+            {
+              "required": [
+                "image_url"
+              ]
+            },
+            {
+              "required": [
+                "image_base64"
+              ]
+            }
+          ]
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "content_type": {
+              "type": "string",
+              "description": "Returned image content type when response=json."
+            },
+            "image_base64": {
+              "type": "string",
+              "description": "Processed image bytes encoded as base64 when response=json."
+            }
+          }
+        }
+      },
+      "license": {
+        "name": "AGPL-3.0",
+        "upstream": "https://github.com/imgly/background-removal-js"
+      }
     }
   }
 }

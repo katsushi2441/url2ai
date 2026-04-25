@@ -28,9 +28,11 @@ If you see the `URL2AI` token referenced in Bankr or project materials, it repre
 - Hosted x402 endpoints:
   - `updf2md`: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md`
   - `uimage`: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage`
+  - `background-removal`: `https://agent402.app/agents/42d997f9-a6ee-4a91-8e51-454d0a66dae0/background-removal/invoke`
 - Current prices:
   - `updf2md`: `0.001 USDC / request`
   - `uimage`: `0.01 USDC / request`
+  - `background-removal`: `0.01 USDC / request`
 - Billing model: Bankr x402 issues a `402 Payment Required` challenge before paid execution
 
 Use cases:
@@ -39,6 +41,7 @@ Use cases:
 - Feed document extraction pipelines for AI agents
 - Connect paid PDF parsing into MCP / automation workflows
 - Generate images from direct prompts, text, public URLs, or X post URLs
+- Remove, replace, or blur image backgrounds via OSS2API
 - Build URL-to-image workflows for agents and social content pipelines
 
 CLI examples:

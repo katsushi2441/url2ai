@@ -1,0 +1,9 @@
+[project]
+name = "url2ai-browser-automation"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "browser-use>=0.12.6",
+    "playwright>=1.58.0",
+    "python-dotenv>=1.2.1",
+]
