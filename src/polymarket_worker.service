@@ -1,0 +1,17 @@
+[Unit]
+Description=Polymarket Worker - Daily news to Polymarket Intelligence + Paragraph
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/kojima/work/url2ai/src
+ExecStart=/usr/bin/python3 /home/kojima/work/url2ai/src/polymarket_worker.py --interval 600
+Restart=always
+RestartSec=20
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=append:/home/kojima/polymarket_worker.log
+StandardError=append:/home/kojima/polymarket_worker.log
+
+[Install]
+WantedBy=multi-user.target

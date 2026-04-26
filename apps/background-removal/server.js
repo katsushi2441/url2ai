@@ -213,10 +213,6 @@ function manifest() {
       blur_sigma: "1-80 for blur mode",
       response: "binary | json",
     },
-    pricing: {
-      x402_ready: true,
-      suggested_price_usd: "0.01",
-    },
   };
 }
 
@@ -226,7 +222,7 @@ function openapi() {
     info: {
       title: "OSS2API Background Removal",
       version: "0.1.0",
-      description: "x402-ready API gateway for background-removal-js.",
+      description: "API gateway for background-removal-js.",
       license: { name: OSS_LICENSE, url: "https://github.com/imgly/background-removal-js" },
     },
     paths: {

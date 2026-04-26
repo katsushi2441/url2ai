@@ -1,6 +1,7 @@
 import asyncio
 import os
 import re
+import time
 from datetime import datetime
 
 import httpx
@@ -111,18 +112,22 @@ async def ollama_generate(prompt: str, timeout: int = 240) -> str:
 
 def search_web(query: str, max_results: int = 6) -> list[dict]:
     results = []
-    try:
-        with DDGS() as ddgs:
-            for item in ddgs.text(query, max_results=max_results, timelimit="w"):
-                results.append(
-                    {
-                        "title": item.get("title", ""),
-                        "url": item.get("href", ""),
-                        "body": item.get("body", ""),
-                    }
-                )
-    except Exception:
-        pass
+    for attempt in range(3):
+        try:
+            with DDGS() as ddgs:
+                for item in ddgs.text(query, max_results=max_results, timelimit="w"):
+                    results.append(
+                        {
+                            "title": item.get("title", ""),
+                            "url": item.get("href", ""),
+                            "body": item.get("body", ""),
+                        }
+                    )
+            if results:
+                break
+        except Exception:
+            if attempt < 2:
+                time.sleep(2 ** attempt)
     return results
 
 
@@ -162,12 +167,11 @@ async def gather_context(ticker: str) -> tuple[str, list[str]]:
         )
 
     loop = asyncio.get_event_loop()
-    search_tasks = [loop.run_in_executor(None, lambda q=query: search_web(q, max_results=5)) for query in queries]
-    search_results = await asyncio.gather(*search_tasks)
-
     all_results = []
-    for results in search_results:
+    for query in queries:
+        results = await loop.run_in_executor(None, lambda q=query: search_web(q, max_results=5))
         all_results.extend(results)
+        await asyncio.sleep(0.8)
 
     seen = set()
     unique = []

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent402 ERC-8004 Register</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; }
+    button { font: inherit; padding: 10px 14px; margin-right: 8px; cursor: pointer; }
+    code, pre { background: #f3f3f3; padding: 2px 4px; border-radius: 4px; }
+    pre { padding: 12px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Agent402 Register</h1>
+  <p>Contract: <code id="contract"></code></p>
+  <p>Agent URI: <code id="uri"></code></p>
+  <button id="connect">Connect MetaMask</button>
+  <button id="register">Register On-chain</button>
+  <pre id="log"></pre>
+
+  <script type="module">
+    import { BrowserProvider, Contract } from "https://cdn.jsdelivr.net/npm/ethers@6.13.5/+esm";
+
+    const CONTRACT = "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432";
+    const AGENT_URI = "ipfs://QmYPQK3vjauHkaSgV7Wo3eg2ZCd9AZeq9XWEiSn6r6GBP2";
+    const ABI = ["function register(string agentURI)"];
+
+    const log = (msg) => document.getElementById("log").textContent += msg + "\n";
+    document.getElementById("contract").textContent = CONTRACT;
+    document.getElementById("uri").textContent = AGENT_URI;
+
+    async function provider() {
+      if (!window.ethereum) throw new Error("MetaMask not found");
+      const p = new BrowserProvider(window.ethereum);
+      const net = await p.getNetwork();
+      if (Number(net.chainId) !== 8453) {
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: "0x2105" }],
+        });
+      }
+      return new BrowserProvider(window.ethereum);
+    }
+
+    document.getElementById("connect").onclick = async () => {
+      try {
+        const p = await provider();
+        const accounts = await p.send("eth_requestAccounts", []);
+        log("Connected: " + accounts[0]);
+      } catch (e) {
+        log("ERROR: " + (e.message || e));
+      }
+    };
+
+    document.getElementById("register").onclick = async () => {
+      try {
+        const p = await provider();
+        await p.send("eth_requestAccounts", []);
+        const signer = await p.getSigner();
+        const c = new Contract(CONTRACT, ABI, signer);
+        log("Sending register transaction...");
+        const tx = await c.register(AGENT_URI);
+        log("TX: " + tx.hash);
+        await tx.wait();
+        log("Confirmed: " + tx.hash);
+      } catch (e) {
+        log("ERROR: " + (e.shortMessage || e.message || e));
+      }
+    };
+  </script>
+</body>
+</html>

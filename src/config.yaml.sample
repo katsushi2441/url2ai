@@ -19,7 +19,10 @@ x_api:
   key_file: 
 
 finreport:
-  api_url: 
+  api_url:
+
+polymarket:
+  api_url:
 
 paragraph:
   api_key: 

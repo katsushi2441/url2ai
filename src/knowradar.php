@@ -330,6 +330,32 @@ $services = array(
         'image_url'=> $BASE_URL . '/images/ainewsradar.png',
         'desc'     => 'Xのニュース投稿と記事をAIが考察',
     ),
+    array(
+        'id'       => 'finreport',
+        'name'     => 'FinReport',
+        'name_ja'  => '投資レポート',
+        'emoji'    => '📊',
+        'color'    => '#0369a1',
+        'bg'       => '#f0f9ff',
+        'view_url' => $BASE_URL . '/finreportv.php',
+        'edit_url' => $BASE_URL . '/finreport.php',
+        'feed_url' => $BASE_URL . '/finreportv.php?feed',
+        'image_url'=> $BASE_URL . '/images/finreport.png',
+        'desc'     => '株・クリプト・会社名をAIが投資分析',
+    ),
+    array(
+        'id'       => 'polymarket',
+        'name'     => 'Polymarket Intel',
+        'name_ja'  => '予測市場分析',
+        'emoji'    => '🔮',
+        'color'    => '#7c3aed',
+        'bg'       => '#f5f3ff',
+        'view_url' => $BASE_URL . '/polymarketv.php',
+        'edit_url' => $BASE_URL . '/polymarket.php',
+        'feed_url' => $BASE_URL . '/polymarketv.php?feed',
+        'image_url'=> $BASE_URL . '/images/polymarket.png',
+        'desc'     => 'Polymarket予測市場オッズをAIが日本語分析',
+    ),
 );
 
 /* =========================================================
@@ -339,6 +365,8 @@ function kr_detect_system($url) {
     if ($url === '') return 'other';
     $u = strtolower($url);
     if (strpos($u, 'ainews')    !== false)                                        return 'ainews';
+    if (strpos($u, 'finreportv') !== false || strpos($u, 'finreport') !== false)  return 'finreport';
+    if (strpos($u, 'polymarketv') !== false || strpos($u, 'polymarket') !== false) return 'polymarket';
     if (strpos($u, 'udebate')   !== false)                                        return 'udebate';
     if (strpos($u, 'uimagev')   !== false || strpos($u, 'uimage')   !== false)   return 'uimage';
     if (strpos($u, 'pimagev')   !== false || strpos($u, 'pimage')   !== false)   return 'pimage';
@@ -389,6 +417,14 @@ if (file_exists($logfile)) {
         }
     }
 }
+}
+
+if (!empty($pv_total)) {
+    usort($services, function($a, $b) use ($pv_total) {
+        $ca = isset($pv_total[$a['id']]) ? $pv_total[$a['id']] : 0;
+        $cb = isset($pv_total[$b['id']]) ? $pv_total[$b['id']] : 0;
+        return $cb - $ca;
+    });
 }
 ?><!DOCTYPE html>
 <html lang="ja">

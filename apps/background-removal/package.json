@@ -6,11 +6,14 @@
   "description": "OSS2API gateway for IMG.LY background-removal-js.",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "start:jpyc": "node server-jpyc.js",
+    "dev:jpyc": "node --watch server-jpyc.js"
   },
   "dependencies": {
     "@imgly/background-removal-node": "1.4.5",
-    "sharp": "^0.33.5"
+    "sharp": "^0.33.5",
+    "viem": "^2.47.10"
   },
   "engines": {
     "node": ">=18"

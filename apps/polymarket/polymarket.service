@@ -1,0 +1,15 @@
+[Unit]
+Description=Polymarket Intelligence FastAPI Service
+After=network.target
+
+[Service]
+Type=simple
+User=kojima
+WorkingDirectory=/home/kojima/work/url2ai/apps/polymarket
+EnvironmentFile=/home/kojima/work/url2ai/apps/polymarket/.env
+ExecStart=/home/kojima/work/url2ai/apps/polymarket/.venv/bin/uvicorn server:app --host ${HOST} --port ${PORT}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
