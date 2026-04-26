@@ -10,6 +10,7 @@ ExecStart=/usr/bin/python3 /home/kojima/work/url2ai/src/polymarket_worker.py --i
 Restart=always
 RestartSec=20
 Environment=PYTHONUNBUFFERED=1
+Environment=PARAGRAPH_API_KEY=
 StandardOutput=append:/home/kojima/polymarket_worker.log
 StandardError=append:/home/kojima/polymarket_worker.log
 

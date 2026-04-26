@@ -9,6 +9,7 @@ WorkingDirectory=/home/kojima/work/url2ai/src
 ExecStart=/usr/bin/python3 /home/kojima/work/url2ai/src/oss_worker.py
 Restart=always
 RestartSec=10
+Environment=PARAGRAPH_API_KEY=
 StandardOutput=append:/home/kojima/oss_worker.log
 StandardError=append:/home/kojima/oss_worker.log
 
