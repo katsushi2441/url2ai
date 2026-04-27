@@ -1,139 +1,185 @@
 ---
-name: background-removal
+name: oss2api
 description: >
-  Remove, replace, or blur image backgrounds using the OSS2API background
-  removal service (powered by imgly/background-removal-js).
-  Use this skill when the user wants to remove a background from an image,
-  replace it with a color or another image, or blur it.
-  Supports JPYC x402 payment on Polygon and free access via Bankr / payapi.market.
+  OSS2API is a multi-skill AI agent gateway wrapping open-source tools into
+  paid x402 endpoints. Skills: image background removal (remove/replace/blur),
+  URL structured extraction, Playwright browser screenshot/extract, and a
+  Shannon-like 3-phase security scan.
+  Use this skill when the user wants to remove/replace/blur an image background,
+  extract structured content from a URL, take a browser screenshot, or run a
+  security scan on a website.
+  Payment is handled via Bankr x402 (USDC on Base) or JPYC x402 (JPYC on Polygon).
 ---
 
-# Background Removal (OSS2API)
+# OSS2API — Multi-skill AI Agent Gateway
 
-This skill calls the OSS2API background removal service to process images.
-The service wraps [imgly/background-removal-js](https://github.com/imgly/background-removal-js) (AGPL-3.0).
+Wraps open-source tools into x402-ready paid endpoints.
+GitHub: [katsushi2441/url2ai](https://github.com/katsushi2441/url2ai)
 
 ## Endpoints
 
-| Endpoint | Description |
-|---|---|
-| `https://exbridge.ddns.net:8015/run` | Free (Bankr / payapi.market) |
-| `https://exbridge.ddns.net:8017/run` | JPYC x402 payment (Polygon, 1.5 JPYC / request) |
+| Gateway | Base URL | Payment |
+|---|---|---|
+| Bankr x402 | `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api` | USDC on Base ($0.01/req) |
+| JPYC x402 | `https://exbridge.ddns.net:8017` | JPYC on Polygon (1.5 JPYC/req) |
 
-Use port **8015** by default unless the user specifically requests JPYC payment.
+**Use the Bankr endpoint by default.** Append the skill path to the base URL.
 
-## Quick Start
+## Skills
 
-Send a POST request to `/run` with a JSON body:
+### 1. Image Background Removal
 
-```bash
-curl -X POST https://exbridge.ddns.net:8015/run \
-  -H "Content-Type: application/json" \
-  -d '{"image_url": "https://example.com/photo.jpg", "mode": "remove"}' \
-  --output result.png
-```
+`POST {base}/oss2api/image/remove-background`
 
-## Parameters
+Remove, replace, or blur the background of any image.
+Powered by [imgly/background-removal-js](https://github.com/imgly/background-removal-js) (AGPL-3.0).
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `image_url` | string | either/or | HTTPS URL of the input image |
-| `image_base64` | string | either/or | base64 or data URL of the input image |
-| `mode` | string | no | `remove` (default), `replace`, `blur` |
-| `background_color` | string | no | CSS color for `replace` mode (e.g. `#ffffff`) |
-| `background_image_url` | string | no | Background image URL for `replace` mode |
-| `blur_sigma` | number | no | Blur strength 1–80 for `blur` mode (default 18) |
-| `output_format` | string | no | `png` (default), `webp`, `jpeg` |
-| `output_quality` | number | no | 1–100 (default 90) |
-| `response` | string | no | `binary` (default) or `json` (returns base64) |
+**Parameters:**
 
-## Workflow
+| Field | Type | Description |
+|---|---|---|
+| `image_url` | string | Publicly reachable HTTPS URL of the source image |
+| `image_base64` | string | Base64-encoded source image (raw or data URL) |
+| `mode` | string | `remove` (default, transparent), `replace`, `blur` |
+| `background_color` | string | CSS color for `replace` mode (e.g. `#ffffff`) |
+| `background_image_url` | string | Background image URL for `replace` mode |
+| `blur_sigma` | number | Blur strength 1–80 for `blur` mode (default 18) |
+| `output_format` | string | `png` (default), `webp`, `jpeg` |
+| `response` | string | `binary` (default) or `json` (returns base64) |
 
-1. Determine the image source (`image_url` or `image_base64`) from user input.
-2. Determine the mode:
-   - User wants transparent background → `remove`
-   - User wants a specific color or image background → `replace`
-   - User wants a blurred background → `blur`
-3. Call the `/run` endpoint with the appropriate parameters.
-4. If `response=json`, extract `image_base64` from the response and show or save it.
-5. If binary response, save the raw bytes as a PNG/WebP/JPEG file.
+Either `image_url` or `image_base64` is required.
 
-## Examples
-
-### Remove background (transparent PNG)
+**Examples:**
 
 ```json
-{
-  "image_url": "https://example.com/product.jpg",
-  "mode": "remove"
-}
+// Remove background (transparent PNG)
+{ "image_url": "https://example.com/photo.jpg", "mode": "remove" }
+
+// Replace with white background
+{ "image_url": "https://example.com/photo.jpg", "mode": "replace", "background_color": "#ffffff" }
+
+// Blur background
+{ "image_url": "https://example.com/photo.jpg", "mode": "blur", "blur_sigma": 22 }
+
+// Return as JSON (base64)
+{ "image_url": "https://example.com/photo.jpg", "mode": "remove", "response": "json" }
 ```
 
-### Replace background with white
+**Response (binary):** Raw image bytes (PNG/WebP/JPEG).
 
+**Response (json):**
 ```json
-{
-  "image_url": "https://example.com/person.jpg",
-  "mode": "replace",
-  "background_color": "#ffffff"
-}
+{ "ok": true, "mode": "remove", "content_type": "image/png", "image_base64": "<base64>" }
 ```
 
-### Blur background
+---
 
-```json
-{
-  "image_url": "https://example.com/portrait.jpg",
-  "mode": "blur",
-  "blur_sigma": 22
-}
-```
+### 2. URL Structured Extraction
 
-### Get result as JSON (base64)
+`POST {base}/oss2api/url/analyze`
 
-```json
-{
-  "image_url": "https://example.com/photo.jpg",
-  "mode": "remove",
-  "response": "json"
-}
-```
+Fetch a URL and extract structured content.
 
-Response:
+**Parameters:**
+
+| Field | Type | Description |
+|---|---|---|
+| `url` | string | Target URL (required) |
+| `format` | string | `json` (default) or `markdown` |
+| `depth` | string | `basic` (default, 600-char summary) or `full` (8000-char body) |
+
+**Response:**
 ```json
 {
   "ok": true,
-  "mode": "remove",
-  "content_type": "image/png",
-  "image_base64": "<base64-encoded-image>"
+  "url": "...",
+  "title": "...",
+  "description": "...",
+  "headings": [{ "tag": "h1", "text": "..." }],
+  "links": [{ "text": "...", "href": "..." }],
+  "entities": [{ "type": "email", "value": "..." }],
+  "summary": "..."
 }
 ```
 
+---
+
+### 3. Browser Screenshot / Extract
+
+`POST {base}/oss2api/url/browse`
+
+Render a page with a real Chromium browser (Playwright). Useful for JavaScript-heavy pages.
+
+**Parameters:**
+
+| Field | Type | Description |
+|---|---|---|
+| `url` | string | Target URL (required) |
+| `action` | string | `screenshot` (default, PNG as base64) or `extract` (visible text + links) |
+| `wait_until` | string | `networkidle` (default) or `load` |
+
+**Response (screenshot):**
+```json
+{ "ok": true, "url": "...", "title": "...", "screenshot": "<base64-png>", "content_type": "image/png" }
+```
+
+**Response (extract):**
+```json
+{ "ok": true, "url": "...", "title": "...", "content": "...", "links": [...] }
+```
+
+---
+
+### 4. Security Scan
+
+`POST {base}/oss2api/url/scan`
+
+Run a 3-phase security scan on any URL.
+
+- **Phase 1** — HTTP security headers (CSP, HSTS, X-Frame-Options, Referrer-Policy, Permissions-Policy)
+- **Phase 2** — Static HTML analysis: XSS sinks (`innerHTML`, `eval`, `document.write`), SQL error exposure, login form issues, SSRF-prone parameters, external script count
+- **Phase 3** — Ollama AI analysis for additional findings and remediation recommendations
+
+**Parameters:**
+
+| Field | Type | Description |
+|---|---|---|
+| `url` | string | Target URL (required) |
+
+**Response:**
+```json
+{
+  "ok": true,
+  "scanner": "shannon-like (headers + static + ollama-ai)",
+  "risk_score": 50,
+  "summary": "...",
+  "findings": {
+    "critical": [], "high": [], "medium": ["[xss] Missing CSP"], "low": [...], "info": [...]
+  },
+  "findings_flat": ["[MEDIUM/xss] Missing CSP", ...],
+  "actions": ["Implement Content-Security-Policy", ...],
+  "phases": ["1:header-analysis", "2:static-content-analysis", "3:ollama-ai-analysis"]
+}
+```
+
+---
+
+## Workflow
+
+1. Identify which skill the user needs based on their request.
+2. Use the **Bankr x402 base URL** by default. Switch to JPYC if the user requests JPYC payment.
+3. Append the skill path and POST with the appropriate JSON body.
+4. Handle the response according to the skill (binary image, JSON data, etc.).
+
 ## JPYC x402 Payment (port 8017)
 
-For direct JPYC payment, use port 8017. The server implements the x402 protocol
-with JPYC (`transferWithAuthorization`, EIP-3009) on Polygon (chainId 137).
+For JPYC payment, use `https://exbridge.ddns.net:8017` as the base and append the same skill paths.
 
-1. Call `/run` without payment → server returns `402` with payment requirements.
-2. Sign a `transferWithAuthorization` for 1.5 JPYC to `0xd5d3DFe5F48222Bee84B69f808b00186b2bd1FC4`.
+1. Call the endpoint without payment → server returns `402` with payment requirements.
+2. Sign a `transferWithAuthorization` for 1.5 JPYC to the relay address (EIP-3009, Polygon chainId 137).
 3. Retry with `X-Payment: <base64-encoded payment payload>`.
 4. On success, response includes `X-PAYMENT-RESPONSE` header with tx hash.
 
-## Self-hosting
-
-```bash
-git clone https://github.com/katsushi2441/url2ai
-cd url2ai/apps/background-removal
-npm install
-cp .env.sample .env
-npm start          # port 8015 (free)
-# JPYC gateway:
-cp .env.jpyc.sample .env.jpyc
-# fill in JPYC_RELAY_PRIVATE_KEY
-node server-jpyc.js  # port 8017
-```
-
 ## License
 
-The underlying OSS library (`@imgly/background-removal-node`) is AGPL-3.0.
-Deployments using this skill must comply with AGPL terms.
+`@imgly/background-removal-js` is AGPL-3.0. Deployments using this skill must comply with AGPL terms.
