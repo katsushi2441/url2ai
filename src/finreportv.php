@@ -188,6 +188,7 @@ body.page-busy{cursor:progress}
 .post-card:hover{background:#fafafa;}
 .card-top{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
 .ticker-badge{background:var(--accent);color:#fff;font-size:13px;font-weight:700;padding:4px 12px;border-radius:20px;font-family:var(--mono);letter-spacing:.03em;}
+.ticker-code{background:#e2e8f0;color:#475569;font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;font-family:var(--mono);letter-spacing:.03em;}
 .card-date{color:#aaa;font-size:12px;margin-left:auto;}
 .card-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px;}
 .card-title a{color:inherit;text-decoration:none;}
@@ -263,7 +264,17 @@ body.page-busy #busy-overlay{display:block}
 <?php if ($detail_report): ?>
 <!-- ========== 詳細ページ ========== -->
 <div class="detail-header">
-    <div class="detail-ticker"><?php echo h($detail_report['ticker']); ?></div>
+    <?php
+    $det_cn = isset($detail_report['company_name']) && $detail_report['company_name'] !== '' ? $detail_report['company_name'] : '';
+    $det_rs = isset($detail_report['resolved_symbol']) && $detail_report['resolved_symbol'] !== '' ? $detail_report['resolved_symbol'] : $detail_report['ticker'];
+    ?>
+    <div class="detail-ticker">
+        <?php if ($det_cn !== '' && $det_cn !== $det_rs): ?>
+            <?php echo h($det_cn); ?> <span style="font-size:14px;color:var(--muted);font-weight:500;"><?php echo h($det_rs); ?></span>
+        <?php else: ?>
+            <?php echo h($detail_report['ticker']); ?>
+        <?php endif; ?>
+    </div>
     <div class="detail-meta">
         <span>生成日: <?php echo h(isset($detail_report['created_at']) ? $detail_report['created_at'] : ''); ?></span>
         <?php if (!empty($detail_report['sources'])): ?>
@@ -498,19 +509,26 @@ function renderReports() {
     var list = document.getElementById('report-list');
     if (!list) return;
     for (var i = 0; i < frReports.length; i++) {
-        var r       = frReports[i];
-        var ticker  = r.ticker    || '';
+        var r           = frReports[i];
+        var ticker      = r.ticker       || '';
+        var companyName = r.company_name || '';
+        var symbol      = r.resolved_symbol || ticker;
+        var displayName = companyName ? companyName : ticker;
         var summary = r.summary   || '';
         var date    = r.created_at || '';
         var detailUrl = 'finreportv.php?ticker=' + encodeURIComponent(ticker);
         var paraHtml = buildFinParaBtn(r, i);
 
+        var badgeHtml = companyName && companyName !== symbol
+            ? '<span class="ticker-badge">' + esc(companyName) + '</span><span class="ticker-code">' + esc(symbol) + '</span>'
+            : '<span class="ticker-badge">' + esc(ticker) + '</span>';
+
         var html = '<div class="post-card" onclick="location.href=\'' + esc(detailUrl) + '\'">'
             + '<div class="card-top">'
-            + '<span class="ticker-badge">' + esc(ticker) + '</span>'
+            + badgeHtml
             + '<span class="card-date">' + esc(date) + '</span>'
             + '</div>'
-            + '<div class="card-title"><a href="' + esc(detailUrl) + '" onclick="event.stopPropagation()">' + esc(ticker) + ' 投資レポート</a></div>'
+            + '<div class="card-title"><a href="' + esc(detailUrl) + '" onclick="event.stopPropagation()">' + esc(displayName) + ' 投資レポート</a></div>'
             + (summary ? '<div class="summary-block">' + esc(summary) + '</div>' : '')
             + '<div class="card-links" onclick="event.stopPropagation()">'
             + '<a class="card-link" href="' + esc(detailUrl) + '" onclick="event.stopPropagation()">📄 詳細を見る</a>'

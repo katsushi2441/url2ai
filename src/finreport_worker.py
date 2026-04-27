@@ -212,15 +212,17 @@ def save_finreport(query: str, response: dict, source_item: dict) -> str:
     today = dt.datetime.now().strftime("%Y%m%d")
     path = os.path.join(DATA_DIR, f"finreport_{slugify(query)}_{today}.json")
     payload = {
-        "ticker": query,
-        "report": response.get("report", ""),
-        "summary": response.get("summary", ""),
-        "sources": response.get("sources", []),
-        "created_at": dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "news_kind": source_item.get("kind", ""),
-        "news_title": source_item.get("title", ""),
-        "news_link": source_item.get("link", ""),
-        "news_summary": source_item.get("summary", ""),
+        "ticker":          query,
+        "company_name":    response.get("company_name", ""),
+        "resolved_symbol": response.get("resolved_symbol", ""),
+        "report":          response.get("report", ""),
+        "summary":         response.get("summary", ""),
+        "sources":         response.get("sources", []),
+        "created_at":      dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "news_kind":       source_item.get("kind", ""),
+        "news_title":      source_item.get("title", ""),
+        "news_link":       source_item.get("link", ""),
+        "news_summary":    source_item.get("summary", ""),
     }
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(payload, fh, ensure_ascii=False, indent=2)
@@ -267,15 +269,17 @@ def build_finreport_item(query: str, response: dict, saved_path: str) -> dict:
 
 def register_finreport_remote(query: str, response: dict, source_item: dict) -> dict:
     payload = {
-        "ticker": query,
-        "report": response.get("report", ""),
-        "summary": response.get("summary", ""),
-        "sources": response.get("sources", []),
-        "created_at": dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "news_kind": source_item.get("kind", ""),
-        "news_title": source_item.get("title", ""),
-        "news_link": source_item.get("link", ""),
-        "news_summary": source_item.get("summary", ""),
+        "ticker":          query,
+        "company_name":    response.get("company_name", ""),
+        "resolved_symbol": response.get("resolved_symbol", ""),
+        "report":          response.get("report", ""),
+        "summary":         response.get("summary", ""),
+        "sources":         response.get("sources", []),
+        "created_at":      dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "news_kind":       source_item.get("kind", ""),
+        "news_title":      source_item.get("title", ""),
+        "news_link":       source_item.get("link", ""),
+        "news_summary":    source_item.get("summary", ""),
     }
     return http_json(FINREPORT_SAVE_URL, payload=payload, timeout=120)
 

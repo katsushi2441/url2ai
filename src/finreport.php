@@ -191,7 +191,10 @@ function fr_load($ticker) {
     rsort($files);
     foreach ($files as $f) {
         $d = json_decode(file_get_contents($f), true);
-        if (is_array($d) && !empty($d['report'])) return $d;
+        if (!is_array($d) || empty($d['report'])) continue;
+        // Guard against slug collisions (Japanese chars all become _)
+        if (isset($d['ticker']) && strcasecmp(trim($d['ticker']), trim($ticker)) !== 0) continue;
+        return $d;
     }
     return null;
 }
@@ -210,7 +213,13 @@ function fr_find_latest_file($ticker) {
     if (file_exists($old)) $files[] = $old;
     if (empty($files)) return null;
     rsort($files);
-    return $files[0];
+    foreach ($files as $f) {
+        $d = json_decode(file_get_contents($f), true);
+        if (!is_array($d)) continue;
+        if (isset($d['ticker']) && strcasecmp(trim($d['ticker']), trim($ticker)) !== 0) continue;
+        return $f;
+    }
+    return null;
 }
 
 function fr_update_latest($ticker, $updates) {
@@ -317,16 +326,18 @@ function fr_load_all_reports($with_report, $limit, $since_ts) {
         if ($ticker === '') continue;
 
         $item = array(
-            'id'         => fr_slug($ticker) . '-' . date('YmdHis', $created_ts),
-            'ticker'     => $ticker,
-            'slug'       => fr_slug($ticker),
-            'summary'    => isset($data['summary']) ? $data['summary'] : '',
-            'sources'    => isset($data['sources']) && is_array($data['sources']) ? $data['sources'] : array(),
-            'created_at' => date('c', $created_ts),
-            'created_ts' => $created_ts,
-            'detail_url' => $BASE_URL . '/finreportv.php?ticker=' . urlencode($ticker),
-            'paragraph_url' => isset($data['paragraph_url']) ? $data['paragraph_url'] : '',
-            'paragraph_post_id' => isset($data['paragraph_post_id']) ? $data['paragraph_post_id'] : '',
+            'id'              => fr_slug($ticker) . '-' . date('YmdHis', $created_ts),
+            'ticker'          => $ticker,
+            'company_name'    => isset($data['company_name'])    ? $data['company_name']    : '',
+            'resolved_symbol' => isset($data['resolved_symbol']) ? $data['resolved_symbol'] : '',
+            'slug'            => fr_slug($ticker),
+            'summary'         => isset($data['summary']) ? $data['summary'] : '',
+            'sources'         => isset($data['sources']) && is_array($data['sources']) ? $data['sources'] : array(),
+            'created_at'      => date('c', $created_ts),
+            'created_ts'      => $created_ts,
+            'detail_url'      => $BASE_URL . '/finreportv.php?ticker=' . urlencode($ticker),
+            'paragraph_url'   => isset($data['paragraph_url']) ? $data['paragraph_url'] : '',
+            'paragraph_post_id'   => isset($data['paragraph_post_id']) ? $data['paragraph_post_id'] : '',
             'paragraph_posted_at' => isset($data['paragraph_posted_at']) ? $data['paragraph_posted_at'] : '',
         );
         if ($with_report) {
@@ -481,16 +492,18 @@ if (isset($_GET['api']) && $_GET['api'] !== '') {
             ? trim($body['created_at'])
             : date('Y-m-d H:i:s');
         $save_data = array(
-            'ticker'       => $ticker,
-            'report'       => $report,
-            'summary'      => isset($body['summary']) ? $body['summary'] : '',
-            'sources'      => isset($body['sources']) && is_array($body['sources']) ? $body['sources'] : array(),
-            'created_at'   => $created_at,
-            'news_kind'    => isset($body['news_kind']) ? $body['news_kind'] : '',
-            'news_title'   => isset($body['news_title']) ? $body['news_title'] : '',
-            'news_link'    => isset($body['news_link']) ? $body['news_link'] : '',
-            'news_summary' => isset($body['news_summary']) ? $body['news_summary'] : '',
-            'paragraph_url' => isset($body['paragraph_url']) ? trim((string) $body['paragraph_url']) : '',
+            'ticker'          => $ticker,
+            'company_name'    => isset($body['company_name'])    ? trim((string) $body['company_name'])    : '',
+            'resolved_symbol' => isset($body['resolved_symbol']) ? trim((string) $body['resolved_symbol']) : '',
+            'report'          => $report,
+            'summary'         => isset($body['summary']) ? $body['summary'] : '',
+            'sources'         => isset($body['sources']) && is_array($body['sources']) ? $body['sources'] : array(),
+            'created_at'      => $created_at,
+            'news_kind'       => isset($body['news_kind']) ? $body['news_kind'] : '',
+            'news_title'      => isset($body['news_title']) ? $body['news_title'] : '',
+            'news_link'       => isset($body['news_link']) ? $body['news_link'] : '',
+            'news_summary'    => isset($body['news_summary']) ? $body['news_summary'] : '',
+            'paragraph_url'   => isset($body['paragraph_url']) ? trim((string) $body['paragraph_url']) : '',
             'paragraph_post_id' => isset($body['paragraph_post_id']) ? trim((string) $body['paragraph_post_id']) : '',
             'paragraph_posted_at' => isset($body['paragraph_posted_at']) ? trim((string) $body['paragraph_posted_at']) : '',
         );
@@ -670,11 +683,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin && $action === 'generate'
     }
 
     $save_data = array(
-        'ticker'     => $ticker,
-        'report'     => $res['report'],
-        'summary'    => isset($res['summary'])  ? $res['summary']  : '',
-        'sources'    => isset($res['sources'])  ? $res['sources']  : array(),
-        'created_at' => date('Y-m-d H:i:s'),
+        'ticker'          => $ticker,
+        'company_name'    => isset($res['company_name'])    ? trim($res['company_name'])    : '',
+        'resolved_symbol' => isset($res['resolved_symbol']) ? trim($res['resolved_symbol']) : '',
+        'report'          => $res['report'],
+        'summary'         => isset($res['summary'])  ? $res['summary']  : '',
+        'sources'         => isset($res['sources'])  ? $res['sources']  : array(),
+        'created_at'      => date('Y-m-d H:i:s'),
     );
     fr_save($ticker, $save_data);
     header('Location: ' . $x_redirect_uri . '?ticker=' . urlencode($ticker)); exit;
@@ -828,7 +843,14 @@ input[type=text]:focus{border-color:var(--accent)}
         <div class="section-header">
             <div class="section-title"><span class="step" style="background:var(--green)">✓</span> AI要約</div>
             <div class="meta-bar">
+                <?php
+                $cn = isset($saved['company_name']) && $saved['company_name'] !== '' ? $saved['company_name'] : '';
+                $rs = isset($saved['resolved_symbol']) && $saved['resolved_symbol'] !== '' ? $saved['resolved_symbol'] : $saved['ticker'];
+                if ($cn !== '' && $cn !== $rs): ?>
+                <strong><?php echo h($cn); ?></strong> <span style="color:var(--muted)"><?php echo h($rs); ?></span>
+                <?php else: ?>
                 <span><?php echo h($saved['ticker']); ?></span>
+                <?php endif; ?>
                 <span><?php echo h(isset($saved['created_at']) ? $saved['created_at'] : ''); ?></span>
                 <button type="button" class="btn-sm" onclick="copyShare()">📋 コピー</button>
                 <button type="button" class="btn-sm" onclick="copyReport()">Markdownコピー</button>

@@ -5,8 +5,8 @@ import time
 from datetime import datetime
 
 import httpx
+import yfinance as yf
 from bs4 import BeautifulSoup
-from duckduckgo_search import DDGS
 
 
 OLLAMA_API = os.getenv("OLLAMA_API", "https://exbridge.ddns.net/api/generate")
@@ -14,50 +14,105 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma4:e4b")
 TODAY = datetime.now().strftime("%Y年%m月%d日")
 YEAR = datetime.now().strftime("%Y")
 
-
-def normalize_symbol(value: str) -> str:
-    text = value.strip()
-    if text.startswith("$"):
-        text = text[1:]
-    return text.strip()
+_JAPANESE_CODE_RE = re.compile(r'^\d{4}$')
+_JAPANESE_TEXT_RE = re.compile(r'[　-鿿＀-￯]')
 
 
-def looks_like_crypto_symbol(value: str) -> bool:
-    raw = value.strip()
-    normalized = normalize_symbol(raw)
-    if not normalized:
-        return False
-    if raw.startswith("$"):
-        return True
-    if len(normalized) <= 6 and normalized.upper() == normalized and normalized.isalnum():
-        return True
-    return False
+def looks_like_crypto(value: str) -> bool:
+    v = value.strip().lstrip('$')
+    return len(v) <= 6 and v.upper() == v and v.isalpha()
+
+
+def resolve_yf_symbol(query: str) -> tuple[str, str]:
+    """Return (yf_symbol, display_name). display_name may be empty if unknown."""
+    q = query.strip()
+
+    # 4-digit Japanese stock code → add .T
+    if _JAPANESE_CODE_RE.match(q):
+        return q + ".T", ""
+
+    # Japanese company name → look up code via Yahoo Finance Japan
+    if _JAPANESE_TEXT_RE.search(q):
+        code = _resolve_japanese_name(q)
+        if code:
+            return code + ".T", q
+        return q, q
+
+    # Short all-uppercase alpha → treat as crypto
+    if looks_like_crypto(q):
+        sym = q.lstrip('$').upper()
+        return sym + "-USD", sym
+
+    # English name or US ticker → yfinance Search
+    try:
+        results = yf.Search(q, max_results=1)
+        quotes = results.quotes or []
+        if quotes:
+            sym = quotes[0].get("symbol", q)
+            name = quotes[0].get("longname") or quotes[0].get("shortname") or ""
+            return sym, name
+    except Exception:
+        pass
+
+    return q, q
+
+
+def _resolve_japanese_name(name: str) -> str:
+    """Scrape Yahoo Finance Japan to resolve Japanese company name → 4-digit code."""
+    try:
+        resp = httpx.get(
+            "https://finance.yahoo.co.jp/search/",
+            params={"query": name, "category": "stock"},
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=8,
+            follow_redirects=True,
+        )
+        codes = re.findall(r'code=(\d{4})', resp.text)
+        if codes:
+            return codes[0]
+    except Exception:
+        pass
+    return ""
+
+
+def extract_company_info(yf_sym: str, query: str, titles: list[str]) -> dict:
+    """Extract company name and symbol from search result titles (regex, no LLM)."""
+    for title in titles:
+        clean = re.sub(r'^\s*(?:\(株\)|（株）|株式会社)\s*', '', title)
+        m = re.match(r'^(.+?)(?:\s*[【（\[\(]|\s*[-–—]\s*\S|\s*[：:]\s*\S)', clean)
+        if m:
+            name = m.group(1).strip()
+            if len(name) >= 2 and name.lower() != query.lower():
+                sym_m = re.search(r'[【（\[](\w+)[】）\]]', title)
+                sym = sym_m.group(1) if sym_m else query
+                return {"company_name": name, "symbol": sym}
+    return {"company_name": query, "symbol": yf_sym}
 
 
 REPORT_PROMPT = """\
 あなたは金融投資アナリストです。本日は{today}です。
-以下の直近1週間のWeb調査データをもとに、{ticker} の投資家向けレポートを**日本語Markdown**で作成してください。
+以下のYahoo Finance・ニュース調査データをもとに、{ticker} の投資家向けレポートを**日本語Markdown**で作成してください。
 
 ## 制約
-- 調査日（{today}）より1週間以上前の古い情報は使わないこと
 - 断定表現は避け「〜と考えられる」「〜の可能性がある」を使うこと
 - 数値・出典がある場合は明記すること
+- データに記載のない事実を捏造しないこと
 
 ## 出力形式（以下の見出しを必ず使うこと）
 
 # {ticker} 投資レポート（{today}）
 
 ## 概要
-（銘柄・プロジェクトの概要を2〜3文で）
+（銘柄・企業の概要を2〜3文で）
 
 ## 最新ニュース・直近の動向
-（直近1週間の重要ニュース・イベントを箇条書き）
+（提供データに含まれる重要ニュース・イベントを箇条書き）
 
 ## 【分析軸1】業績・価格への影響
-（最新ニュースが財務業績・株価・時価総額にどう影響する可能性があるか）
+（ニュースが財務業績・株価・時価総額にどう影響する可能性があるか）
 
 ## 【分析軸2】市場トレンド・競合比較
-（同業他社・競合プロジェクトと比較した相対的ポジション・市場シェア動向）
+（同業他社・競合と比較した相対的ポジション・市場シェア動向）
 
 ## 【分析軸3】投資リスク・機会評価
 | 観点 | 内容 |
@@ -72,7 +127,7 @@ REPORT_PROMPT = """\
 
 ---
 
-## 調査データ（直近1週間）
+## 調査データ
 
 {context}
 
@@ -110,27 +165,6 @@ async def ollama_generate(prompt: str, timeout: int = 240) -> str:
         return resp.json().get("response", "").strip()
 
 
-def search_web(query: str, max_results: int = 6) -> list[dict]:
-    results = []
-    for attempt in range(3):
-        try:
-            with DDGS() as ddgs:
-                for item in ddgs.text(query, max_results=max_results, timelimit="w"):
-                    results.append(
-                        {
-                            "title": item.get("title", ""),
-                            "url": item.get("href", ""),
-                            "body": item.get("body", ""),
-                        }
-                    )
-            if results:
-                break
-        except Exception:
-            if attempt < 2:
-                time.sleep(2 ** attempt)
-    return results
-
-
 async def scrape_url(url: str, timeout: int = 8) -> str:
     try:
         async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
@@ -144,52 +178,77 @@ async def scrape_url(url: str, timeout: int = 8) -> str:
         return ""
 
 
-async def gather_context(ticker: str) -> tuple[str, list[str]]:
-    symbol = normalize_symbol(ticker)
-    queries = [
-        f"{symbol} 最新ニュース {YEAR} 株価 業績",
-        f"{symbol} IR 決算 投資家向け情報 {YEAR}",
-        f"{symbol} site:finance.yahoo.co.jp OR site:nikkei.com {YEAR}",
-        f"{symbol} 競合比較 市場シェア トレンド {YEAR}",
-        f"{symbol} リスク 規制 課題 {YEAR}",
-        f"{symbol} cryptocurrency price analysis {YEAR}" if len(symbol) <= 6 else f"{symbol} 事業戦略 成長 {YEAR}",
-    ]
+def _fetch_yf(yf_sym: str) -> tuple[dict, list[dict]]:
+    try:
+        t = yf.Ticker(yf_sym)
+        info = t.info or {}
+        news = t.news or []
+        return info, news
+    except Exception:
+        return {}, []
 
-    if looks_like_crypto_symbol(ticker):
-        queries.extend(
-            [
-                f"{symbol} token Base Bankr x402 {YEAR}",
-                f"${symbol} crypto token news {YEAR}",
-                f"{symbol} bankr bot launch {YEAR}",
-                f"{symbol} project tokenomics roadmap {YEAR}",
-                f"site:bankr.bot {symbol} {YEAR}",
-            ]
-        )
 
+async def gather_context(ticker: str, yf_sym: str) -> tuple[str, list[str], list[str]]:
     loop = asyncio.get_event_loop()
-    all_results = []
-    for query in queries:
-        results = await loop.run_in_executor(None, lambda q=query: search_web(q, max_results=5))
-        all_results.extend(results)
-        await asyncio.sleep(0.8)
+    info, news = await loop.run_in_executor(None, lambda: _fetch_yf(yf_sym))
 
-    seen = set()
-    unique = []
-    for result in all_results:
-        if result["url"] and result["url"] not in seen:
-            seen.add(result["url"])
-            unique.append(result)
+    context_parts: list[str] = []
+    sources: list[str] = []
+    titles: list[str] = []
 
-    sources = [result["url"] for result in unique[:10]]
-    scraped = await asyncio.gather(*[scrape_url(result["url"]) for result in unique[:8]])
+    # --- Company basic info from yfinance ---
+    if info:
+        name = info.get("longName") or info.get("shortName") or ticker
+        desc = info.get("longBusinessSummary", "")
+        price = info.get("currentPrice") or info.get("regularMarketPrice")
+        market_cap = info.get("marketCap")
+        sector = info.get("sector", "")
+        industry = info.get("industry", "")
+        prev_close = info.get("previousClose")
+        fifty_two_week_high = info.get("fiftyTwoWeekHigh")
+        fifty_two_week_low = info.get("fiftyTwoWeekLow")
 
-    context_parts = []
-    for result, body in zip(unique[:8], scraped):
-        snippet = body if body else result["body"]
-        if snippet.strip():
-            context_parts.append(f"### {result['title']}\n出典: {result['url']}\n{snippet[:2500]}")
+        part = f"### {name} 基本情報\nシンボル: {yf_sym}\n"
+        if price:
+            part += f"現在株価/価格: {price:,.2f}\n"
+        if prev_close:
+            part += f"前日終値: {prev_close:,.2f}\n"
+        if market_cap:
+            part += f"時価総額: {market_cap:,}\n"
+        if sector:
+            part += f"セクター: {sector}\n"
+        if industry:
+            part += f"業種: {industry}\n"
+        if fifty_two_week_high and fifty_two_week_low:
+            part += f"52週高値/安値: {fifty_two_week_high:,.2f} / {fifty_two_week_low:,.2f}\n"
+        if desc:
+            part += f"\n事業概要:\n{desc[:2000]}\n"
+        context_parts.append(part)
+        titles.append(f"{name} 企業情報")
 
-    return "\n\n---\n\n".join(context_parts), sources
+    # --- News from yfinance ---
+    news_urls = [a.get("link") or a.get("url", "") for a in news if a.get("title")]
+    scraped = await asyncio.gather(*[scrape_url(u) for u in news_urls[:6]])
+
+    for article, body in zip(news[:6], scraped):
+        title = article.get("title", "")
+        url = article.get("link") or article.get("url", "")
+        publisher = article.get("publisher", "")
+        if not title:
+            continue
+        titles.append(title)
+        if url:
+            sources.append(url)
+        part = f"### {title}"
+        if publisher:
+            part += f" ({publisher})"
+        if url:
+            part += f"\n出典: {url}"
+        if body:
+            part += f"\n{body[:2000]}"
+        context_parts.append(part)
+
+    return "\n\n---\n\n".join(context_parts), sources, titles
 
 
 async def generate_report_data(ticker: str) -> dict:
@@ -197,16 +256,27 @@ async def generate_report_data(ticker: str) -> dict:
     if not symbol:
         raise ValueError("ticker is required")
 
-    context, sources = await gather_context(symbol)
-    if not context:
-        raise RuntimeError("検索結果が取得できませんでした")
+    yf_sym, resolved_name = resolve_yf_symbol(symbol)
 
-    report = await ollama_generate(REPORT_PROMPT.format(ticker=symbol, today=TODAY, context=context), timeout=360)
+    context, sources, result_titles = await gather_context(symbol, yf_sym)
+    if not context:
+        raise RuntimeError(f"データを取得できませんでした（{yf_sym}）")
+
+    company_info = extract_company_info(yf_sym, symbol, result_titles)
+    if resolved_name and company_info["company_name"] == symbol:
+        company_info["company_name"] = resolved_name
+
+    report = await ollama_generate(
+        REPORT_PROMPT.format(ticker=symbol, today=TODAY, context=context),
+        timeout=360,
+    )
     summary = await ollama_generate(SUMMARY_PROMPT.format(report=report), timeout=120)
 
     return {
         "ok": True,
         "ticker": symbol,
+        "company_name": company_info["company_name"],
+        "resolved_symbol": yf_sym,
         "markdown": report,
         "summary": summary,
         "sources": sources,
