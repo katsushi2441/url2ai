@@ -244,15 +244,19 @@ async function handle(req, res) {
     return res.end(result.body);
   }
 
-  // Non-POST or non-/run — proxy directly
-  if (req.method !== "POST" || url.pathname !== "/run") {
+  // Non-POST or paths that don't require payment — proxy directly
+  const requiresPayment = req.method === "POST" && (
+    url.pathname === "/run" ||
+    url.pathname.startsWith("/oss2api/")
+  );
+  if (!requiresPayment) {
     const rawBody = await readRawBody(req);
     const result = await proxyToUpstream(req, rawBody, {});
     res.writeHead(result.status, result.headers);
     return res.end(result.body);
   }
 
-  // /run — verify JPYC payment first
+  // /run and /oss2api/* — verify JPYC payment first
   const raw = req.headers["x-payment"] || req.headers["payment-signature"];
   if (!raw) {
     return json(res, 402, payment402Body());
