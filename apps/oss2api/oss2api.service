@@ -1,11 +1,11 @@
 [Unit]
-Description=OSS2API Background Removal Gateway
+Description=OSS2API Gateway (background removal + URL agent)
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/kojima/work/url2ai/apps/background-removal
-EnvironmentFile=-/home/kojima/work/url2ai/apps/background-removal/.env
+WorkingDirectory=/home/kojima/work/url2ai/apps/oss2api
+EnvironmentFile=-/home/kojima/work/url2ai/apps/oss2api/.env
 Environment=PATH=/home/kojima/.local/node-v22.15.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ExecStart=/home/kojima/.local/node-v22.15.0/bin/npm start
 Restart=always

@@ -692,8 +692,9 @@ h1 {
             OSS2API は、公開OSSをラップして、支払い・メタデータ・運用監視まで含めた agent-ready API にする取り組みです。
         </div>
         <div class="system-list">
-            <div class="system-row"><div class="system-file">apps/background-removal</div><div class="system-kind">OSS2API</div><div class="system-desc">imgly/background-removal-js を使った背景削除API。remove / replace / blur に対応し、画像URLまたはbase64入力を処理します。</div></div>
+            <div class="system-row"><div class="system-file">apps/oss2api</div><div class="system-kind">OSS2API</div><div class="system-desc">OSSをラップしたマルチスキルゲートウェイ。背景除去（imgly）＋URLエージェント（抽出・スクリーンショット・セキュリティスキャン）に対応。</div></div>
             <div class="system-row"><div class="system-file">x402/background</div><div class="system-kind">x402</div><div class="system-desc">OSS2API Background Removal を paid agent endpoint として呼び出すための x402 handler。</div></div>
+            <div class="system-row"><div class="system-file">server-jpyc.js</div><div class="system-kind">JPYC x402</div><div class="system-desc">JPYC（日本円ステーブルコイン）決済対応の背景除去ゲートウェイ。Polygon チェーン上で 1.5 JPYC（約1円）/リクエスト。EIP-3009 transferWithAuthorization によるオンチェーン決済。</div></div>
             <div class="system-row"><div class="system-file">Agent402</div><div class="system-kind">Marketplace</div><div class="system-desc">OSS2API Background Removal を 0.01 USDC/request のサービスとして登録。支払い後に公開APIへプロキシします。</div></div>
             <div class="system-row"><div class="system-file">PayAPI Market</div><div class="system-kind">Review</div><div class="system-desc">PayAPI Market に OSS2API Background Removal として登録済み。レビュー後、x402 API marketplace 上で discoverable になります。</div></div>
         </div>
@@ -783,6 +784,19 @@ h1 {
                     <h4>OSS2API Background Removal</h4>
                     <p>画像の背景を削除・置換・ぼかし処理する paid endpoint。imgly/background-removal-js をOSS2API化し、Agent402 経由で x402 決済に対応しています。</p>
                     <a href="https://agent402.app/agents/42d997f9-a6ee-4a91-8e51-454d0a66dae0/background-removal/invoke" class="button" target="_blank" rel="noopener">View Agent402 Endpoint</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#7C3AED;">
+                    <div class="card-visual-badge">🪙 JPYC x402 <span class="card-visual-id">JPYC</span></div>
+                    <img src="./images/oss2api.png" alt="JPYC x402 Background Removal" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">PAID AGENT · JPYC</div>
+                    <h4>背景除去 JPYC決済</h4>
+                    <p>JPYC（日本円ステーブルコイン）で支払う背景除去 API。1.5 JPYC（≈¥1）/リクエスト。Polygon チェーン上の EIP-3009 transferWithAuthorization によるオンチェーン決済。日本語コミュニティ向け Web3 AI エージェントの先駆け。</p>
+                    <a href="https://exbridge.ddns.net:8017/health" class="button" target="_blank" rel="noopener">View JPYC Endpoint</a>
                 </div>
             </div>
         </div>

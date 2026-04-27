@@ -1,9 +1,9 @@
 {
-  "name": "@url2ai/background-removal-api",
-  "version": "0.1.0",
+  "name": "@url2ai/oss2api",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "OSS2API gateway for IMG.LY background-removal-js.",
+  "description": "OSS2API gateway: background removal (imgly) + URL agent (extract/browse/scan).",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
@@ -12,8 +12,12 @@
   },
   "dependencies": {
     "@imgly/background-removal-node": "1.4.5",
+    "cheerio": "^1.0.0",
     "sharp": "^0.33.5",
     "viem": "^2.47.10"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.44.0"
   },
   "engines": {
     "node": ">=18"

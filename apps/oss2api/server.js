@@ -2,6 +2,7 @@ import http from "node:http";
 import { Buffer } from "node:buffer";
 import { removeBackground } from "@imgly/background-removal-node";
 import sharp from "sharp";
+import { analyzeUrl, browseUrl, scanUrl } from "./url-agent.js";
 
 const HOST = process.env.HOST || "0.0.0.0";
 const PORT = Number.parseInt(process.env.PORT || "8015", 10);
@@ -187,31 +188,29 @@ async function processImage(body) {
 
 function manifest() {
   return {
-    name: "background-removal",
+    name: "oss2api-gateway",
     family: "OSS2API",
-    description: "Background removal, replacement, and blur using background-removal-js.",
-    oss: {
-      name: OSS_NAME,
-      package: "@imgly/background-removal-node",
-      license: OSS_LICENSE,
-      repository: "https://github.com/imgly/background-removal-js",
+    description: "OSS2API gateway: background removal (imgly) + URL agent (extract / browse / scan).",
+    skills: {
+      "background-removal": {
+        oss: { name: OSS_NAME, package: "@imgly/background-removal-node", license: OSS_LICENSE },
+        endpoints: { remove: "/image/remove-background", legacy: "/run" },
+        capabilities: ["background.remove", "background.replace", "background.blur"],
+      },
+      "url-agent": {
+        oss: ["cheerio", "playwright"],
+        endpoints: {
+          analyze: "/url/analyze",
+          browse: "/url/browse",
+          scan: "/url/scan",
+        },
+        capabilities: ["url.extract", "url.screenshot", "url.security_scan"],
+      },
     },
-    capabilities: ["background.remove", "background.replace", "background.blur"],
     endpoints: {
       health: "/health",
-      healthz: "/healthz",
-      run: "/run",
       manifest: "/.well-known/oss2api.json",
       openapi: "/openapi.json",
-    },
-    input: {
-      image_url: "https URL to an input image",
-      image_base64: "base64 or data URL image",
-      mode: "remove | replace | blur",
-      background_color: "CSS color for replace mode",
-      background_image_url: "optional background image URL for replace mode",
-      blur_sigma: "1-80 for blur mode",
-      response: "binary | json",
     },
   };
 }
@@ -229,8 +228,9 @@ function openapi() {
       "/health": { get: { responses: { "200": { description: "OK" } } } },
       "/healthz": { get: { responses: { "200": { description: "OK" } } } },
       "/.well-known/oss2api.json": { get: { responses: { "200": { description: "Manifest" } } } },
-      "/run": {
+      "/image/remove-background": {
         post: {
+          summary: "Remove, replace, or blur image background",
           requestBody: {
             required: true,
             content: {
@@ -238,25 +238,32 @@ function openapi() {
                 schema: {
                   type: "object",
                   properties: {
-                    image_url: { type: "string" },
-                    image_base64: { type: "string" },
-                    mode: { enum: ["remove", "replace", "blur"] },
-                    background_color: { type: "string" },
+                    image_url: { type: "string", description: "URL of the source image" },
+                    image_base64: { type: "string", description: "Base64-encoded source image" },
+                    mode: { enum: ["remove", "replace", "blur"], default: "remove" },
+                    background_color: { type: "string", description: "CSS color for replace mode" },
                     background_image_url: { type: "string" },
                     background_image_base64: { type: "string" },
-                    blur_sigma: { type: "number" },
-                    output_format: { enum: ["png", "webp", "jpeg"] },
-                    response: { enum: ["binary", "json"] },
+                    blur_sigma: { type: "number", default: 10 },
+                    output_format: { enum: ["png", "webp", "jpeg"], default: "png" },
+                    response: { enum: ["binary", "json"], default: "binary" },
                   },
                 },
               },
             },
           },
           responses: {
-            "200": { description: "Processed image" },
+            "200": { description: "Processed image (binary or base64 JSON)" },
             "400": { description: "Invalid request" },
             "500": { description: "Processing error" },
           },
+        },
+      },
+      "/run": {
+        post: {
+          summary: "Background removal (legacy alias for /image/remove-background)",
+          requestBody: { "$ref": "#/paths/~1image~1remove-background/post/requestBody" },
+          responses: { "200": { description: "Processed image" } },
         },
       },
     },
@@ -266,7 +273,7 @@ function openapi() {
 async function handle(req, res) {
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
   if (req.method === "GET" && ["/health", "/healthz"].includes(url.pathname)) {
-    return json(res, 200, { ok: true, service: "background-removal", oss: OSS_NAME });
+    return json(res, 200, { ok: true, service: "oss2api", skills: ["background-removal", "url-agent"] });
   }
   if (req.method === "GET" && url.pathname === "/.well-known/oss2api.json") {
     return json(res, 200, manifest());
@@ -274,25 +281,57 @@ async function handle(req, res) {
   if (req.method === "GET" && url.pathname === "/openapi.json") {
     return json(res, 200, openapi());
   }
-  if (req.method !== "POST" || url.pathname !== "/run") {
-    return json(res, 404, { error: "Not found" });
+  // ── URL agent routes ──────────────────────────────────────────────────
+  if (req.method === "POST" && url.pathname === "/url/analyze") {
+    try {
+      const body = await readJson(req);
+      const result = await analyzeUrl(body);
+      return json(res, 200, result);
+    } catch (error) {
+      return json(res, 400, { ok: false, error: error.message || String(error) });
+    }
   }
 
-  try {
-    const body = await readJson(req);
-    const result = await processImage(body);
-    if (body.response === "json") {
-      return json(res, 200, {
-        ok: true,
-        mode: result.mode,
-        content_type: result.contentType,
-        image_base64: result.buffer.toString("base64"),
-      });
+  if (req.method === "POST" && url.pathname === "/url/browse") {
+    try {
+      const body = await readJson(req);
+      const result = await browseUrl(body);
+      return json(res, 200, result);
+    } catch (error) {
+      return json(res, 400, { ok: false, error: error.message || String(error) });
     }
-    return image(res, 200, result.buffer, result.contentType);
-  } catch (error) {
-    return json(res, 400, { ok: false, error: error.message || String(error) });
   }
+
+  if (req.method === "POST" && url.pathname === "/url/scan") {
+    try {
+      const body = await readJson(req);
+      const result = await scanUrl(body);
+      return json(res, 200, result);
+    } catch (error) {
+      return json(res, 400, { ok: false, error: error.message || String(error) });
+    }
+  }
+
+  // ── Image processing ──────────────────────────────────────────────────
+  if (req.method === "POST" && ["/image/remove-background", "/run"].includes(url.pathname)) {
+    try {
+      const body = await readJson(req);
+      const result = await processImage(body);
+      if (body.response === "json") {
+        return json(res, 200, {
+          ok: true,
+          mode: result.mode,
+          content_type: result.contentType,
+          image_base64: result.buffer.toString("base64"),
+        });
+      }
+      return image(res, 200, result.buffer, result.contentType);
+    } catch (error) {
+      return json(res, 400, { ok: false, error: error.message || String(error) });
+    }
+  }
+
+  return json(res, 404, { error: "Not found" });
 }
 
 http.createServer((req, res) => {
@@ -300,5 +339,5 @@ http.createServer((req, res) => {
     json(res, 500, { ok: false, error: error.message || String(error) });
   });
 }).listen(PORT, HOST, () => {
-  console.log(`background-removal API listening on http://${HOST}:${PORT}`);
+  console.log(`OSS2API gateway listening on http://${HOST}:${PORT}`);
 });
