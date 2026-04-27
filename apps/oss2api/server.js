@@ -281,8 +281,13 @@ async function handle(req, res) {
   if (req.method === "GET" && url.pathname === "/openapi.json") {
     return json(res, 200, openapi());
   }
+  // ── /oss2api/* prefix → strip to bare path ───────────────────────────
+  const skill = url.pathname.startsWith("/oss2api/")
+    ? url.pathname.slice("/oss2api".length)
+    : url.pathname;
+
   // ── URL agent routes ──────────────────────────────────────────────────
-  if (req.method === "POST" && url.pathname === "/url/analyze") {
+  if (req.method === "POST" && skill === "/url/analyze") {
     try {
       const body = await readJson(req);
       const result = await analyzeUrl(body);
@@ -292,7 +297,7 @@ async function handle(req, res) {
     }
   }
 
-  if (req.method === "POST" && url.pathname === "/url/browse") {
+  if (req.method === "POST" && skill === "/url/browse") {
     try {
       const body = await readJson(req);
       const result = await browseUrl(body);
@@ -302,7 +307,7 @@ async function handle(req, res) {
     }
   }
 
-  if (req.method === "POST" && url.pathname === "/url/scan") {
+  if (req.method === "POST" && skill === "/url/scan") {
     try {
       const body = await readJson(req);
       const result = await scanUrl(body);
@@ -313,7 +318,7 @@ async function handle(req, res) {
   }
 
   // ── Image processing ──────────────────────────────────────────────────
-  if (req.method === "POST" && ["/image/remove-background", "/run"].includes(url.pathname)) {
+  if (req.method === "POST" && ["/image/remove-background", "/run"].includes(skill)) {
     try {
       const body = await readJson(req);
       const result = await processImage(body);

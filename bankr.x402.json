@@ -145,79 +145,57 @@
         }
       }
     },
-    "background-removal": {
+    "oss2api": {
       "price": "0.01",
-      "description": "OSS2API Background Removal endpoint for AI agents. Removes, replaces, or blurs image backgrounds using imgly/background-removal-js through an x402-ready gateway.",
+      "description": "OSS2API multi-skill AI agent gateway. Skills: image background removal (remove/replace/blur), URL structured extraction, Playwright browser screenshot/extract, Shannon-like 3-phase security scan. Call POST /{skill} — e.g. /oss2api/image/remove-background or /oss2api/url/scan.",
       "methods": [
         "POST"
       ],
-      "endpoint": "https://agent402.app/agents/42d997f9-a6ee-4a91-8e51-454d0a66dae0/background-removal/invoke",
-      "upstream_endpoint": "https://exbridge.ddns.net:8012/background-removal/run",
+      "upstream_endpoint": "http://exbridge.ddns.net:8015",
       "schema": {
         "input": {
           "type": "object",
           "properties": {
+            "skill": {
+              "type": "string",
+              "description": "Skill path: image/remove-background | url/analyze | url/browse | url/scan"
+            },
+            "url": {
+              "type": "string",
+              "description": "Target URL for url/* skills."
+            },
             "image_url": {
               "type": "string",
-              "description": "Publicly reachable HTTP(S) URL of the input image."
+              "description": "Image URL for image/remove-background."
             },
             "image_base64": {
               "type": "string",
-              "description": "Base64 or data URL encoded input image."
+              "description": "Base64 image for image/remove-background."
             },
             "mode": {
               "type": "string",
-              "description": "remove, replace, or blur."
+              "description": "remove | replace | blur (image/remove-background only)."
             },
-            "background_color": {
+            "format": {
               "type": "string",
-              "description": "CSS color used for replace mode when no background image is provided."
+              "description": "json | markdown (url/analyze only)."
             },
-            "background_image_url": {
+            "action": {
               "type": "string",
-              "description": "Optional public background image URL for replace mode."
-            },
-            "background_image_base64": {
-              "type": "string",
-              "description": "Optional base64 or data URL background image for replace mode."
-            },
-            "blur_sigma": {
-              "type": "number",
-              "description": "Blur strength from 1 to 80 for blur mode."
-            },
-            "output_format": {
-              "type": "string",
-              "description": "png, webp, or jpeg."
-            },
-            "response": {
-              "type": "string",
-              "description": "binary or json. json returns image_base64."
+              "description": "screenshot | extract (url/browse only)."
             }
-          },
-          "anyOf": [
-            {
-              "required": [
-                "image_url"
-              ]
-            },
-            {
-              "required": [
-                "image_base64"
-              ]
-            }
-          ]
+          }
         },
         "output": {
           "type": "object",
           "properties": {
-            "content_type": {
-              "type": "string",
-              "description": "Returned image content type when response=json."
-            },
-            "image_base64": {
-              "type": "string",
-              "description": "Processed image bytes encoded as base64 when response=json."
-            }
+            "ok": { "type": "boolean" },
+            "image_base64": { "type": "string", "description": "Processed image (image/remove-background with response=json)." },
+            "title": { "type": "string" },
+            "markdown": { "type": "string" },
+            "risk_score": { "type": "integer" },
+            "findings": { "type": "object" },
+            "summary": { "type": "string" }
           }
         }
       },

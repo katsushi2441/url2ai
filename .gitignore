@@ -7,3 +7,6 @@ apps/background-removal/node_modules/
 tools/browser-use/.venv/
 tools/browser-use/.env
 tools/browser-use/.browser-profile/
+.env
+*.env
+!*.env.sample
