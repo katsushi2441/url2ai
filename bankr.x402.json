@@ -147,7 +147,7 @@
     },
     "oss2api": {
       "price": "0.01",
-      "description": "OSS2API multi-skill AI agent gateway. Skills: image background removal (remove/replace/blur), URL structured extraction, Playwright browser screenshot/extract, Shannon-like 3-phase security scan. Call POST /{skill} — e.g. /oss2api/image/remove-background or /oss2api/url/scan.",
+      "description": "OSS2API is a multi-skill AI agent gateway that wraps open-source tools into x402-ready paid endpoints. It exposes four skills under a single service — select a skill by appending its path after the service URL.\n\nSkills:\n  POST .../oss2api/image/remove-background\n    Remove, replace, or blur the background of any image. Powered by imgly/background-removal-js (AGPL-3.0). Supply image_url or image_base64. Use mode=remove (transparent PNG), mode=replace (fill with background_color or background_image_url), or mode=blur (gaussian blur). Returns binary image or base64 JSON when response=json.\n\n  POST .../oss2api/url/analyze\n    Fetch a URL and extract structured content: title, description, headings (h1-h3), links, email/URL entities, and plain-text summary. Set format=markdown to get a Markdown rendering instead. Set depth=full for up to 8000 chars of body text.\n\n  POST .../oss2api/url/browse\n    Render a page with a real Chromium browser (Playwright) and return a screenshot or extracted text. Use action=screenshot (returns PNG as base64) or action=extract (returns visible text + links). Useful for JavaScript-heavy pages that static fetch cannot read.\n\n  POST .../oss2api/url/scan\n    Run a 3-phase security scan on any URL. Phase 1 checks HTTP security headers (CSP, HSTS, X-Frame-Options, Referrer-Policy, Permissions-Policy). Phase 2 does static HTML analysis for XSS sinks (innerHTML, eval, document.write), SQL error exposure, login form issues, SSRF-prone parameters, and external script count. Phase 3 sends findings to an Ollama AI model for additional vulnerability analysis and remediation recommendations. Returns a risk_score (0-100) and categorised findings (critical/high/medium/low/info).",
       "methods": [
         "POST"
       ],
@@ -156,46 +156,128 @@
         "input": {
           "type": "object",
           "properties": {
-            "skill": {
-              "type": "string",
-              "description": "Skill path: image/remove-background | url/analyze | url/browse | url/scan"
-            },
             "url": {
               "type": "string",
-              "description": "Target URL for url/* skills."
-            },
-            "image_url": {
-              "type": "string",
-              "description": "Image URL for image/remove-background."
-            },
-            "image_base64": {
-              "type": "string",
-              "description": "Base64 image for image/remove-background."
-            },
-            "mode": {
-              "type": "string",
-              "description": "remove | replace | blur (image/remove-background only)."
+              "description": "[url/analyze, url/browse, url/scan] The target URL to fetch, browse, or scan. Must be an absolute http/https URL."
             },
             "format": {
               "type": "string",
-              "description": "json | markdown (url/analyze only)."
+              "description": "[url/analyze] Response format: json (default, returns structured fields) or markdown (returns Markdown rendering of the page body)."
+            },
+            "depth": {
+              "type": "string",
+              "description": "[url/analyze] Content depth: basic (default, summary up to 600 chars) or full (returns up to 8000 chars of body text in content field)."
             },
             "action": {
               "type": "string",
-              "description": "screenshot | extract (url/browse only)."
+              "description": "[url/browse] Browser action: screenshot (default, returns PNG as base64) or extract (returns visible text and links)."
+            },
+            "wait_until": {
+              "type": "string",
+              "description": "[url/browse] Playwright page load event to wait for: networkidle (default) or load."
+            },
+            "image_url": {
+              "type": "string",
+              "description": "[image/remove-background] Publicly reachable HTTP(S) URL of the source image."
+            },
+            "image_base64": {
+              "type": "string",
+              "description": "[image/remove-background] Base64-encoded source image (raw base64 or data URL)."
+            },
+            "mode": {
+              "type": "string",
+              "description": "[image/remove-background] Processing mode: remove (default — transparent background), replace (solid color or image), blur (gaussian blur)."
+            },
+            "background_color": {
+              "type": "string",
+              "description": "[image/remove-background, mode=replace] CSS color for the replacement background, e.g. #ffffff or rgba(0,0,0,0)."
+            },
+            "background_image_url": {
+              "type": "string",
+              "description": "[image/remove-background, mode=replace] Public URL of a background image to composite behind the subject."
+            },
+            "blur_sigma": {
+              "type": "number",
+              "description": "[image/remove-background, mode=blur] Gaussian blur strength 1–80. Default 18."
+            },
+            "output_format": {
+              "type": "string",
+              "description": "[image/remove-background] Output image format: png (default), webp, or jpeg."
+            },
+            "response": {
+              "type": "string",
+              "description": "[image/remove-background] Response mode: binary (default, raw image bytes) or json (returns {ok, image_base64, content_type})."
             }
           }
         },
         "output": {
           "type": "object",
+          "description": "Response shape varies by skill.",
           "properties": {
-            "ok": { "type": "boolean" },
-            "image_base64": { "type": "string", "description": "Processed image (image/remove-background with response=json)." },
-            "title": { "type": "string" },
-            "markdown": { "type": "string" },
-            "risk_score": { "type": "integer" },
-            "findings": { "type": "object" },
-            "summary": { "type": "string" }
+            "ok": {
+              "type": "boolean",
+              "description": "true on success (url/* and image/* with response=json)."
+            },
+            "image_base64": {
+              "type": "string",
+              "description": "[image/remove-background, response=json] Processed image encoded as base64."
+            },
+            "content_type": {
+              "type": "string",
+              "description": "[image/remove-background, response=json] MIME type of the returned image, e.g. image/png."
+            },
+            "title": {
+              "type": "string",
+              "description": "[url/analyze, url/browse] Page title."
+            },
+            "description": {
+              "type": "string",
+              "description": "[url/analyze] Meta description of the page."
+            },
+            "headings": {
+              "type": "array",
+              "description": "[url/analyze] List of {tag, text} objects for h1–h3 headings."
+            },
+            "links": {
+              "type": "array",
+              "description": "[url/analyze, url/browse] List of {text, href} objects for absolute links found on the page."
+            },
+            "summary": {
+              "type": "string",
+              "description": "[url/analyze] Plain-text excerpt of the page body (up to 600 chars). [url/scan] One-sentence AI security assessment."
+            },
+            "markdown": {
+              "type": "string",
+              "description": "[url/analyze, format=markdown] Markdown rendering of the page content."
+            },
+            "content": {
+              "type": "string",
+              "description": "[url/analyze, depth=full] Full plain-text body up to 8000 chars. [url/browse, action=extract] Visible page text up to 8000 chars."
+            },
+            "screenshot": {
+              "type": "string",
+              "description": "[url/browse, action=screenshot] Base64-encoded PNG screenshot of the rendered page."
+            },
+            "risk_score": {
+              "type": "integer",
+              "description": "[url/scan] Composite risk score 0–100 (0=clean, 100=critical)."
+            },
+            "findings": {
+              "type": "object",
+              "description": "[url/scan] Categorised findings: {critical, high, medium, low, info} — each an array of '[type] detail' strings."
+            },
+            "findings_flat": {
+              "type": "array",
+              "description": "[url/scan] All findings as flat '[SEVERITY/type] detail' strings."
+            },
+            "actions": {
+              "type": "array",
+              "description": "[url/scan] Recommended remediation actions generated by the AI analysis phase."
+            },
+            "phases": {
+              "type": "array",
+              "description": "[url/scan] List of analysis phases executed: 1:header-analysis, 2:static-content-analysis, 3:ollama-ai-analysis."
+            }
           }
         }
       },
