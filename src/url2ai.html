@@ -629,13 +629,13 @@ h1 {
 
             <div class="card">
                 <div class="card-visual" style="--card-accent:#14B8A6;">
-                    <div class="card-visual-badge">🖼️ OSS2API <span class="card-visual-id">12</span></div>
-                    <img src="./images/oss2api.png" alt="OSS2API Background Removal" onerror="this.parentNode.className+=' is-fallback';">
+                    <div class="card-visual-badge">⚙️ OSS2API <span class="card-visual-id">12</span></div>
+                    <img src="./images/oss2api.png" alt="OSS2API Gateway" onerror="this.parentNode.className+=' is-fallback';">
                 </div>
                 <div class="card-body">
                     <div class="pill">12</div>
                     <h4>OSS2API</h4>
-                    <p>OSSを実用APIへ変換するシリーズ。第一弾として、画像背景の削除・置換・ぼかしを x402 paid endpoint として公開しています。</p>
+                    <p>OSSをラップした multi-skill AI agent ゲートウェイ。画像背景除去・URL解析・Playwright ブラウズ・Shannon-like セキュリティスキャンを x402 paid endpoint として公開。</p>
                 </div>
             </div>
 
@@ -692,11 +692,10 @@ h1 {
             OSS2API は、公開OSSをラップして、支払い・メタデータ・運用監視まで含めた agent-ready API にする取り組みです。
         </div>
         <div class="system-list">
-            <div class="system-row"><div class="system-file">apps/oss2api</div><div class="system-kind">OSS2API</div><div class="system-desc">OSSをラップしたマルチスキルゲートウェイ。背景除去（imgly）＋URLエージェント（抽出・スクリーンショット・セキュリティスキャン）に対応。</div></div>
-            <div class="system-row"><div class="system-file">x402/background</div><div class="system-kind">x402</div><div class="system-desc">OSS2API Background Removal を paid agent endpoint として呼び出すための x402 handler。</div></div>
-            <div class="system-row"><div class="system-file">server-jpyc.js</div><div class="system-kind">JPYC x402</div><div class="system-desc">JPYC（日本円ステーブルコイン）決済対応の背景除去ゲートウェイ。Polygon チェーン上で 1.5 JPYC（約1円）/リクエスト。EIP-3009 transferWithAuthorization によるオンチェーン決済。</div></div>
-            <div class="system-row"><div class="system-file">Agent402</div><div class="system-kind">Marketplace</div><div class="system-desc">OSS2API Background Removal を 0.01 USDC/request のサービスとして登録。支払い後に公開APIへプロキシします。</div></div>
-            <div class="system-row"><div class="system-file">PayAPI Market</div><div class="system-kind">Review</div><div class="system-desc">PayAPI Market に OSS2API Background Removal として登録済み。レビュー後、x402 API marketplace 上で discoverable になります。</div></div>
+            <div class="system-row"><div class="system-file">apps/oss2api</div><div class="system-kind">OSS2API</div><div class="system-desc">OSSをラップした multi-skill ゲートウェイ（port 8015）。<br>・<code>POST /image/remove-background</code> — 背景除去・置換・ぼかし（imgly AGPL-3.0）<br>・<code>POST /url/analyze</code> — URL 構造抽出（title / headings / links / entities）<br>・<code>POST /url/browse</code> — Playwright スクリーンショット / 動的抽出<br>・<code>POST /url/scan</code> — Shannon-like 3フェーズ セキュリティスキャン（HTTP headers + static HTML + Ollama AI）</div></div>
+            <div class="system-row"><div class="system-file">server-jpyc.js</div><div class="system-kind">JPYC x402</div><div class="system-desc">JPYC（日本円ステーブルコイン）決済対応ゲートウェイ（port 8017）。Polygon チェーン上で 1.5 JPYC（約1円）/リクエスト。EIP-3009 transferWithAuthorization によるオンチェーン決済。8015 へのリバースプロキシとして動作。</div></div>
+            <div class="system-row"><div class="system-file">Agent402</div><div class="system-kind">Marketplace</div><div class="system-desc">OSS2API を 0.01 USDC/request のサービスとして登録。支払い後に公開APIへプロキシします。</div></div>
+            <div class="system-row"><div class="system-file">PayAPI Market</div><div class="system-kind">Review</div><div class="system-desc">PayAPI Market に OSS2API として登録済み。レビュー後、x402 API marketplace 上で discoverable になります。</div></div>
         </div>
     </div>
 
@@ -776,13 +775,13 @@ h1 {
 
             <div class="card">
                 <div class="card-visual" style="--card-accent:#0D9488;">
-                    <div class="card-visual-badge">🖼️ OSS2API <span class="card-visual-id">X402</span></div>
-                    <img src="./images/oss2api.png" alt="OSS2API Background Removal" onerror="this.parentNode.className+=' is-fallback';">
+                    <div class="card-visual-badge">⚙️ OSS2API <span class="card-visual-id">X402</span></div>
+                    <img src="./images/oss2api.png" alt="OSS2API Gateway" onerror="this.parentNode.className+=' is-fallback';">
                 </div>
                 <div class="card-body">
                     <div class="pill">PAID AGENT</div>
-                    <h4>OSS2API Background Removal</h4>
-                    <p>画像の背景を削除・置換・ぼかし処理する paid endpoint。imgly/background-removal-js をOSS2API化し、Agent402 経由で x402 決済に対応しています。</p>
+                    <h4>OSS2API Gateway</h4>
+                    <p>背景除去 / URL解析 / Playwright ブラウズ / Shannon-like セキュリティスキャンを1つのゲートウェイで提供。Agent402 経由で x402 決済に対応しています。</p>
                     <a href="https://agent402.app/agents/42d997f9-a6ee-4a91-8e51-454d0a66dae0/background-removal/invoke" class="button" target="_blank" rel="noopener">View Agent402 Endpoint</a>
                 </div>
             </div>

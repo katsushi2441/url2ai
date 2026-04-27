@@ -1,27 +1,33 @@
-# OSS2API Background Removal
+# OSS2API — Multi-skill AI Agent Gateway
 
-[URL2AI](https://github.com/katsushi2441/url2ai) プロジェクトの OSS2API サービスの一つ。
-[imgly/background-removal-js](https://github.com/imgly/background-removal-js) を API 化し、JPYC x402 決済に対応した AI エージェントスキルです。
+[URL2AI](https://github.com/katsushi2441/url2ai) プロジェクトの OSS2API サービス。
+公開OSSをラップして x402 / JPYC 決済対応の agent-ready API として公開するゲートウェイです。
 
-## 機能
+## スキル一覧
 
-| モード | 説明 |
-|---|---|
-| `remove` | 背景を除去して透過 PNG/WebP/JPEG を返す |
-| `replace` | 背景を除去して指定色または画像で置き換える |
-| `blur` | 背景を除去してぼかし処理した背景と合成する |
+| エンドポイント | スキル | 説明 |
+|---|---|---|
+| `POST /image/remove-background` | 背景除去 | 除去 / 置換 / ぼかし（imgly AGPL-3.0） |
+| `POST /url/analyze` | URL解析 | タイトル・見出し・リンク・エンティティ抽出 |
+| `POST /url/browse` | Webブラウズ | Playwright スクリーンショット / 動的抽出 |
+| `POST /url/scan` | セキュリティスキャン | Shannon-like 3フェーズ診断（headers + static + AI） |
+
+`POST /run` は `/image/remove-background` の後方互換エイリアスです。
 
 ## 構成
 
 | ファイル | ポート | 用途 |
 |---|---|---|
-| `server.js` | 8015 | 無料（Bankr / payapi.market 経由） |
+| `server.js` | 8015 | ゲートウェイ本体（Bankr / payapi.market 経由） |
 | `server-jpyc.js` | 8017 | JPYC x402 直接決済（Polygon） |
+| `anthropic-ollama-proxy.js` | 8098 | Anthropic API → Ollama 変換プロキシ |
 
 ## セットアップ
 
 ```bash
 npm install
+# Playwright を使う場合（/url/browse）
+npx playwright install chromium
 ```
 
 ### 無料サーバー（Bankr / payapi.market 向け）
@@ -41,9 +47,9 @@ npm run start:jpyc
 
 ## API
 
-### POST /run
+### POST /image/remove-background
 
-**リクエスト**
+画像の背景を除去・置換・ぼかし処理します。
 
 | フィールド | 型 | 説明 |
 |---|---|---|
@@ -54,44 +60,86 @@ npm run start:jpyc
 | `background_image_url` | string | `replace` モード用背景画像 URL |
 | `blur_sigma` | number | `blur` モードのぼかし強度 1–80（デフォルト 18） |
 | `output_format` | string | `png`（デフォルト）/ `webp` / `jpeg` |
-| `output_quality` | number | 1–100（デフォルト 90） |
 | `response` | string | `binary`（デフォルト）/ `json`（base64 返却） |
 
-## 使用例
-
-**背景除去（透過 PNG）**
-
 ```bash
-curl -sS https://exbridge.ddns.net:8015/run \
+# 背景除去（透過 PNG）
+curl -sS https://exbridge.ddns.net:8015/image/remove-background \
   -H 'Content-Type: application/json' \
   -d '{"image_url":"https://example.com/product.jpg","mode":"remove"}' \
   --output removed.png
-```
 
-**背景を白に置換**
-
-```bash
-curl -sS https://exbridge.ddns.net:8015/run \
+# 背景を白に置換
+curl -sS https://exbridge.ddns.net:8015/image/remove-background \
   -H 'Content-Type: application/json' \
   -d '{"image_url":"https://example.com/person.jpg","mode":"replace","background_color":"#ffffff"}' \
   --output replaced.png
 ```
 
-**背景をぼかす**
+### POST /url/analyze
+
+URL を fetch して構造化データを返します。
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `url` | string | 解析対象の URL（必須） |
+| `format` | string | `json`（デフォルト）/ `markdown` |
+| `depth` | string | `basic`（デフォルト）/ `full`（本文 8000 字） |
 
 ```bash
-curl -sS https://exbridge.ddns.net:8015/run \
+curl -s -X POST https://exbridge.ddns.net:8015/url/analyze \
   -H 'Content-Type: application/json' \
-  -d '{"image_url":"https://example.com/portrait.jpg","mode":"blur","blur_sigma":22}' \
-  --output blurred.png
+  -d '{"url":"https://example.com","format":"markdown"}'
 ```
 
-**JSON（base64）で受け取る**
+### POST /url/browse
+
+Playwright でページを描画してスクリーンショットまたはテキスト抽出します。
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `url` | string | 対象 URL（必須） |
+| `action` | string | `screenshot`（デフォルト）/ `extract` |
+| `wait_until` | string | `networkidle`（デフォルト）/ `load` |
 
 ```bash
-curl -sS https://exbridge.ddns.net:8015/run \
+curl -s -X POST https://exbridge.ddns.net:8015/url/browse \
   -H 'Content-Type: application/json' \
-  -d '{"image_url":"https://example.com/photo.jpg","mode":"remove","response":"json"}'
+  -d '{"url":"https://example.com","action":"screenshot"}' | jq '.screenshot' | base64 -d > shot.png
+```
+
+### POST /url/scan
+
+Shannon-like 3フェーズ セキュリティスキャンを実行します。
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `url` | string | スキャン対象 URL（必須） |
+
+**3フェーズ処理:**
+1. **headers** — CSP / X-Frame-Options / HSTS / Referrer-Policy 等の欠落検出
+2. **static** — XSSシンク（`document.write` / `innerHTML` / `eval`）、SQLエラー露出、フォーム認証問題、SSRF URLパラメータ、外部スクリプト数
+3. **ollama-ai** — Ollama gemma4:e4b による追加findings・推奨アクション生成
+
+```bash
+curl -s -X POST https://exbridge.ddns.net:8015/url/scan \
+  -H 'Content-Type: application/json' \
+  -d '{"url":"https://example.com"}' | python3 -m json.tool
+```
+
+**レスポンス例:**
+```json
+{
+  "ok": true,
+  "scanner": "shannon-like (headers + static + ollama-ai)",
+  "risk_score": 50,
+  "summary": "...",
+  "findings": {
+    "critical": [], "high": [], "medium": ["[xss] Missing CSP"], "low": [...], "info": [...]
+  },
+  "actions": ["Implement CSP", "Add X-Frame-Options: DENY"],
+  "phases": ["1:header-analysis", "2:static-content-analysis", "3:ollama-ai-analysis"]
+}
 ```
 
 ## JPYC x402 決済
