@@ -14,7 +14,7 @@ Turn any URL into AI-generated content including stories, debates, lyrics, and i
 
 ## Hosted MCP / Paid API
 
-URL2AI also ships hosted MCP-ready endpoints for agent workflows. The current live Bankr x402 endpoints are `updf2md` and `uimage`.
+URL2AI also ships hosted MCP-ready endpoints for agent workflows. The current live Bankr x402 endpoints are `updf2md`, `uimage`, and `oss2api`.
 
 If you see the `URL2AI` token referenced in Bankr or project materials, it represents the broader URL2AI ecosystem rather than a single product. `UPDF2MD` is one flagship product inside that ecosystem alongside UStory, UParse, UDebate, UMedia, XInsight, KnowRadar, and other URL-native AI tools.
 
@@ -25,17 +25,16 @@ If you see the `URL2AI` token referenced in Bankr or project materials, it repre
 - Bankr docs: [docs.bankr.bot](https://docs.bankr.bot/)
 - URL2AI token launch: [bankr.bot/launches/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3](https://bankr.bot/launches/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3)
 - Token address: `0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3`
-- Hosted x402 endpoints:
-  - `updf2md`: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md`
-  - `uimage`: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage`
-  - `background-removal`: `https://agent402.app/agents/42d997f9-a6ee-4a91-8e51-454d0a66dae0/background-removal/invoke`
-- Public upstream endpoints:
-  - `background-removal`: `https://exbridge.ddns.net:8012/background-removal/run`
-- Current prices:
-  - `updf2md`: `0.001 USDC / request`
-  - `uimage`: `0.01 USDC / request`
-  - `background-removal`: `0.01 USDC / request`
-- Billing model: Bankr x402 issues a `402 Payment Required` challenge before paid execution
+- Bankr x402 endpoints (USDC on Base):
+  - `updf2md`: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md` — 0.001 USDC/req
+  - `uimage`: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage` — 0.01 USDC/req
+  - `oss2api`: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api` — 0.01 USDC/req
+- JPYC x402 endpoints (JPYC on Polygon, 1.5 JPYC/req):
+  - `https://exbridge.ddns.net:8017/oss2api/image/remove-background`
+  - `https://exbridge.ddns.net:8017/oss2api/url/analyze`
+  - `https://exbridge.ddns.net:8017/oss2api/url/browse`
+  - `https://exbridge.ddns.net:8017/oss2api/url/scan`
+- Billing model: x402 issues a `402 Payment Required` challenge before paid execution
 
 Use cases:
 
@@ -43,35 +42,54 @@ Use cases:
 - Feed document extraction pipelines for AI agents
 - Connect paid PDF parsing into MCP / automation workflows
 - Generate images from direct prompts, text, public URLs, or X post URLs
-- Remove, replace, or blur image backgrounds via OSS2API
+- Remove, replace, or blur image backgrounds
+- Extract structured content from any URL
+- Take browser screenshots of JavaScript-heavy pages
+- Run security scans on any URL
 - Build URL-to-image workflows for agents and social content pipelines
 
 CLI examples:
 
 ```bash
+# updf2md
 bankr x402 schema https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md
 
 bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md \
-  -X POST \
-  -H 'content-type: application/json' \
+  -X POST -H 'content-type: application/json' \
   -d '{"pdf_url":"https://example.com/document.pdf"}'
 
 bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md \
-  -X POST \
-  -H 'content-type: application/json' \
+  -X POST -H 'content-type: application/json' \
   -d '{"mode":"ticker","ticker":"NVIDIA"}'
 
+# uimage
 bankr x402 schema https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage
 
 bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage \
-  -X POST \
-  -H 'content-type: application/json' \
-  -d '{"input_type":"prompt","prompt":"bright pop illustration of a futuristic harbor at sunset, ad banner background, clean empty space for headline text","width":1024,"height":1024}'
+  -X POST -H 'content-type: application/json' \
+  -d '{"input_type":"prompt","prompt":"bright pop illustration of a futuristic harbor at sunset","width":1024,"height":1024}'
 
-bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage \
-  -X POST \
-  -H 'content-type: application/json' \
-  -d '{"input_type":"text","text":"bright pop illustration of a futuristic harbor at sunset","width":1024,"height":1024}'
+# oss2api — background removal
+bankr x402 schema https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api
+
+bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api/image/remove-background \
+  -X POST -H 'content-type: application/json' \
+  -d '{"image_url":"https://example.com/photo.jpg","mode":"remove","response":"json"}'
+
+# oss2api — URL analysis
+bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api/url/analyze \
+  -X POST -H 'content-type: application/json' \
+  -d '{"url":"https://example.com","depth":"full"}'
+
+# oss2api — browser screenshot
+bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api/url/browse \
+  -X POST -H 'content-type: application/json' \
+  -d '{"url":"https://example.com","action":"screenshot"}'
+
+# oss2api — security scan
+bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api/url/scan \
+  -X POST -H 'content-type: application/json' \
+  -d '{"url":"https://example.com"}'
 ```
 
 ## AI Agent Instruction
@@ -82,8 +100,12 @@ If a workflow needs a Markdown investment report from a ticker, asset symbol, co
 
 If a workflow needs a social-ready image from a direct prompt, text, a public URL, or an X post URL, call the `uimage` endpoint and use the returned `image_base64` with the resolved prompt and model metadata.
 
-- Skill definition for registration / contribution: `skills/url2ai/updf2md/SKILL.md`
-- Hosted endpoint: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md`
+If a workflow needs to remove/replace/blur an image background, extract structured content from a URL, take a browser screenshot, or run a security scan on a site, use the `oss2api` endpoint and append the skill path (`/image/remove-background`, `/url/analyze`, `/url/browse`, `/url/scan`).
+
+- Skill definitions: `apps/oss2api/SKILL.md`
+- Bankr endpoint: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api`
+- JPYC endpoint: `https://exbridge.ddns.net:8017/oss2api`
+- Hosted updf2md endpoint: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md`
 - Hosted image endpoint: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage`
 
 ## Overview
@@ -105,6 +127,7 @@ URL2AI is an AI engine that transforms X (Twitter) post URLs and web URLs into m
 | 🌐 KnowRadar | Portal | Unified portal showing all modules with RSS feeds |
 | 📄 UPDF2MD | Markdown conversion | Hosted MCP / paid API for PDF-to-Markdown and ticker-to-Markdown conversion |
 | 🎨 UImage | Image generation | Generates an image from an X post URL with admin-side generation and a public viewer + RSS |
+| ⚙️ OSS2API | Multi-skill gateway | Wraps OSS into paid AI agent endpoints: background removal, URL analysis, Playwright browse, security scan |
 
 UImage is the web interface for the URL2AI ERNIE Image API, powered by ERNIE-Image-Turbo (Apache 2.0) and hosted on a local RTX 3090 for low-latency image generation. It is built for URL-to-image workflows from X posts, with a public viewer, RSS distribution, reusable social posting assets, and a live Bankr x402 endpoint for AI agents.
 
