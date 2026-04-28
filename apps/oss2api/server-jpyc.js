@@ -11,6 +11,8 @@
  */
 
 import http from "node:http";
+import https from "node:https";
+import fs from "node:fs";
 import { Buffer } from "node:buffer";
 import {
   createPublicClient,
@@ -23,6 +25,8 @@ import { privateKeyToAccount } from "viem/accounts";
 
 const HOST          = process.env.HOST           || "0.0.0.0";
 const PORT          = Number.parseInt(process.env.PORT_JPYC     || "8017", 10);
+const TLS_CERT      = process.env.TLS_CERT || "/etc/letsencrypt/live/exbridge.ddns.net/fullchain.pem";
+const TLS_KEY       = process.env.TLS_KEY  || "/etc/letsencrypt/live/exbridge.ddns.net/privkey.pem";
 const UPSTREAM_PORT = Number.parseInt(process.env.PORT_UPSTREAM || "8015", 10);
 const UPSTREAM_HOST = process.env.UPSTREAM_HOST  || "127.0.0.1";
 const MAX_BODY_BYTES = Number.parseInt(process.env.MAX_BODY_BYTES || `${12 * 1024 * 1024}`, 10);
@@ -294,10 +298,29 @@ async function handle(req, res) {
   res.end(result.body);
 }
 
-http.createServer((req, res) => {
+const requestHandler = (req, res) => {
   handle(req, res).catch((err) => {
     json(res, 500, { ok: false, error: err.message || String(err) });
   });
-}).listen(PORT, HOST, () => {
-  console.log(`JPYC payment gateway listening on http://${HOST}:${PORT} → upstream http://${UPSTREAM_HOST}:${UPSTREAM_PORT}`);
-});
+};
+
+let certOk = false;
+try {
+  fs.accessSync(TLS_CERT);
+  fs.accessSync(TLS_KEY);
+  certOk = true;
+} catch {}
+
+if (certOk) {
+  const tlsOptions = {
+    cert: fs.readFileSync(TLS_CERT),
+    key:  fs.readFileSync(TLS_KEY),
+  };
+  https.createServer(tlsOptions, requestHandler).listen(PORT, HOST, () => {
+    console.log(`JPYC payment gateway listening on https://${HOST}:${PORT} → upstream http://${UPSTREAM_HOST}:${UPSTREAM_PORT}`);
+  });
+} else {
+  http.createServer(requestHandler).listen(PORT, HOST, () => {
+    console.log(`JPYC payment gateway listening on http://${HOST}:${PORT} → upstream http://${UPSTREAM_HOST}:${UPSTREAM_PORT}`);
+  });
+}
