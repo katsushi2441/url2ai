@@ -479,21 +479,121 @@ h1 {
     <div class="section">
         <h3>🚀 What is URL2AI</h3>
         <div class="intro-box">
-            URL2AIは、記事URL・X投稿URL・GitHub URL・画像URL などを起点に、AIが情報を取得し、理解し、別の価値ある形式へ変換していく仕組みです。
-            単なる要約ではなく、考察、短編小説、議論、歌詞、構文解析、メディア読解、OSS紹介、Zenn連携、技術リンク集、ニュース解説、そして全体ポータルまでをシリーズとして展開しています。
+            URL2AIは、記事URL・X投稿URL・GitHub URL・画像URL などを起点に、AIが情報を取得し、理解し、別の価値ある形式へ変換していくAIインフラです。
+            AI エージェントが直接呼び出せる x402 paid API として公開し、Web デモで成果物を無料で確認できます。
         </div>
     </div>
 
     <div class="section">
-        <h3>🧠 How it works</h3>
-        <div class="flow">
-            URL → 取得 → AI解析 → コンテンツ生成 → 配信
+        <h3>🤖 AI Agent / x402 Paid Endpoints</h3>
+        <div class="intro-box" style="margin-bottom:18px;">
+            AI エージェントが直接呼び出せる x402 paid API です。Bankr x402（USDC on Base）と JPYC x402（JPYC on Polygon）の両方に対応しています。
         </div>
-    </div>
-
-    <div class="section">
-        <h3>🧩 Products</h3>
+        <div class="system-list" style="margin-bottom:24px;">
+            <div class="system-row"><div class="system-file">OSS2API</div><div class="system-kind">Bankr x402</div><div class="system-desc">OSSをラップした multi-skill ゲートウェイ。0.01 USDC/リクエスト（USDC on Base）。<br>・<code>POST …/oss2api/image/remove-background</code> — 背景除去・置換・ぼかし（imgly AGPL-3.0）<br>・<code>POST …/oss2api/url/analyze</code> — URL 構造抽出（title / headings / links / entities）<br>・<code>POST …/oss2api/url/browse</code> — Playwright スクリーンショット / 動的抽出<br>・<code>POST …/oss2api/url/scan</code> — Shannon-like 3フェーズ セキュリティスキャン（HTTP headers + static HTML + Ollama AI）<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api</span></div></div>
+            <div class="system-row"><div class="system-file">OSS2API</div><div class="system-kind">JPYC x402</div><div class="system-desc">同スキルを JPYC（日本円ステーブルコイン）で利用可能。1.5 JPYC（≈¥1）/リクエスト（JPYC on Polygon）。EIP-3009 transferWithAuthorization によるオンチェーン決済。<br>・<code>POST https://exbridge.ddns.net:8017/oss2api/image/remove-background</code><br>・<code>POST https://exbridge.ddns.net:8017/oss2api/url/analyze</code><br>・<code>POST https://exbridge.ddns.net:8017/oss2api/url/browse</code><br>・<code>POST https://exbridge.ddns.net:8017/oss2api/url/scan</code></div></div>
+            <div class="system-row"><div class="system-file">UPDF2MD</div><div class="system-kind">Bankr x402</div><div class="system-desc">PDF URL や企業名・銘柄名から agent-ready Markdown を返す universal Markdown conversion endpoint。0.001 USDC/リクエスト。<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md</span></div></div>
+            <div class="system-row"><div class="system-file">UImage</div><div class="system-kind">Bankr x402</div><div class="system-desc">プロンプト・テキスト・URL・X投稿から画像を生成する ERNIE Image API。0.01 USDC/リクエスト。<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage</span></div></div>
+        </div>
         <div class="card-grid">
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#0D9488;">
+                    <div class="card-visual-badge">⚙️ OSS2API <span class="card-visual-id">BANKR</span></div>
+                    <img src="./images/oss2api.png" alt="OSS2API Gateway" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">PAID AGENT · USDC</div>
+                    <h4>OSS2API — Bankr x402</h4>
+                    <p>背景除去 / URL解析 / Playwright ブラウズ / セキュリティスキャンを提供するマルチスキルゲートウェイ。0.01 USDC/リクエスト。</p>
+                    <a href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api" class="button" target="_blank" rel="noopener">View Bankr Endpoint</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#7C3AED;">
+                    <div class="card-visual-badge">🪙 OSS2API <span class="card-visual-id">JPYC</span></div>
+                    <img src="./images/oss2api.png" alt="OSS2API JPYC x402" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">PAID AGENT · JPYC</div>
+                    <h4>OSS2API — JPYC x402</h4>
+                    <p>同スキルを JPYC（日本円ステーブルコイン）で利用可能。1.5 JPYC（≈¥1）/リクエスト。Polygon チェーン上の EIP-3009 によるオンチェーン決済。</p>
+                    <a href="https://exbridge.ddns.net:8017/health" class="button" target="_blank" rel="noopener">View JPYC Endpoint</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#1D4ED8;">
+                    <div class="card-visual-badge">📄 UPDF2MD <span class="card-visual-id">X402</span></div>
+                    <img src="./images/updf2md.png" alt="UPDF2MD" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">PAID AGENT · USDC</div>
+                    <h4>UPDF2MD x402</h4>
+                    <p>PDF URL や企業名・銘柄名から agent-ready Markdown を返す universal Markdown conversion endpoint。0.001 USDC/リクエスト。</p>
+                    <a href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md" class="button" target="_blank" rel="noopener">View x402 Endpoint</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#DB2777;">
+                    <div class="card-visual-badge">🎨 UImage <span class="card-visual-id">X402</span></div>
+                    <img src="./images/uimage.png" alt="UImage" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">PAID AGENT · USDC</div>
+                    <h4>UImage x402</h4>
+                    <p>プロンプト・テキスト・URL・X投稿から画像を生成する ERNIE Image API。AI エージェントから直接呼び出せます。0.01 USDC/リクエスト。</p>
+                    <a href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage" class="button" target="_blank" rel="noopener">View x402 Endpoint</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>🌐 Web Demo</h3>
+        <div class="intro-box" style="margin-bottom:20px;">
+            AI エージェントが生成した成果物を無料で確認できる Web デモです。出力品質の検証や動作確認にご利用ください。
+        </div>
+        <div class="card-grid">
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#0F766E;">
+                    <div class="card-visual-badge">📈 FinReport <span class="card-visual-id">FREE</span></div>
+                    <img src="./images/finreport.png" alt="FinReport" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">FREE DEMO</div>
+                    <h4>FinReport</h4>
+                    <p>GPT Researcher と Ollama gemma4 による Markdown 投資レポート生成。銘柄・企業名を入力するだけで調査レポートを生成します。</p>
+                    <a href="finreport.php" class="button">Open FinReport</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#DB2777;">
+                    <div class="card-visual-badge">🎨 UImage <span class="card-visual-id">FREE</span></div>
+                    <img src="./images/uimage.png" alt="UImage" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">FREE DEMO</div>
+                    <h4>UImage</h4>
+                    <p>テキスト・URL・X投稿から画像を生成して確認できる Web デモ。生成した画像は公開ビューアや RSS で配信されます。</p>
+                    <a href="uimage.php" class="button">Open UImage</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#6366F1;">
+                    <div class="card-visual-badge">🛰️ KnowRadar <span class="card-visual-id">PORTAL</span></div>
+                    <img src="./images/knowradar.png" alt="KnowRadar" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">PORTAL</div>
+                    <h4>KnowRadar</h4>
+                    <p>URL2AI シリーズ全体を横断して確認できるエコシステムポータル。</p>
+                    <a href="knowradar.php" class="button">Open KnowRadar</a>
+                </div>
+            </div>
 
             <div class="card">
                 <div class="card-visual" style="--card-accent:#7C3AED;">
@@ -501,7 +601,7 @@ h1 {
                     <img src="./images/ustory.png" alt="UStory" onerror="this.parentNode.className+=' is-fallback';">
                 </div>
                 <div class="card-body">
-                    <div class="pill">01</div>
+                    <div class="pill">FREE DEMO</div>
                     <h4>UStory</h4>
                     <p>X投稿をもとに、AIが短編小説として再構成します。</p>
                 </div>
@@ -513,9 +613,9 @@ h1 {
                     <img src="./images/uparse.png" alt="UParse" onerror="this.parentNode.className+=' is-fallback';">
                 </div>
                 <div class="card-body">
-                    <div class="pill">02</div>
+                    <div class="pill">FREE DEMO</div>
                     <h4>UParse</h4>
-                    <p>投稿文の構文を解析し、その構文パターンを使った別の例文をいくつか生成します。</p>
+                    <p>投稿文の構文を解析し、その構文パターンを使った別の例文を生成します。</p>
                 </div>
             </div>
 
@@ -525,7 +625,7 @@ h1 {
                     <img src="./images/udebate.png" alt="UDebate AI" onerror="this.parentNode.className+=' is-fallback';">
                 </div>
                 <div class="card-body">
-                    <div class="pill">03</div>
+                    <div class="pill">FREE DEMO</div>
                     <h4>UDebate AI</h4>
                     <p>肯定・否定の視点をAIが議論し、結論まで整理します。</p>
                 </div>
@@ -537,7 +637,7 @@ h1 {
                     <img src="./images/umedia.png" alt="UMedia" onerror="this.parentNode.className+=' is-fallback';">
                 </div>
                 <div class="card-body">
-                    <div class="pill">04</div>
+                    <div class="pill">FREE DEMO</div>
                     <h4>UMedia</h4>
                     <p>X投稿の画像や動画も含めて、AIが文脈ごと考察します。</p>
                 </div>
@@ -549,7 +649,7 @@ h1 {
                     <img src="./images/xinsight.png" alt="XInsight" onerror="this.parentNode.className+=' is-fallback';">
                 </div>
                 <div class="card-body">
-                    <div class="pill">05</div>
+                    <div class="pill">FREE DEMO</div>
                     <h4>XInsight</h4>
                     <p>X投稿に対して、AIが深い洞察と読み解きを返します。</p>
                 </div>
@@ -561,7 +661,7 @@ h1 {
                     <img src="./images/oss.png" alt="OSS Timeline" onerror="this.parentNode.className+=' is-fallback';">
                 </div>
                 <div class="card-body">
-                    <div class="pill">06</div>
+                    <div class="pill">FREE DEMO</div>
                     <h4>OSS Timeline</h4>
                     <p>GitHubのAI系OSSを収集し、解説付きでタイムライン化します。</p>
                 </div>
@@ -573,7 +673,7 @@ h1 {
                     <img src="./images/osszenn.png" alt="OSSZenn" onerror="this.parentNode.className+=' is-fallback';">
                 </div>
                 <div class="card-body">
-                    <div class="pill">07</div>
+                    <div class="pill">FREE DEMO</div>
                     <h4>OSSZenn</h4>
                     <p>OSSと関連するZenn記事をつなぎ、知識導線を作ります。</p>
                 </div>
@@ -585,7 +685,7 @@ h1 {
                     <img src="./images/aitech.png" alt="AITech Links" onerror="this.parentNode.className+=' is-fallback';">
                 </div>
                 <div class="card-body">
-                    <div class="pill">08</div>
+                    <div class="pill">FREE DEMO</div>
                     <h4>AITech Links</h4>
                     <p>技術系サイトのURLをAIが要約し、実用リンク集に整理します。</p>
                 </div>
@@ -597,7 +697,7 @@ h1 {
                     <img src="./images/usong.png" alt="USong" onerror="this.parentNode.className+=' is-fallback';">
                 </div>
                 <div class="card-body">
-                    <div class="pill">09</div>
+                    <div class="pill">FREE DEMO</div>
                     <h4>USong</h4>
                     <p>投稿内容や話題から、AIが歌詞として新しく表現します。</p>
                 </div>
@@ -609,199 +709,9 @@ h1 {
                     <img src="./images/ainews.png" alt="AI News Radar" onerror="this.parentNode.className+=' is-fallback';">
                 </div>
                 <div class="card-body">
-                    <div class="pill">10</div>
+                    <div class="pill">FREE DEMO</div>
                     <h4>AI News Radar</h4>
                     <p>X上のニュース投稿と記事をAIが読み、ニュース考察へ変換します。</p>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-visual" style="--card-accent:#6366F1;">
-                    <div class="card-visual-badge">🛰️ KnowRader <span class="card-visual-id">11</span></div>
-                    <img src="./images/knowradar.png" alt="KnowRader" onerror="this.parentNode.className+=' is-fallback';">
-                </div>
-                <div class="card-body">
-                    <div class="pill">11</div>
-                    <h4>KnowRader</h4>
-                    <p>URL2AIシリーズ全体を横断して見渡せるエコシステムポータルです。</p>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-visual" style="--card-accent:#14B8A6;">
-                    <div class="card-visual-badge">⚙️ OSS2API <span class="card-visual-id">12</span></div>
-                    <img src="./images/oss2api.png" alt="OSS2API Gateway" onerror="this.parentNode.className+=' is-fallback';">
-                </div>
-                <div class="card-body">
-                    <div class="pill">12</div>
-                    <h4>OSS2API</h4>
-                    <p>OSSをラップした multi-skill AI agent ゲートウェイ。画像背景除去・URL解析・Playwright ブラウズ・Shannon-like セキュリティスキャンを x402 paid endpoint として公開。</p>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-    <div class="section">
-        <h3>🗂️ All PHP Systems</h3>
-        <div class="intro-box" style="margin-bottom:18px;">
-            URL2AI は単一プロダクトではなく、`src/` 配下に複数の PHP システムを持つ実運用スタックです。
-            公開コンテンツ、ビューア、分析デモ、配信補助、運用系スクリプトまで含めて一覧化しています。
-        </div>
-        <div class="system-list">
-            <div class="system-row"><div class="system-file">ainews.php</div><div class="system-kind">Public</div><div class="system-desc">AI News Radar。本日のAIニュース投稿と記事をAIが読み、考察コンテンツへ変換。</div></div>
-            <div class="system-row"><div class="system-file">aitech.php</div><div class="system-kind">Public</div><div class="system-desc">AITech Links。技術系URLの要約・タグ付け・リンク集化を行うシステム。</div></div>
-            <div class="system-row"><div class="system-file">analyze.php</div><div class="system-kind">Ops</div><div class="system-desc">分析補助エンドポイント。内部の解析処理や検証用途で使う補助スクリプト。</div></div>
-            <div class="system-row"><div class="system-file">config.php</div><div class="system-kind">Core</div><div class="system-desc">全PHPシステム共通の設定ローダー。config.yaml を読み込み各サービスへ設定を渡します。</div></div>
-            <div class="system-row"><div class="system-file">finreport.php</div><div class="system-kind">Demo</div><div class="system-desc">FinReport 無料デモ。GPT Researcher + Ollama gemma4 による Markdown 投資レポート生成。</div></div>
-            <div class="system-row"><div class="system-file">finreportv.php</div><div class="system-kind">Viewer</div><div class="system-desc">FinReport の保存済みレポートを閲覧・再利用するビューア。</div></div>
-            <div class="system-row"><div class="system-file">knowradar.php</div><div class="system-kind">Portal</div><div class="system-desc">URL2AI 全体を横断表示するエコシステムポータル。</div></div>
-            <div class="system-row"><div class="system-file">nextpost.php</div><div class="system-kind">Ops</div><div class="system-desc">次に投稿する候補を扱う運用系ページ。SNS配信フローの管理に利用。</div></div>
-            <div class="system-row"><div class="system-file">oss.php</div><div class="system-kind">Public</div><div class="system-desc">OSS Timeline。GitHub のAI系OSSを収集し、要約と考察を付けて公開。</div></div>
-            <div class="system-row"><div class="system-file">osszenn.php</div><div class="system-kind">Public</div><div class="system-desc">OSS と Zenn 記事をつなぐ知識導線システム。</div></div>
-            <div class="system-row"><div class="system-file">saveainews.php</div><div class="system-kind">Ops</div><div class="system-desc">AI News Radar の保存処理を担当する補助スクリプト。</div></div>
-            <div class="system-row"><div class="system-file">saveaitech.php</div><div class="system-kind">Ops</div><div class="system-desc">AITech Links の保存処理を担当する補助スクリプト。</div></div>
-            <div class="system-row"><div class="system-file">saveoss.php</div><div class="system-kind">Ops</div><div class="system-desc">OSS 系コンテンツの保存処理を担当する補助スクリプト。</div></div>
-            <div class="system-row"><div class="system-file">udebate.php</div><div class="system-kind">Public</div><div class="system-desc">UDebate。肯定・否定AIの議論を生成する対話型システム。</div></div>
-            <div class="system-row"><div class="system-file">udebatev.php</div><div class="system-kind">Viewer</div><div class="system-desc">UDebate の生成結果を閲覧するビューア。</div></div>
-            <div class="system-row"><div class="system-file">uimage.php</div><div class="system-kind">Demo</div><div class="system-desc">UImage 無料デモ。テキスト、URL、X投稿から画像を生成。Bankr x402 側では direct prompt 入力にも対応。</div></div>
-            <div class="system-row"><div class="system-file">uimagev.php</div><div class="system-kind">Viewer</div><div class="system-desc">UImage 生成画像の公開ビューア兼RSS配信ページ。</div></div>
-            <div class="system-row"><div class="system-file">pimage.php</div><div class="system-kind">Demo</div><div class="system-desc">PImage プロンプト画像デモ。プロンプトを直接入力して画像生成し、そのまま保存・再利用。</div></div>
-            <div class="system-row"><div class="system-file">pimagev.php</div><div class="system-kind">Viewer</div><div class="system-desc">PImage の保存済みプロンプトと生成画像を公開表示するビューア。</div></div>
-            <div class="system-row"><div class="system-file">umedia.php</div><div class="system-kind">Public</div><div class="system-desc">UMedia。X投稿の画像・動画を含めてAIが考察するシステム。</div></div>
-            <div class="system-row"><div class="system-file">umediav.php</div><div class="system-kind">Viewer</div><div class="system-desc">UMedia の保存済みコンテンツを一覧・詳細表示するビューア。</div></div>
-            <div class="system-row"><div class="system-file">uparse.php</div><div class="system-kind">Public</div><div class="system-desc">UParse。投稿文の構文解析と例文生成を行うシステム。</div></div>
-            <div class="system-row"><div class="system-file">uparsev.php</div><div class="system-kind">Viewer</div><div class="system-desc">UParse 結果のビューア。</div></div>
-            <div class="system-row"><div class="system-file">updf2md.php</div><div class="system-kind">Demo</div><div class="system-desc">UPDF2MD のWeb UI。PDF to Markdown と universal Markdown conversion の導線ページ。</div></div>
-            <div class="system-row"><div class="system-file">usong.php</div><div class="system-kind">Public</div><div class="system-desc">USong。X投稿や話題からAI作詞を行うシステム。</div></div>
-            <div class="system-row"><div class="system-file">usongv.php</div><div class="system-kind">Viewer</div><div class="system-desc">USong 結果のビューア。</div></div>
-            <div class="system-row"><div class="system-file">ustory.php</div><div class="system-kind">Public</div><div class="system-desc">UStory。X投稿を短編小説へ再構成するシステム。</div></div>
-            <div class="system-row"><div class="system-file">ustoryv.php</div><div class="system-kind">Viewer</div><div class="system-desc">UStory の保存済み作品を表示するビューア。</div></div>
-            <div class="system-row"><div class="system-file">xauth.php</div><div class="system-kind">Core</div><div class="system-desc">X OAuth 認証まわりを扱う共通認証システム。</div></div>
-            <div class="system-row"><div class="system-file">xinsight.php</div><div class="system-kind">Public</div><div class="system-desc">XInsight。X投稿に対する深いAI考察を返すシステム。</div></div>
-            <div class="system-row"><div class="system-file">xinsightv.php</div><div class="system-kind">Viewer</div><div class="system-desc">XInsight の生成結果ビューア。</div></div>
-            <div class="system-row"><div class="system-file">xview.php</div><div class="system-kind">Public</div><div class="system-desc">X投稿や関連コンテンツを表示・確認する補助ビューア。</div></div>
-            <div class="system-row"><div class="system-file">zenn2oss.php</div><div class="system-kind">Public</div><div class="system-desc">Zenn と OSS の接続を扱う補助システム。知識導線の拡張用。</div></div>
-        </div>
-    </div>
-
-    <div class="section">
-        <h3>⚙️ Agent / API Systems</h3>
-        <div class="intro-box" style="margin-bottom:18px;">
-            URL2AI は PHP のWebデモだけでなく、AI agent が直接呼び出せる x402 paid API としても展開しています。
-            OSS2API は、公開OSSをラップして、支払い・メタデータ・運用監視まで含めた agent-ready API にする取り組みです。
-        </div>
-        <div class="system-list">
-            <div class="system-row"><div class="system-file">apps/oss2api</div><div class="system-kind">OSS2API</div><div class="system-desc">OSSをラップした multi-skill ゲートウェイ。Bankr x402（USDC）経由で公開。<br>・<code>POST …/oss2api/image/remove-background</code> — 背景除去・置換・ぼかし（imgly AGPL-3.0）<br>・<code>POST …/oss2api/url/analyze</code> — URL 構造抽出（title / headings / links / entities）<br>・<code>POST …/oss2api/url/browse</code> — Playwright スクリーンショット / 動的抽出<br>・<code>POST …/oss2api/url/scan</code> — Shannon-like 3フェーズ セキュリティスキャン（HTTP headers + static HTML + Ollama AI）<br><span style="font-size:12px;color:#6B7280;">Bankr: https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api</span></div></div>
-            <div class="system-row"><div class="system-file">server-jpyc.js</div><div class="system-kind">JPYC x402</div><div class="system-desc">JPYC（日本円ステーブルコイン）決済対応ゲートウェイ（port 8017）。Polygon チェーン上で 1.5 JPYC（約1円）/リクエスト。EIP-3009 transferWithAuthorization によるオンチェーン決済。<br>・<code>POST https://exbridge.ddns.net:8017/oss2api/image/remove-background</code><br>・<code>POST https://exbridge.ddns.net:8017/oss2api/url/analyze</code><br>・<code>POST https://exbridge.ddns.net:8017/oss2api/url/browse</code><br>・<code>POST https://exbridge.ddns.net:8017/oss2api/url/scan</code></div></div>
-            <div class="system-row"><div class="system-file">Agent402</div><div class="system-kind">Marketplace</div><div class="system-desc">OSS2API を 0.01 USDC/request のサービスとして登録。支払い後に公開APIへプロキシします。</div></div>
-            <div class="system-row"><div class="system-file">PayAPI Market</div><div class="system-kind">Review</div><div class="system-desc">PayAPI Market に OSS2API として登録済み。レビュー後、x402 API marketplace 上で discoverable になります。</div></div>
-        </div>
-    </div>
-
-    <div class="section">
-        <h3>🔥 Features</h3>
-        <ul class="feature-list">
-            <li>URLだけで完結（プロンプト不要）</li>
-            <li>複数コンテンツ同時生成</li>
-            <li>自動収集・解析・配信</li>
-            <li>CMS・RSS・SNS連携</li>
-            <li>無料Webデモで出力品質を確認し、使えるものを Bankr x402 の paid AI agent / API として展開</li>
-            <li>OSS2API により、OSSプロジェクトを agent-ready な paid API として公開</li>
-            <li>同じ入力から、考察・物語・議論・歌詞など複数の表現へ展開</li>
-            <li>シリーズ全体を KnowRader で横断的に把握可能</li>
-        </ul>
-    </div>
-
-    <div class="section">
-        <h3>💸 Free Demo → Paid Agent</h3>
-        <div class="intro-box">
-            URL2AIは、まずWeb上の無料デモで出力を開発・検証し、実際にXやParagraphなどのSNS運用へ投入します。
-            その中で有効だったものを、Bankr x402 の paid AI agent / API として公開していく構成です。
-            無料で品質を見てから、そのまま自動化やエージェント運用へ進めます。
-        </div>
-        <div class="card-grid" style="margin-top:20px;">
-            <div class="card">
-                <div class="card-visual" style="--card-accent:#0F766E;">
-                    <div class="card-visual-badge">📈 FinReport <span class="card-visual-id">FREE</span></div>
-                    <img src="./images/finreport.png" alt="FinReport" onerror="this.parentNode.className+=' is-fallback';">
-                </div>
-                <div class="card-body">
-                    <div class="pill">FREE DEMO</div>
-                    <h4>FinReport</h4>
-                    <p>GPT Researcher と Ollama gemma4 を使った Markdown 投資レポート生成デモ。無料で出力品質を確認できます。</p>
-                    <a href="finreport.php" class="button">Open FinReport</a>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-visual" style="--card-accent:#DB2777;">
-                    <div class="card-visual-badge">🎨 UImage <span class="card-visual-id">FREE + PAID</span></div>
-                    <img src="./images/uimage.png" alt="UImage" onerror="this.parentNode.className+=' is-fallback';">
-                </div>
-                <div class="card-body">
-                    <div class="pill">WEB + X402</div>
-                    <h4>UImage</h4>
-                    <p>テキスト、URL、X投稿から画像を生成。Bankr x402 では direct prompt 入力にも対応し、無料Web導線と paid endpoint を両方持っています。</p>
-                    <a href="uimage.php" class="button">Open UImage</a>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-visual" style="--card-accent:#2563EB;">
-                    <div class="card-visual-badge">🧩 PImage <span class="card-visual-id">PROMPT</span></div>
-                    <img src="./images/uimage.png" alt="PImage" onerror="this.parentNode.className+=' is-fallback';">
-                </div>
-                <div class="card-body">
-                    <div class="pill">PROMPT DEMO</div>
-                    <h4>PImage</h4>
-                    <p>画像生成プロンプトを直接入力して 1 枚の画像を生成。保存した prompt は UImage x402 の direct prompt 入力にもつなげられます。</p>
-                    <a href="pimage.php" class="button">Open PImage</a>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-visual" style="--card-accent:#1D4ED8;">
-                    <div class="card-visual-badge">📄 UPDF2MD <span class="card-visual-id">X402</span></div>
-                    <img src="./images/updf2md.png" alt="UPDF2MD" onerror="this.parentNode.className+=' is-fallback';">
-                </div>
-                <div class="card-body">
-                    <div class="pill">PAID AGENT</div>
-                    <h4>UPDF2MD x402</h4>
-                    <p>PDF URL や企業名・銘柄名から agent-ready Markdown を返す universal Markdown conversion endpoint です。</p>
-                    <a href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md" class="button" target="_blank" rel="noopener">View x402 Endpoint</a>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-visual" style="--card-accent:#0D9488;">
-                    <div class="card-visual-badge">⚙️ OSS2API <span class="card-visual-id">X402</span></div>
-                    <img src="./images/oss2api.png" alt="OSS2API Gateway" onerror="this.parentNode.className+=' is-fallback';">
-                </div>
-                <div class="card-body">
-                    <div class="pill">PAID AGENT</div>
-                    <h4>OSS2API Gateway</h4>
-                    <p>背景除去 / URL解析 / Playwright ブラウズ / Shannon-like セキュリティスキャンを1つのゲートウェイで提供。Agent402 経由で x402 決済に対応しています。</p>
-                    <a href="https://agent402.app/agents/42d997f9-a6ee-4a91-8e51-454d0a66dae0/background-removal/invoke" class="button" target="_blank" rel="noopener">View Agent402 Endpoint</a>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-visual" style="--card-accent:#7C3AED;">
-                    <div class="card-visual-badge">🪙 JPYC x402 <span class="card-visual-id">JPYC</span></div>
-                    <img src="./images/oss2api.png" alt="OSS2API JPYC x402" onerror="this.parentNode.className+=' is-fallback';">
-                </div>
-                <div class="card-body">
-                    <div class="pill">PAID AGENT · JPYC</div>
-                    <h4>OSS2API JPYC決済</h4>
-                    <p>JPYC（日本円ステーブルコイン）で支払う OSS2API マルチスキル API。1.5 JPYC（≈¥1）/リクエスト。Polygon チェーン上の EIP-3009 transferWithAuthorization によるオンチェーン決済。</p>
-                    <p style="margin-top:10px;font-size:13px;color:#374151;line-height:1.8;">
-                        <code style="background:#F3F4F6;padding:2px 6px;border-radius:4px;">POST https://exbridge.ddns.net:8017/oss2api/image/remove-background</code> — 背景除去・置換・ぼかし<br>
-                        <code style="background:#F3F4F6;padding:2px 6px;border-radius:4px;">POST https://exbridge.ddns.net:8017/oss2api/url/analyze</code> — URL構造抽出<br>
-                        <code style="background:#F3F4F6;padding:2px 6px;border-radius:4px;">POST https://exbridge.ddns.net:8017/oss2api/url/browse</code> — Playwright ブラウズ<br>
-                        <code style="background:#F3F4F6;padding:2px 6px;border-radius:4px;">POST https://exbridge.ddns.net:8017/oss2api/url/scan</code> — セキュリティスキャン
-                    </p>
-                    <a href="https://exbridge.ddns.net:8017/health" class="button" target="_blank" rel="noopener">View JPYC Endpoint</a>
                 </div>
             </div>
         </div>
@@ -810,14 +720,20 @@ h1 {
     <div class="section">
         <h3>🌍 Vision</h3>
         <p>
-        URL2AIは情報を価値に変換するAIインフラです。  
-        Web無料デモで開発・検証し、SNSで実運用し、Bankr / Agent402 x402 で paid AI agent 化し、さらにOSS2APIとトークン経済圏へつなげていく。
+        URL2AIは情報を価値に変換するAIインフラです。
+        AI エージェントが paid API として直接呼び出し、Web デモで成果物を確認し、OSS2API でオープンソースを agent-ready な経済圏へつなげていく。
         コンテンツは消費されるものではなく、再生成され続ける資産へ。
         </p>
     </div>
 
     <div class="section" style="text-align:center;">
         <a href="knowradar.php" class="button">Start Using URL2AI</a>
+    </div>
+
+    <div class="section" style="text-align:center;font-size:13px;color:#6B7280;">
+        <a href="tokusho.html" style="color:#6B7280;text-decoration:underline;">特定商取引法に基づく表示</a>
+        &nbsp;|&nbsp;
+        &copy; 株式会社エクスブリッジ
     </div>
 
 </div>
