@@ -143,6 +143,7 @@ function api_post($url, $payload, $timeout = 90) {
 
 define('OSS2API',  'http://exbridge.ddns.net:8015/oss2api');
 define('PDF2MD',   'http://exbridge.ddns.net:8010');
+define('LLM2API',  'http://exbridge.ddns.net:8019/llm');
 define('DATA_DIR', __DIR__ . '/data');
 
 function save_result($tab, $input, $result) {
@@ -165,7 +166,7 @@ $error  = '';
 $result = null;
 $input  = [];
 
-$valid_tabs = ['analyze', 'browse', 'scan', 'bgremove', 'pdf'];
+$valid_tabs = ['analyze', 'browse', 'scan', 'bgremove', 'pdf', 'llm'];
 if (!in_array($tab, $valid_tabs)) $tab = 'analyze';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin && isset($_POST['run'])) {
@@ -258,6 +259,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin && isset($_POST['run'])) 
                 $result = api_post(PDF2MD . '/pdf/convert-url', $payload, 120);
             }
             if ($result) save_result('pdf', $input, $result);
+            else $error = 'API呼び出しに失敗しました';
+        }
+
+    } elseif ($tab === 'llm') {
+        $system      = trim((isset($_POST['system'])      ? $_POST['system']      : ''));
+        $message     = trim((isset($_POST['message'])     ? $_POST['message']     : ''));
+        $temperature = floatval((isset($_POST['temperature']) ? $_POST['temperature'] : 0.7));
+        $max_tokens  = intval((isset($_POST['max_tokens'])    ? $_POST['max_tokens']  : 512));
+        if ($message === '') { $error = 'メッセージを入力してください'; }
+        else {
+            $messages = array();
+            if ($system !== '') $messages[] = array('role' => 'system', 'content' => $system);
+            $messages[] = array('role' => 'user', 'content' => $message);
+            $payload = array('messages' => $messages, 'temperature' => $temperature, 'max_tokens' => $max_tokens);
+            $input   = array('system' => $system, 'message' => $message, 'temperature' => $temperature, 'max_tokens' => $max_tokens);
+            $result  = api_post(LLM2API . '/v1/chat/completions', $payload, 90);
+            if ($result) save_result('llm', $input, $result);
             else $error = 'API呼び出しに失敗しました';
         }
     }
@@ -373,6 +391,7 @@ textarea.code-area:focus{border-color:var(--accent)}
         <button class="tab <?php echo $tab==='scan'     ? 'active':'' ?>" onclick="switchTab('scan')">🔒 セキュリティスキャン</button>
         <button class="tab <?php echo $tab==='bgremove' ? 'active':'' ?>" onclick="switchTab('bgremove')">🖼 背景除去</button>
         <button class="tab <?php echo $tab==='pdf'      ? 'active':'' ?>" onclick="switchTab('pdf')">📄 PDF→MD</button>
+        <button class="tab <?php echo $tab==='llm'      ? 'active':'' ?>" onclick="switchTab('llm')">🧠 LLM</button>
     </div>
 
     <?php if ($error): ?>
@@ -628,6 +647,67 @@ textarea.code-area:focus{border-color:var(--accent)}
         <?php endif; ?>
     </div>
 
+    <!-- ========== LLM ========== -->
+    <div class="tab-panel <?php echo $tab==='llm' ? 'active':'' ?>" id="panel-llm">
+        <form method="POST" onsubmit="showGenerating()"><input type="hidden" name="run" value="1">
+            <input type="hidden" name="tab" value="llm">
+            <div class="section">
+                <div class="section-header"><div class="section-title">🧠 LLM2API — Gemma 4 E4B</div><span style="font-size:.75rem;color:var(--muted)">入力上限 4,000文字 / 出力上限 2,048トークン</span></div>
+                <div class="section-body">
+                    <div class="form-group">
+                        <label>システムプロンプト（省略可）</label>
+                        <textarea name="system" class="code-area" rows="3" placeholder="You are a helpful assistant."><?php echo h($tab==='llm' ? ((isset($input['system']) ? $input['system'] : '')) : '') ?></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>ユーザーメッセージ</label>
+                        <textarea name="message" class="code-area" rows="5" placeholder="日本語で自己紹介して"><?php echo h($tab==='llm' ? ((isset($input['message']) ? $input['message'] : '')) : '') ?></textarea>
+                    </div>
+                    <div class="row" style="gap:1.5rem;margin-bottom:.75rem;align-items:flex-end">
+                        <div class="form-group" style="margin-bottom:0">
+                            <label>温度 (temperature)</label>
+                            <input type="text" name="temperature" value="<?php echo h($tab==='llm' ? ((isset($input['temperature']) ? $input['temperature'] : '0.7')) : '0.7') ?>" style="width:80px">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0">
+                            <label>最大トークン (max_tokens)</label>
+                            <input type="text" name="max_tokens" value="<?php echo h($tab==='llm' ? ((isset($input['max_tokens']) ? $input['max_tokens'] : '512')) : '512') ?>" style="width:100px">
+                        </div>
+                    </div>
+                    <button type="submit" name="run" class="btn btn-green" <?php echo !$is_admin?'disabled':'' ?>>
+                        <span class="btn-label">✦ 送信</span><span class="spinner"></span>
+                    </button>
+                    <?php if (!$is_admin): ?><span style="font-size:.78rem;color:var(--muted);margin-left:.5rem">ログインが必要です</span><?php endif; ?>
+                </div>
+            </div>
+        </form>
+        <?php if ($tab==='llm' && $result): ?>
+        <?php $llm_content = isset($result['choices'][0]['message']['content']) ? $result['choices'][0]['message']['content'] : null; ?>
+        <?php $llm_usage   = isset($result['usage']) ? $result['usage'] : array(); ?>
+        <div class="section result-box">
+            <div class="section-header">
+                <div class="section-title"><span style="color:var(--green)">✓</span> レスポンス — <?php echo h((isset($result['model']) ? $result['model'] : '')) ?></div>
+                <?php if ($llm_content !== null): ?>
+                <button type="button" class="btn btn-secondary" style="font-size:.75rem;padding:.25rem .6rem" onclick="copyEl('llm-result')">コピー</button>
+                <?php endif; ?>
+            </div>
+            <div class="section-body">
+                <?php if ($llm_content !== null): ?>
+                <textarea class="code-area" id="llm-result" rows="12" readonly><?php echo h($llm_content) ?></textarea>
+                <?php if (!empty($llm_usage)): ?>
+                <div style="margin-top:.5rem;font-size:.75rem;color:var(--muted);font-family:var(--mono)">
+                    prompt: <?php echo h((isset($llm_usage['prompt_tokens']) ? $llm_usage['prompt_tokens'] : '?')) ?> tokens &nbsp;|&nbsp;
+                    completion: <?php echo h((isset($llm_usage['completion_tokens']) ? $llm_usage['completion_tokens'] : '?')) ?> tokens &nbsp;|&nbsp;
+                    total: <?php echo h((isset($llm_usage['total_tokens']) ? $llm_usage['total_tokens'] : '?')) ?> tokens
+                </div>
+                <?php endif; ?>
+                <?php else: ?>
+                <div class="msg-error">レスポンスの取得に失敗しました。</div>
+                <textarea class="code-area" rows="6" readonly><?php echo h(json_encode($result, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT)) ?></textarea>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
+
     <!-- ========== PDF→MD ========== -->
     <div class="tab-panel <?php echo $tab==='pdf' ? 'active':'' ?>" id="panel-pdf">
         <form method="POST" enctype="multipart/form-data" onsubmit="showGenerating()"><input type="hidden" name="run" value="1">
@@ -691,7 +771,7 @@ textarea.code-area:focus{border-color:var(--accent)}
 function switchTab(t) {
     document.querySelectorAll('.tab').forEach(function(b){ b.classList.remove('active'); });
     document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
-    var idx = ['analyze','browse','scan','bgremove','pdf'].indexOf(t);
+    var idx = ['analyze','browse','scan','bgremove','pdf','llm'].indexOf(t);
     document.querySelectorAll('.tab')[idx].classList.add('active');
     document.getElementById('panel-'+t).classList.add('active');
 }
