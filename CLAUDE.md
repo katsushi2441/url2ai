@@ -54,6 +54,7 @@ cd src && python3 ftpphp.py
 | 8018 | (未使用) | — | — |
 | 8019 | **llm-gateway** | Node.js | LLM2API Bankr x402 endpoint (Gemma 4 E4B via Ollama)。systemd: `llm-gateway.service` |
 | 8020 | **llm-gateway-jpyc** | Node.js | LLM2API JPYC x402 gateway (proxies to 8019)。systemd: `llm-gateway-jpyc.service` |
+| 8021 | **cdp-gateway** | Node.js | OSS2API + LLM2API 統合 CDP x402 gateway。Coinbase Bazaar discovery対応（discoverable:true）。systemd: `cdp-gateway.service` |
 
 ### api_gateway (port 8010) の再起動方法
 
