@@ -29,11 +29,13 @@ If you see the `URL2AI` token referenced in Bankr or project materials, it repre
   - `updf2md`: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md` — 0.001 USDC/req
   - `uimage`: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage` — 0.01 USDC/req
   - `oss2api`: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api` — 0.01 USDC/req
+  - `llm2api`: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api` — 0.01 USDC/req
 - JPYC x402 endpoints (JPYC on Polygon, 1.5 JPYC/req):
   - `https://exbridge.ddns.net:8017/oss2api/image/remove-background`
   - `https://exbridge.ddns.net:8017/oss2api/url/analyze`
   - `https://exbridge.ddns.net:8017/oss2api/url/browse`
   - `https://exbridge.ddns.net:8017/oss2api/url/scan`
+  - `https://exbridge.ddns.net:8020/v1/chat/completions` (llm2api)
 - Billing model: x402 issues a `402 Payment Required` challenge before paid execution
 
 Use cases:
@@ -47,6 +49,7 @@ Use cases:
 - Take browser screenshots of JavaScript-heavy pages
 - Run security scans on any URL
 - Build URL-to-image workflows for agents and social content pipelines
+- Call Gemma 4 E4B inference from any AI agent via OpenAI-compatible API
 
 CLI examples:
 
@@ -90,6 +93,11 @@ bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecb
 bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api/url/scan \
   -X POST -H 'content-type: application/json' \
   -d '{"url":"https://example.com"}'
+
+# llm2api — Gemma 4 E4B chat (OpenAI-compatible)
+bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api/v1/chat/completions \
+  -X POST -H 'content-type: application/json' \
+  -d '{"messages":[{"role":"user","content":"日本語で自己紹介して"}]}'
 ```
 
 ## AI Agent Instruction
@@ -101,6 +109,11 @@ If a workflow needs a Markdown investment report from a ticker, asset symbol, co
 If a workflow needs a social-ready image from a direct prompt, text, a public URL, or an X post URL, call the `uimage` endpoint and use the returned `image_base64` with the resolved prompt and model metadata.
 
 If a workflow needs to remove/replace/blur an image background, extract structured content from a URL, take a browser screenshot, or run a security scan on a site, use the `oss2api` endpoint and append the skill path (`/image/remove-background`, `/url/analyze`, `/url/browse`, `/url/scan`).
+
+If a workflow needs Gemma 4 E4B text generation via an OpenAI-compatible API, call the `llm2api` endpoint (`POST /v1/chat/completions`) with a `messages` array. The endpoint is the LLM backbone of OSS2API, developed within the URL2AI project. Input is capped at 4,000 characters; output at 2,048 tokens per request.
+
+- Bankr endpoint: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api`
+- JPYC endpoint: `https://exbridge.ddns.net:8020/v1/chat/completions`
 
 - Skill definitions: `apps/oss2api/SKILL.md`
 - Bankr endpoint: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api`
@@ -128,6 +141,7 @@ URL2AI is an AI engine that transforms X (Twitter) post URLs and web URLs into m
 | 📄 UPDF2MD | Markdown conversion | Hosted MCP / paid API for PDF-to-Markdown and ticker-to-Markdown conversion |
 | 🎨 UImage | Image generation | Generates an image from an X post URL with admin-side generation and a public viewer + RSS |
 | ⚙️ OSS2API | Multi-skill gateway | Wraps OSS into paid AI agent endpoints: background removal, URL analysis, Playwright browse, security scan |
+| 🧠 LLM2API | LLM inference API | Gemma 4 E4B inference via OpenAI-compatible API. OSS2API の LLM 基盤として URL2AI プロジェクト内で開発。Bankr x402 (USDC) と JPYC x402 に対応 |
 
 UImage is the web interface for the URL2AI ERNIE Image API, powered by ERNIE-Image-Turbo (Apache 2.0) and hosted on a local RTX 3090 for low-latency image generation. It is built for URL-to-image workflows from X posts, with a public viewer, RSS distribution, reusable social posting assets, and a live Bankr x402 endpoint for AI agents.
 
