@@ -4,7 +4,7 @@
   "services": {
     "llm2api": {
       "price": "0.01",
-      "description": "LLM2API — Gemma 4 E4B inference via Ollama. OpenAI-compatible chat completions API for AI agents and MCP workflows. Send a messages array and receive a response from Google Gemma 4 Edge 4B (gemma4:e4b). Supports streaming and non-streaming modes.",
+      "description": "LLM2API — Gemma 4 E4B inference via Ollama. OpenAI-compatible chat completions API for AI agents and MCP workflows. Send a messages array and receive a response from Google Gemma 4 Edge 4B (gemma4:e4b). Supports streaming and non-streaming modes. Input is capped at 4,000 characters total across all messages; max 20 messages per request; output is capped at 2,048 tokens per request.",
       "methods": ["POST"],
       "upstream_endpoint": "http://exbridge.ddns.net:8019",
       "schema": {
@@ -14,7 +14,7 @@
           "properties": {
             "messages": {
               "type": "array",
-              "description": "Array of message objects with role and content. Roles: system, user, assistant.",
+              "description": "Array of message objects with role and content. Roles: system, user, assistant. Total input text across all messages must not exceed 4,000 characters; max 20 messages.",
               "items": {
                 "type": "object",
                 "properties": {
@@ -33,7 +33,7 @@
             },
             "max_tokens": {
               "type": "integer",
-              "description": "Maximum tokens to generate."
+              "description": "Maximum tokens to generate. Capped at 2,048 per request regardless of the value specified."
             }
           }
         },
