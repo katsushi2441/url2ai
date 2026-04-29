@@ -378,7 +378,6 @@ textarea.code-area:focus{border-color:var(--accent)}
         <?php else: ?>
         <a href="?ss_login=1" class="btn-sm">X でログイン</a>
         <?php endif; ?>
-        <a href="url2aiv.php" class="btn-sm">履歴 →</a>
     </div>
 </header>
 
