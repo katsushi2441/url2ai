@@ -100,6 +100,29 @@ $is_admin  = ($username === 'xb_bittensor');
 ========================================================= */
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
+function api_upload_pdf($url, $tmp_path, $filename, $pages = '', $timeout = 120) {
+    $post = array(
+        'file'             => new CURLFile($tmp_path, 'application/pdf', $filename),
+        'include_markdown' => 'true',
+        'save_output'      => 'false',
+    );
+    if ($pages !== '') $post['pages'] = $pages;
+    $ch = curl_init($url);
+    curl_setopt_array($ch, array(
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => $post,
+        CURLOPT_HTTPHEADER     => array('Accept: application/json'),
+        CURLOPT_TIMEOUT        => $timeout,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_SSL_VERIFYPEER => false,
+    ));
+    $res = curl_exec($ch);
+    curl_close($ch);
+    if ($res === false) return null;
+    return json_decode($res, true);
+}
+
 function api_post($url, $payload, $timeout = 90) {
     $body = json_encode($payload);
     $ch = curl_init($url);
@@ -187,33 +210,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin && isset($_POST['run'])) 
         $bg_color  = trim((isset($_POST['background_color']) ? $_POST['background_color'] : '#ffffff'));
         $blur_sig  = (int)((isset($_POST['blur_sigma']) ? $_POST['blur_sigma'] : 18));
         $out_fmt   = (isset($_POST['output_format']) ? $_POST['output_format'] : 'png');
-        if ($image_url === '') { $error = '画像URLを入力してください'; }
+        $has_file  = !empty($_FILES['image_file']['tmp_name']) && $_FILES['image_file']['error'] === UPLOAD_ERR_OK;
+        if ($image_url === '' && !$has_file) { $error = '画像URLまたはファイルを指定してください'; }
         else {
-            $payload = ['image_url' => $image_url, 'mode' => $mode, 'response' => 'json', 'output_format' => $out_fmt];
+            $payload = ['mode' => $mode, 'response' => 'json', 'output_format' => $out_fmt];
+            if ($has_file) {
+                $mime = (isset($_FILES['image_file']['type']) ? $_FILES['image_file']['type'] : 'image/png');
+                $payload['image_base64'] = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($_FILES['image_file']['tmp_name']));
+            } else {
+                $payload['image_url'] = $image_url;
+            }
             if ($mode === 'replace') $payload['background_color'] = $bg_color;
             if ($mode === 'blur')    $payload['blur_sigma'] = $blur_sig;
-            $input  = $payload;
+            $input  = array_merge($payload, array('image_url' => $image_url));
             $result = api_post(OSS2API . '/image/remove-background', $payload, 60);
-            if ($result) save_result('bgremove', $input, $result);
-            else $error = 'API呼び出しに失敗しました';
+            if ($result && !empty($result['image_base64'])) {
+                $ext = 'png';
+                if (!empty($result['content_type'])) {
+                    if (strpos($result['content_type'], 'webp') !== false) $ext = 'webp';
+                    elseif (strpos($result['content_type'], 'jpeg') !== false) $ext = 'jpg';
+                }
+                $fname = 'bgremove_' . date('YmdHis') . '.' . $ext;
+                file_put_contents(DATA_DIR . '/' . $fname, base64_decode($result['image_base64']));
+                $result['_saved_url'] = AIGM_BASE_URL . '/data/' . $fname;
+                save_result('bgremove', $input, $result);
+            } elseif ($result) {
+                save_result('bgremove', $input, $result);
+            } else {
+                $error = 'API呼び出しに失敗しました';
+            }
         }
 
     } elseif ($tab === 'pdf') {
-        $pdf_url = trim((isset($_POST['pdf_url']) ? $_POST['pdf_url'] : ''));
-        $ticker  = trim((isset($_POST['ticker']) ? $_POST['ticker'] : ''));
-        $pages   = trim((isset($_POST['pages']) ? $_POST['pages'] : ''));
-        if ($pdf_url === '' && $ticker === '') { $error = 'PDF URL またはティッカーを入力してください'; }
+        $pdf_url  = trim((isset($_POST['pdf_url']) ? $_POST['pdf_url'] : ''));
+        $pages    = trim((isset($_POST['pages']) ? $_POST['pages'] : ''));
+        $has_file = !empty($_FILES['pdf_file']['tmp_name']) && $_FILES['pdf_file']['error'] === UPLOAD_ERR_OK;
+        if ($pdf_url === '' && !$has_file) { $error = 'PDF URLまたはファイルを指定してください'; }
         else {
-            if ($pdf_url !== '') {
-                $payload = ['pdf_url' => $pdf_url];
-                if ($pages !== '') $payload['pages'] = $pages;
-                $endpoint = PDF2MD . '/pdf/convert';
+            if ($has_file) {
+                $fname  = (isset($_FILES['pdf_file']['name']) ? $_FILES['pdf_file']['name'] : 'document.pdf');
+                $input  = array('file' => $fname, 'pages' => $pages);
+                $result = api_upload_pdf(PDF2MD . '/pdf/convert', $_FILES['pdf_file']['tmp_name'], $fname, $pages, 120);
             } else {
-                $payload  = ['ticker' => $ticker];
-                $endpoint = PDF2MD . '/pdf/report';
+                $payload = array('pdf_url' => $pdf_url);
+                if ($pages !== '') $payload['pages'] = $pages;
+                $input  = $payload;
+                $result = api_post(PDF2MD . '/pdf/convert-url', $payload, 120);
             }
-            $input  = $payload;
-            $result = api_post($endpoint, $payload, 120);
             if ($result) save_result('pdf', $input, $result);
             else $error = 'API呼び出しに失敗しました';
         }
@@ -442,6 +485,9 @@ textarea.code-area:focus{border-color:var(--accent)}
             </div>
         </form>
         <?php if ($tab==='browse' && $result): ?>
+        <?php if (!empty($result['error'])): ?>
+        <div class="msg-error">ブラウズエラー: <?php echo h($result['error']) ?></div>
+        <?php else: ?>
         <div class="section result-box">
             <div class="section-header"><div class="section-title"><span style="color:var(--green)">✓</span> ブラウズ結果 — <?php echo h((isset($result['title']) ? $result['title'] : '')) ?></div></div>
             <div class="section-body">
@@ -452,6 +498,7 @@ textarea.code-area:focus{border-color:var(--accent)}
                 <?php endif; ?>
             </div>
         </div>
+        <?php endif; ?>
         <?php endif; ?>
     </div>
 
@@ -518,14 +565,18 @@ textarea.code-area:focus{border-color:var(--accent)}
 
     <!-- ========== 背景除去 ========== -->
     <div class="tab-panel <?php echo $tab==='bgremove' ? 'active':'' ?>" id="panel-bgremove">
-        <form method="POST" onsubmit="showGenerating()" id="form-bgremove"><input type="hidden" name="run" value="1">
+        <form method="POST" enctype="multipart/form-data" onsubmit="showGenerating()" id="form-bgremove"><input type="hidden" name="run" value="1">
             <input type="hidden" name="tab" value="bgremove">
             <div class="section">
                 <div class="section-header"><div class="section-title">🖼 画像背景除去 / 置換 / ぼかし</div></div>
                 <div class="section-body">
                     <div class="form-group">
                         <label>画像URL</label>
-                        <input type="url" name="image_url" class="input-url" placeholder="https://example.com/photo.jpg" value="<?php echo h($tab==='bgremove' ? ((isset($input['image_url']) ? $input['image_url'] : '')) : '') ?>">
+                        <input type="url" name="image_url" class="input-url" placeholder="https://example.com/photo.jpg" value="<?php echo h($tab==='bgremove' ? ((isset($result['_saved_url']) ? $result['_saved_url'] : (isset($input['image_url']) ? $input['image_url'] : ''))) : '') ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>または画像ファイル（URL優先）</label>
+                        <input type="file" name="image_file" accept="image/*">
                     </div>
                     <div class="row" style="gap:1rem;margin-bottom:.75rem">
                         <div class="form-group">
@@ -579,22 +630,22 @@ textarea.code-area:focus{border-color:var(--accent)}
 
     <!-- ========== PDF→MD ========== -->
     <div class="tab-panel <?php echo $tab==='pdf' ? 'active':'' ?>" id="panel-pdf">
-        <form method="POST" onsubmit="showGenerating()"><input type="hidden" name="run" value="1">
+        <form method="POST" enctype="multipart/form-data" onsubmit="showGenerating()"><input type="hidden" name="run" value="1">
             <input type="hidden" name="tab" value="pdf">
             <div class="section">
-                <div class="section-header"><div class="section-title">📄 PDF→Markdown / 投資レポート</div></div>
+                <div class="section-header"><div class="section-title">📄 PDF→Markdown</div></div>
                 <div class="section-body">
                     <div class="form-group">
-                        <label>PDF URL（公開URLから変換）</label>
-                        <input type="url" name="pdf_url" class="input-url" placeholder="https://example.com/document.pdf" value="<?php echo h($tab==='pdf' ? ((isset($input['pdf_url']) ? $input['pdf_url'] : '')) : '') ?>">
+                        <label>PDFファイル</label>
+                        <input type="file" name="pdf_file" accept="application/pdf,.pdf">
                     </div>
                     <div style="text-align:center;font-size:.78rem;color:var(--muted);margin:.5rem 0">— または —</div>
                     <div class="form-group">
-                        <label>ティッカー / 企業名（投資レポート生成）</label>
-                        <input type="text" name="ticker" placeholder="NVIDIA / Apple / ビットコイン" style="max-width:320px" value="<?php echo h($tab==='pdf' ? ((isset($input['ticker']) ? $input['ticker'] : '')) : '') ?>">
+                        <label>PDF URL（公開URL）</label>
+                        <input type="url" name="pdf_url" class="input-url" placeholder="https://example.com/document.pdf" value="<?php echo h($tab==='pdf' ? ((isset($input['pdf_url']) ? $input['pdf_url'] : '')) : '') ?>">
                     </div>
                     <div class="form-group">
-                        <label>ページ指定（PDFのみ、例: 1-3,5）</label>
+                        <label>ページ指定（例: 1-3,5）</label>
                         <input type="text" name="pages" placeholder="1-5" style="max-width:160px" value="<?php echo h($tab==='pdf' ? ((isset($input['pages']) ? $input['pages'] : '')) : '') ?>">
                     </div>
                     <button type="submit" name="run" class="btn btn-green" <?php echo !$is_admin?'disabled':'' ?>>
@@ -608,13 +659,27 @@ textarea.code-area:focus{border-color:var(--accent)}
         <div class="section result-box">
             <div class="section-header">
                 <div class="section-title"><span style="color:var(--green)">✓</span> 変換結果</div>
+                <?php if (!empty($result['markdown'])): ?>
                 <button type="button" class="btn btn-secondary" style="font-size:.75rem;padding:.25rem .6rem" onclick="copyEl('pdf-result')">コピー</button>
+                <?php endif; ?>
             </div>
             <div class="section-body">
-                <?php if (!empty($result['summary'])): ?>
-                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:.75rem;font-size:.82rem;margin-bottom:.75rem"><?php echo h($result['summary']) ?></div>
+                <?php if (isset($result['markdown']) && $result['markdown'] !== null && $result['markdown'] !== ''): ?>
+                <textarea class="code-area" id="pdf-result" rows="18" readonly><?php echo h($result['markdown']) ?></textarea>
+                <?php elseif (!empty($result['pdf_type']) && $result['pdf_type'] === 'image_based'): ?>
+                <div class="msg-error" style="margin-bottom:.75rem">
+                    このPDFはスキャン画像です（OCR非対応）。テキストが埋め込まれたPDFのみ変換できます。
+                </div>
+                <table class="kv-table" style="font-size:.8rem">
+                    <tr><th>ファイル名</th><td><?php echo h((isset($result['filename']) ? $result['filename'] : '')) ?></td></tr>
+                    <tr><th>ページ数</th><td><?php echo h((isset($result['page_count']) ? $result['page_count'] : '')) ?></td></tr>
+                    <tr><th>種別</th><td><?php echo h((isset($result['pdf_type']) ? $result['pdf_type'] : '')) ?></td></tr>
+                    <tr><th>処理時間</th><td><?php echo h((isset($result['processing_time_ms']) ? $result['processing_time_ms'] : '')) ?> ms</td></tr>
+                </table>
+                <?php else: ?>
+                <div class="msg-error">Markdownの抽出に失敗しました。</div>
+                <textarea class="code-area" id="pdf-result" rows="8" readonly><?php echo h(json_encode($result, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT)) ?></textarea>
                 <?php endif; ?>
-                <textarea class="code-area" id="pdf-result" rows="18" readonly><?php echo h(isset($result['markdown']) ? $result['markdown'] : json_encode($result, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT)) ?></textarea>
             </div>
         </div>
         <?php endif; ?>
