@@ -45,7 +45,7 @@ cd src && python3 ftpphp.py
 |------|---------|-------|-------|
 | 8010 | **api_gateway** | Python (ernie venv) | Unified gateway: `/image` → ernie-image-turbo, `/pdf` → updf2md. Started manually with `nohup uvicorn api_gateway:app ...` from `apps/` |
 | 8011 | **ernie-image-turbo** | Python | ERNIE image generation standalone. systemd: なし、直接起動 |
-| 8012 | **nginx SSL proxy** | nginx | `exbridge.ddns.net:8012` (HTTPS). `/mcp` → 127.0.0.1:8013, `/oss2api` → 8015, `/updf2md` → 8010/pdf, etc. |
+| 8012 | **Smithery / nginx SSL proxy** | nginx | Smithery MCP用。`/mcp` → 127.0.0.1:8013 など |
 | 8013 | **url2ai-mcp** | Python (FastMCP) | MCP server, localhost only。`apps/url2ai-mcp/`。systemd: `url2ai-mcp.service` |
 | 8014 | **finreport** | Python (FastAPI) | 投資レポート生成。`apps/finreport/`。systemd: なし |
 | 8015 | **oss2api** | Node.js | OSS2API Bankr x402 endpoint。`apps/oss2api/`。systemd: `oss2api.service` |
