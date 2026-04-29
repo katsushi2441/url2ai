@@ -1,0 +1,11 @@
+{
+  "name": "@url2ai/cdp-gateway",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": { "start": "node server.js" },
+  "dependencies": {
+    "@coinbase/x402": "^2.1.0",
+    "express": "^4.21.2",
+    "x402-express": "^1.2.0"
+  }
+}

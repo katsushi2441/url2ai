@@ -1,0 +1,21 @@
+[Unit]
+Description=CDP x402 Gateway (OSS2API + LLM2API, Bazaar Discovery, port 8021)
+After=network.target
+
+[Service]
+WorkingDirectory=/home/kojima/work/url2ai/apps/cdp-gateway
+ExecStart=/home/kojima/.nvm/versions/node/v20.20.2/bin/node server.js
+Restart=always
+RestartSec=5
+Environment=PORT=8021
+Environment=PAY_TO=0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd
+Environment=OSS2API_URL=http://127.0.0.1:8015
+Environment=LLM_URL=http://127.0.0.1:8019
+Environment=NETWORK=base
+Environment=PRICE_OSS=$0.01
+Environment=PRICE_LLM=$0.01
+Environment=CDP_API_KEY_ID=39d89997-f82e-449f-8ed3-bec854b976aa
+Environment=CDP_API_KEY_SECRET=pCqU2Yry1NqwY8U0KrqFI86xUdTOkNjPINLfOWcYh5R2X9jnjTOZnuNhThk5AU7TIW/wtqYmVo0EFLwfhdhnpA==
+
+[Install]
+WantedBy=multi-user.target
