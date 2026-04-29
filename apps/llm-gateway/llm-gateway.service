@@ -1,0 +1,16 @@
+[Unit]
+Description=LLM Gateway (Gemma 4 E4B via Ollama, x402 Bankr)
+After=network.target
+
+[Service]
+WorkingDirectory=/home/kojima/work/url2ai/apps/llm-gateway
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+Environment=PORT=8019
+Environment=OLLAMA_HOST=192.168.0.14
+Environment=OLLAMA_PORT=11434
+Environment=DEFAULT_MODEL=gemma4:e4b
+
+[Install]
+WantedBy=multi-user.target

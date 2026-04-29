@@ -1,0 +1,17 @@
+[Unit]
+Description=LLM2API JPYC x402 Payment Gateway (Gemma 4 E4B)
+After=network.target llm-gateway.service
+
+[Service]
+WorkingDirectory=/home/kojima/work/url2ai/apps/llm-gateway
+ExecStart=/home/kojima/.local/node-v22.15.0/bin/node server-jpyc.js
+Restart=always
+RestartSec=5
+EnvironmentFile=-/home/kojima/work/url2ai/apps/llm-gateway/.env.jpyc
+Environment=PATH=/home/kojima/.local/node-v22.15.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PORT_JPYC=8020
+Environment=PORT_UPSTREAM=8019
+Environment=UPSTREAM_HOST=127.0.0.1
+
+[Install]
+WantedBy=multi-user.target

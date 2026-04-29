@@ -492,6 +492,8 @@ h1 {
         <div class="system-list" style="margin-bottom:24px;">
             <div class="system-row"><div class="system-file">OSS2API</div><div class="system-kind">Bankr x402</div><div class="system-desc">OSSをラップした multi-skill ゲートウェイ。0.01 USDC/リクエスト（USDC on Base）。<br>・<code>POST …/oss2api/image/remove-background</code> — 背景除去・置換・ぼかし（imgly AGPL-3.0）<br>・<code>POST …/oss2api/url/analyze</code> — URL 構造抽出（title / headings / links / entities）<br>・<code>POST …/oss2api/url/browse</code> — Playwright スクリーンショット / 動的抽出<br>・<code>POST …/oss2api/url/scan</code> — Shannon-like 3フェーズ セキュリティスキャン（HTTP headers + static HTML + Ollama AI）<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api</span></div></div>
             <div class="system-row"><div class="system-file">OSS2API</div><div class="system-kind">JPYC x402</div><div class="system-desc">同スキルを JPYC（日本円ステーブルコイン）で利用可能。1.5 JPYC（≈¥1）/リクエスト（JPYC on Polygon）。EIP-3009 transferWithAuthorization によるオンチェーン決済。<br>・<code>POST https://exbridge.ddns.net:8017/oss2api/image/remove-background</code><br>・<code>POST https://exbridge.ddns.net:8017/oss2api/url/analyze</code><br>・<code>POST https://exbridge.ddns.net:8017/oss2api/url/browse</code><br>・<code>POST https://exbridge.ddns.net:8017/oss2api/url/scan</code></div></div>
+            <div class="system-row"><div class="system-file">LLM2API</div><div class="system-kind">Bankr x402</div><div class="system-desc">OSS2API の LLM 推論基盤として URL2AI プロジェクト内で開発した Gemma 4 E4B 推論 API。OpenAI 互換の chat/completions エンドポイントを x402 で提供。0.01 USDC/リクエスト（USDC on Base）。<br>・<code>POST …/llm2api/v1/chat/completions</code> — Gemma 4 E4B による日本語対応テキスト生成<br>・入力上限 4,000 文字 / 出力上限 2,048 トークン<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api</span></div></div>
+            <div class="system-row"><div class="system-file">LLM2API</div><div class="system-kind">JPYC x402</div><div class="system-desc">同 Gemma 4 E4B 推論を JPYC（日本円ステーブルコイン）で利用可能。1.5 JPYC（≈¥1）/リクエスト（JPYC on Polygon）。<br>・<code>POST https://exbridge.ddns.net:8020/v1/chat/completions</code></div></div>
             <div class="system-row"><div class="system-file">UPDF2MD</div><div class="system-kind">Bankr x402</div><div class="system-desc">PDF URL や企業名・銘柄名から agent-ready Markdown を返す universal Markdown conversion endpoint。0.001 USDC/リクエスト。<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md</span></div></div>
             <div class="system-row"><div class="system-file">UImage</div><div class="system-kind">Bankr x402</div><div class="system-desc">プロンプト・テキスト・URL・X投稿から画像を生成する ERNIE Image API。0.01 USDC/リクエスト。<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage</span></div></div>
         </div>
@@ -519,6 +521,32 @@ h1 {
                     <h4>OSS2API — JPYC x402</h4>
                     <p>同スキルを JPYC（日本円ステーブルコイン）で利用可能。1.5 JPYC（≈¥1）/リクエスト。Polygon チェーン上の EIP-3009 によるオンチェーン決済。</p>
                     <a href="https://exbridge.ddns.net:8017/health" class="button" target="_blank" rel="noopener">View JPYC Endpoint</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#059669;">
+                    <div class="card-visual-badge">🧠 LLM2API <span class="card-visual-id">BANKR</span></div>
+                    <img src="./images/llm2api.png" alt="LLM2API" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">PAID AGENT · USDC</div>
+                    <h4>LLM2API — Bankr x402</h4>
+                    <p>URL2AI プロジェクトが OSS2API の LLM 基盤として開発した Gemma 4 E4B 推論 API。OpenAI 互換エンドポイントを x402 で提供。0.01 USDC/リクエスト。</p>
+                    <a href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api" class="button" target="_blank" rel="noopener">View Bankr Endpoint</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#0F766E;">
+                    <div class="card-visual-badge">🧠 LLM2API <span class="card-visual-id">JPYC</span></div>
+                    <img src="./images/llm2api.png" alt="LLM2API JPYC" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">PAID AGENT · JPYC</div>
+                    <h4>LLM2API — JPYC x402</h4>
+                    <p>同 Gemma 4 E4B 推論を JPYC（日本円ステーブルコイン）で利用可能。1.5 JPYC（≈¥1）/リクエスト。OSS2API の LLM 基盤として URL2AI が提供。</p>
+                    <a href="https://exbridge.ddns.net:8020/health" class="button" target="_blank" rel="noopener">View JPYC Endpoint</a>
                 </div>
             </div>
 

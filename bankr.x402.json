@@ -2,6 +2,76 @@
   "network": "base",
   "currency": "USDC",
   "services": {
+    "llm2api": {
+      "price": "0.01",
+      "description": "LLM2API — Gemma 4 E4B inference via Ollama. OpenAI-compatible chat completions API for AI agents and MCP workflows. Send a messages array and receive a response from Google Gemma 4 Edge 4B (gemma4:e4b). Supports streaming and non-streaming modes.",
+      "methods": ["POST"],
+      "upstream_endpoint": "http://exbridge.ddns.net:8019",
+      "schema": {
+        "input": {
+          "type": "object",
+          "required": ["messages"],
+          "properties": {
+            "messages": {
+              "type": "array",
+              "description": "Array of message objects with role and content. Roles: system, user, assistant.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "role": { "type": "string", "enum": ["system", "user", "assistant"] },
+                  "content": { "type": "string" }
+                }
+              }
+            },
+            "stream": {
+              "type": "boolean",
+              "description": "Enable streaming response (Server-Sent Events). Default false."
+            },
+            "temperature": {
+              "type": "number",
+              "description": "Sampling temperature 0.0–2.0. Default 0.7."
+            },
+            "max_tokens": {
+              "type": "integer",
+              "description": "Maximum tokens to generate."
+            }
+          }
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string", "description": "Completion ID." },
+            "object": { "type": "string", "description": "Always chat.completion." },
+            "model": { "type": "string", "description": "Model used: gemma4:e4b." },
+            "choices": {
+              "type": "array",
+              "description": "Array of completion choices.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "object",
+                    "properties": {
+                      "role": { "type": "string" },
+                      "content": { "type": "string" }
+                    }
+                  },
+                  "finish_reason": { "type": "string" }
+                }
+              }
+            },
+            "usage": {
+              "type": "object",
+              "properties": {
+                "prompt_tokens": { "type": "integer" },
+                "completion_tokens": { "type": "integer" },
+                "total_tokens": { "type": "integer" }
+              }
+            }
+          }
+        }
+      }
+    },
     "updf2md": {
       "price": "0.001",
       "description": "Universal Markdown conversion endpoint for MCP tools and AI agents. It converts public PDF URLs or ticker symbols into agent-ready Markdown, returning OCR/layout metadata for PDFs and report context for ticker-based workflows.",
