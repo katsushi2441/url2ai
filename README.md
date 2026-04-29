@@ -112,6 +112,7 @@ If a workflow needs to remove/replace/blur an image background, extract structur
 
 If a workflow needs Gemma 4 E4B text generation via an OpenAI-compatible API, call the `llm2api` endpoint (`POST /v1/chat/completions`) with a `messages` array. The endpoint is the LLM backbone of OSS2API, developed within the URL2AI project. Input is capped at 4,000 characters; output at 2,048 tokens per request.
 
+- Skill definitions: `apps/llm-gateway/SKILL.md`
 - Bankr endpoint: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api`
 - JPYC endpoint: `https://exbridge.ddns.net:8020/v1/chat/completions`
 
