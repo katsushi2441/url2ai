@@ -181,6 +181,67 @@ uksort($all_tags, function($a, $b) {
                   mb_convert_encoding($b, 'UTF-32', 'UTF-8'));
 });
 
+function oss_fetch_book_rankings($limit = 10) {
+    $limit = max(1, min(10, (int)$limit));
+    $url = 'https://aixec.exbridge.jp/books_ranking_api.php?limit=' . $limit;
+    $ctx = stream_context_create(array(
+        'http' => array(
+            'method' => 'GET',
+            'timeout' => 3,
+            'header' => "User-Agent: OSSTimeline/1.0\r\nAccept: application/json\r\n",
+            'ignore_errors' => true
+        )
+    ));
+    $json = @file_get_contents($url, false, $ctx);
+    if (!$json) {
+        return array();
+    }
+    $data = json_decode($json, true);
+    if (!is_array($data) || empty($data['items']) || !is_array($data['items'])) {
+        return array();
+    }
+    return array_slice($data['items'], 0, $limit);
+}
+
+$book_rankings = oss_fetch_book_rankings(10);
+
+function oss_render_book_ranking($books, $extra_class = '', $limit = 10) {
+    if (empty($books) || !is_array($books)) {
+        return;
+    }
+    $class = trim('book-ranking ' . $extra_class);
+    $books = array_slice($books, 0, max(1, (int)$limit));
+    ?>
+    <aside class="<?php echo htmlspecialchars($class); ?>" aria-label="書籍ランキング">
+        <div class="book-ranking-title">書籍ランキング</div>
+        <div class="book-ranking-list">
+            <?php foreach ($books as $i => $book):
+                $title = isset($book['title']) ? $book['title'] : '';
+                $url   = !empty($book['affiliate_url']) ? $book['affiliate_url'] : (isset($book['product_url']) ? $book['product_url'] : '#');
+                $image = isset($book['image_url']) ? $book['image_url'] : '';
+                $maker = isset($book['maker']) ? $book['maker'] : '';
+                $price = isset($book['price']) ? (int)$book['price'] : 0;
+                $rank  = isset($book['rank']) ? (int)$book['rank'] : ($i + 1);
+            ?>
+            <a class="book-ranking-item" href="<?php echo htmlspecialchars($url); ?>" target="_blank" rel="nofollow sponsored noopener">
+                <?php if ($image): ?>
+                <img class="book-cover" src="<?php echo htmlspecialchars($image); ?>" alt="<?php echo htmlspecialchars($title); ?>" loading="lazy">
+                <?php else: ?>
+                <div class="book-cover" aria-hidden="true"></div>
+                <?php endif; ?>
+                <div>
+                    <div class="book-rank">#<?php echo $rank; ?></div>
+                    <div class="book-title"><?php echo htmlspecialchars($title); ?></div>
+                    <?php if ($maker): ?><div class="book-maker"><?php echo htmlspecialchars($maker); ?></div><?php endif; ?>
+                    <?php if ($price > 0): ?><div class="book-price"><?php echo number_format($price); ?>円</div><?php endif; ?>
+                </div>
+            </a>
+            <?php endforeach; ?>
+        </div>
+    </aside>
+    <?php
+}
+
 if ($detail_post) {
     $page_title       = htmlspecialchars($detail_post['title']) . ' | ' . $SITE_NAME;
     $page_description = htmlspecialchars(mb_substr(strip_tags($detail_post['post_text']), 0, 160));
@@ -382,8 +443,96 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
 .tag-btn:hover { border-color: #6c63ff; color: #6c63ff; }
 .tag-btn.active { background: #6c63ff; border-color: #6c63ff; color: #fff; }
 
-.container { max-width: 640px; margin: 0 auto; padding: 0 0 80px; }
+.page-shell {
+    max-width: 1000px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 640px) 300px;
+    gap: 28px;
+    align-items: start;
+    padding: 0 20px 80px;
+}
+.container { max-width: 640px; width: 100%; margin: 0 auto; padding: 0 0 80px; }
+.page-shell .container { margin: 0; padding: 0; }
 .count-bar { padding: 10px 20px; font-size: 13px; color: #888; border-bottom: 1px solid #f0f0f0; }
+
+.book-ranking {
+    position: sticky;
+    top: 72px;
+    border-left: 1px solid #f0f0f0;
+    padding: 14px 0 0 18px;
+}
+.book-ranking-mobile { display: none; }
+.book-ranking-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #111;
+    margin-bottom: 12px;
+}
+.book-ranking-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.book-ranking-item {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+}
+.book-ranking-item:hover .book-title { color: #6c63ff; }
+.book-cover {
+    width: 58px;
+    height: 82px;
+    object-fit: cover;
+    border: 1px solid #e5e7eb;
+    background: #f5f5f5;
+}
+.book-rank {
+    font-size: 11px;
+    color: #6c63ff;
+    font-weight: 700;
+    margin-bottom: 3px;
+}
+.book-title {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+    color: #222;
+}
+.book-maker {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #888;
+    line-height: 1.4;
+}
+.book-price {
+    margin-top: 3px;
+    font-size: 11px;
+    color: #555;
+}
+@media (max-width: 900px) {
+    .page-shell {
+        display: block;
+        padding: 0 0 80px;
+    }
+    .page-shell .container {
+        margin: 0 auto;
+    }
+    .book-ranking {
+        display: none;
+    }
+    .book-ranking-mobile {
+        display: block;
+        position: static;
+        max-width: 640px;
+        margin: 0 auto;
+        border-left: 0;
+        border-bottom: 1px solid #f0f0f0;
+        padding: 14px 20px 16px;
+    }
+}
 
 .post-card { border-bottom: 1px solid #f0f0f0; padding: 20px; transition: background 0.15s; }
 .post-card:hover { background: #fafafa; }
@@ -638,6 +787,7 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
 
 <?php if ($detail_post): ?>
 <!-- ========== 詳細ページ ========== -->
+<div class="page-shell">
 <div class="container">
     <div class="detail-header">
         <h1><?php echo htmlspecialchars($detail_post['title']); ?></h1>
@@ -678,6 +828,8 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
         </div>
 
     </div>
+</div>
+<?php oss_render_book_ranking($book_rankings); ?>
 </div>
 
 <script>
@@ -770,6 +922,9 @@ if ($filter_tag) {
 </div>
 <?php endif; ?>
 
+<?php oss_render_book_ranking($book_rankings, 'book-ranking-mobile', 3); ?>
+
+<div class="page-shell">
 <div class="container">
 
 <div class="count-bar">
@@ -785,6 +940,8 @@ if ($filter_tag) {
 <div id="load-sentinel" style="height:1px;"></div>
 <div id="load-indicator" style="display:none;text-align:center;padding:16px;font-size:13px;color:#888;">読み込み中...</div>
 
+</div>
+<?php oss_render_book_ranking($book_rankings); ?>
 </div>
 
 <script>
