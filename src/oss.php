@@ -226,7 +226,10 @@ function oss_render_book_ranking($books, $extra_class = '', $limit = 10) {
     $books = array_slice($books, 0, max(1, (int)$limit));
     ?>
     <aside class="<?php echo htmlspecialchars($class); ?>" aria-label="AIテクノロジー書籍ランキング">
-        <div class="book-ranking-title">AIテクノロジー書籍</div>
+        <div class="book-ranking-head">
+            <div class="book-ranking-title">AIテクノロジー書籍</div>
+            <a class="book-reels-button" href="https://aixec.exbridge.jp/reels.php?tab=ai&limit=10" target="_blank" rel="noopener">リール動画</a>
+        </div>
         <div class="book-ranking-list">
             <?php foreach ($books as $i => $book):
                 $title = isset($book['title']) ? $book['title'] : '';
@@ -480,7 +483,33 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
     font-size: 13px;
     font-weight: 700;
     color: #111;
+}
+.book-ranking-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     margin-bottom: 12px;
+}
+.book-reels-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 26px;
+    padding: 4px 8px;
+    border: 1px solid #6c63ff;
+    border-radius: 4px;
+    color: #4f46e5;
+    background: #f5f3ff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.book-reels-button:hover {
+    color: #fff;
+    background: #6c63ff;
 }
 .book-ranking-list {
     display: flex;
