@@ -113,6 +113,7 @@ foreach ($posts as &$p) {
     if (!empty($p['paragraph_url']) && !oss_is_valid_paragraph_url($p['paragraph_url'])) {
         $p['paragraph_url'] = '';
     }
+    $p['display_title'] = oss_display_title($p);
 }
 unset($p);
 usort($posts, function($a, $b) {
@@ -218,6 +219,35 @@ function oss_fetch_book_rankings($limit = 10) {
 
 $book_rankings = oss_fetch_book_rankings(10);
 
+function oss_repo_label_from_post($post) {
+    $github = isset($post['github_url']) ? trim((string)$post['github_url']) : '';
+    if (preg_match('!github\.com/([^/]+)/([^/?#]+)!i', $github, $m)) {
+        return $m[1] . '/' . preg_replace('/\.git$/i', '', $m[2]);
+    }
+    $id = isset($post['id']) ? trim((string)$post['id']) : '';
+    if ($id !== '') {
+        $label = str_replace('_', '/', $id);
+        return preg_replace('/\.git$/i', '', $label);
+    }
+    return '';
+}
+
+function oss_is_generic_title($title) {
+    $title = trim((string)$title);
+    if ($title === '') return true;
+    $generic = array('about', 'overview', 'readme', 'introduction', 'getting started', 'home', 'docs', 'documentation');
+    return in_array(strtolower($title), $generic, true);
+}
+
+function oss_display_title($post) {
+    $title = isset($post['title']) ? trim((string)$post['title']) : '';
+    if (!oss_is_generic_title($title)) {
+        return $title;
+    }
+    $label = oss_repo_label_from_post($post);
+    return $label !== '' ? $label : (isset($post['id']) ? (string)$post['id'] : 'OSS Project');
+}
+
 function oss_render_book_ranking($books, $extra_class = '', $limit = 10) {
     if (empty($books) || !is_array($books)) {
         return;
@@ -259,7 +289,9 @@ function oss_render_book_ranking($books, $extra_class = '', $limit = 10) {
 }
 
 if ($detail_post) {
-    $page_title       = htmlspecialchars($detail_post['title']) . ' | ' . $SITE_NAME;
+    $detail_title     = oss_display_title($detail_post);
+    $detail_post['display_title'] = $detail_title;
+    $page_title       = htmlspecialchars($detail_title) . ' | ' . $SITE_NAME;
     $page_description = htmlspecialchars(mb_substr(strip_tags($detail_post['post_text']), 0, 160));
     $page_url         = $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($detail_post['id']);
     $page_type        = 'article';
@@ -285,7 +317,7 @@ if ($detail_post) {
     $jsonld = array(
         '@context'      => 'https://schema.org',
         '@type'         => 'TechArticle',
-        'headline'      => $detail_post['title'],
+        'headline'      => $detail_post['display_title'],
         'description'   => mb_substr(strip_tags($detail_post['post_text']), 0, 160),
         'url'           => $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($detail_post['id']),
         'datePublished' => isset($detail_post['created_at']) ? $detail_post['created_at'] : '',
@@ -832,7 +864,7 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
 <div class="page-shell">
 <div class="container">
     <div class="detail-header">
-        <h1><?php echo htmlspecialchars($detail_post['title']); ?></h1>
+        <h1><?php echo htmlspecialchars($detail_post['display_title']); ?></h1>
         <div class="detail-meta">
             <span>@<?php echo htmlspecialchars($detail_post['author']); ?></span>
             <span><?php echo htmlspecialchars($detail_post['created_at']); ?></span>
@@ -881,7 +913,7 @@ var detailPageUrl = '<?php echo $BASE_URL; ?>/oss.php?id=<?php echo urlencode($d
 function buildDetailText(post) {
     var lines = [];
     lines.push('#URL2AI OSS');
-    lines.push(post.title);
+    lines.push(post.display_title || post.title);
     lines.push('');
     if (post.post_text) {
         var textOnly = post.post_text.replace(/https?:\/\/\S+/g, '').trim();
@@ -1020,7 +1052,7 @@ function renderPosts(from, to) {
             + '<a class="x-btn" id="x-btn-' + idx + '" href="#" target="_blank" rel="noopener">𝕏</a>'
             + buildParaBtn(post, idx)
             + '</div></div>'
-            + '<div class="post-title"><a href="oss.php?id=' + encodeURIComponent(post.id) + '">' + esc(post.title) + '</a></div>'
+            + '<div class="post-title"><a href="oss.php?id=' + encodeURIComponent(post.id) + '">' + esc(post.display_title || post.title) + '</a></div>'
             + postText
             + analysis
             + '<a class="github-link" href="' + esc(post.github_url) + '" target="_blank" rel="noopener">⌥ ' + esc(post.github_url) + '</a>'
@@ -1073,7 +1105,7 @@ function getDetailUrl(post) {
 function buildPostText(post) {
     var lines = [];
     lines.push('#URL2AI OSS');
-    lines.push(post.title);
+    lines.push(post.display_title || post.title);
     lines.push('');
     if (post.post_text) {
         var textOnly = post.post_text.replace(/https?:\/\/\S+/g, '').trim();

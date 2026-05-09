@@ -264,6 +264,12 @@ function clean_title_line($line) {
     return $line;
 }
 
+function is_generic_oss_title($title) {
+    $title = strtolower(trim((string)$title));
+    if ($title === '') return true;
+    return in_array($title, array('about', 'overview', 'readme', 'introduction', 'getting started', 'home', 'docs', 'documentation'), true);
+}
+
 function extract_title_from_readme($readme, $fallback) {
     foreach (explode("\n", $readme) as $line) {
         $raw  = trim($line);
@@ -284,6 +290,7 @@ function extract_title_from_readme($readme, $fallback) {
         $cleaned = clean_title_line($raw);
         if (!$cleaned) continue;
         if (strlen($cleaned) < 2 || strlen($cleaned) > 120) continue;
+        if (is_generic_oss_title($cleaned)) continue;
         // エンティティが残っていたらスキップ（&middot;等の取り残し）
         if (strpos($cleaned, '&') !== false && strpos($cleaned, ';') !== false) continue;
 
@@ -318,9 +325,6 @@ function extract_tags($post_text, $repo_name) {
     $tags_lower = array_map('strtolower', $tags);
     if ($repo_tag && !in_array(strtolower($repo_tag), $tags_lower)) {
         $tags[] = $repo_tag;
-    }
-    foreach (array('AI', 'OSS', 'GitHub') as $fixed) {
-        if (!in_array($fixed, $tags)) $tags[] = $fixed;
     }
     $seen   = array();
     $result = array();
@@ -401,10 +405,13 @@ if ($action === 'manual_register') {
     $readme_title = $readme ? extract_title_from_readme($readme, $fallback) : $fallback;
 
     /* 3. 最終タイトル決定：API > README > fallback */
-    if ($api_title) {
+    if ($api_title && !is_generic_oss_title($api_title)) {
         $title = $api_title;
     } else {
         $title = $readme_title;
+    }
+    if (is_generic_oss_title($title)) {
+        $title = $fallback;
     }
 
     $context = '';

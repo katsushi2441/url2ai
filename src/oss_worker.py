@@ -100,6 +100,10 @@ def is_valid_github_repo(path):
     return True
 
 def extract_title_from_readme(readme, fallback):
+    generic_titles = {
+        'about', 'overview', 'readme', 'introduction',
+        'getting started', 'home', 'docs', 'documentation'
+    }
     for line in readme.splitlines():
         line = line.strip()
         if not line:
@@ -123,9 +127,13 @@ def extract_title_from_readme(readme, fallback):
             continue
         if line.startswith('#'):
             title = line.lstrip('#').strip()
+            if title.lower() in generic_titles:
+                continue
             if title and len(title) > 2:
                 return title
         if not line.startswith('<') and not line.startswith('|'):
+            if line.lower() in generic_titles:
+                continue
             return line
     return fallback
 
