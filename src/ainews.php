@@ -93,7 +93,7 @@ if (isset($_GET['feed'])) {
         $title    = isset($p['title'])      ? $p['title']      : '(no title)';
         $summary  = isset($p['summary'])    ? $p['summary']    : '';
         $id       = isset($p['id'])         ? $p['id']         : '';
-        $site_url = isset($p['tweet_url'])        ? $p['tweet_url']        : '';
+        $site_url = isset($p['article_url']) && $p['article_url'] !== '' ? $p['article_url'] : (isset($p['tweet_url']) ? $p['tweet_url'] : '');
         $date_raw = isset($p['created_at']) ? $p['created_at'] : '';
         $desc     = mb_substr(str_replace("\n", ' ', $summary), 0, 200);
         $link     = $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($id);
@@ -469,7 +469,8 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
     <div class="detail-body">
 
         <div class="detail-url-box">
-            🔗 <a href="<?php echo htmlspecialchars($detail_post['tweet_url']); ?>" target="_blank" rel="noopener"><?php echo htmlspecialchars($detail_post['tweet_url']); ?></a>
+            <?php $detail_source_url = !empty($detail_post['article_url']) ? $detail_post['article_url'] : $detail_post['tweet_url']; ?>
+            🔗 <a href="<?php echo htmlspecialchars($detail_source_url); ?>" target="_blank" rel="noopener"><?php echo htmlspecialchars($detail_source_url); ?></a>
         </div>
 
         <?php if (!empty($detail_post['summary'])): ?>
@@ -489,7 +490,8 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
         <div class="detail-btn-group">
             <button class="detail-copy-btn" type="button" onclick="copyDetail()">📋 コピー</button>
             <a class="detail-x-btn" id="detail-x-link" href="#" target="_blank" rel="noopener">𝕏 Xに投稿</a>
-            <a class="detail-link" href="<?php echo htmlspecialchars($detail_post['tweet_url']); ?>" target="_blank" rel="noopener">🌐 元の記事を開く</a>
+            <?php $detail_source_url = !empty($detail_post['article_url']) ? $detail_post['article_url'] : $detail_post['tweet_url']; ?>
+            <a class="detail-link" href="<?php echo htmlspecialchars($detail_source_url); ?>" target="_blank" rel="noopener">🌐 元の記事を開く</a>
         </div>
     </div>
 </div>
@@ -508,7 +510,7 @@ function buildDetailText(post) {
         if (s) lines.push(s);
     }
     lines.push('');
-    lines.push(post.tweet_url);
+    lines.push(post.article_url || post.tweet_url);
     lines.push(detailPageUrl);
     if (post.tags && post.tags.length) {
         lines.push(post.tags.map(function(t){ return '#' + t; }).join(' '));
@@ -524,7 +526,7 @@ function buildXText(post) {
         if (short) lines.push(short);
     }
     lines.push('');
-    lines.push(post.tweet_url);
+    lines.push(post.article_url || post.tweet_url);
     lines.push(detailPageUrl);
     if (post.tags && post.tags.length) {
         lines.push(post.tags.slice(0, 3).map(function(t){ return '#' + t; }).join(' '));
@@ -617,7 +619,7 @@ function buildPostText(post) {
         if (s) lines.push(s);
     }
     lines.push('');
-    lines.push(post.tweet_url);
+    lines.push(post.article_url || post.tweet_url);
     lines.push(getDetailUrl(post));
     if (post.tags && post.tags.length) {
         lines.push(post.tags.map(function(t){ return '#' + t; }).join(' '));
@@ -633,7 +635,7 @@ function buildXText(post) {
         if (short) lines.push(short);
     }
     lines.push('');
-    lines.push(post.tweet_url);
+    lines.push(post.article_url || post.tweet_url);
     lines.push(getDetailUrl(post));
     if (post.tags && post.tags.length) {
         lines.push(post.tags.slice(0, 3).map(function(t){ return '#' + t; }).join(' '));
@@ -671,7 +673,7 @@ function renderPosts(from, to) {
             + '</div></div>'
             + '<div class="post-title"><a href="' + THIS_FILE + '?id=' + encodeURIComponent(post.id) + '">' + esc(post.title) + '</a></div>'
             + summaryHtml
-            + '<a class="site-link" href="' + esc(post.tweet_url) + '" target="_blank" rel="noopener">🌐 ' + esc(post.tweet_url) + '</a>'
+            + '<a class="site-link" href="' + esc(post.article_url || post.tweet_url) + '" target="_blank" rel="noopener">🌐 ' + esc(post.article_url || post.tweet_url) + '</a>'
             + '<a class="detail-link" href="' + THIS_FILE + '?id=' + encodeURIComponent(post.id) + '">🔖 詳細</a>'
             + (tags ? '<div class="tags">' + tags + '</div>' : '')
             + '</div>';

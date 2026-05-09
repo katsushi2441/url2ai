@@ -10,6 +10,7 @@ define('AINEWS_BASE_URL', 'https://aiknowledgecms.exbridge.jp/ainews.php');
 function ainews_build_sns_notice($post) {
     $title = isset($post['title']) ? trim((string)$post['title']) : '';
     $summary = isset($post['summary']) ? trim((string)$post['summary']) : '';
+    $article_url = isset($post['article_url']) ? trim((string)$post['article_url']) : '';
     $tweet_url = isset($post['tweet_url']) ? trim((string)$post['tweet_url']) : '';
     $id = isset($post['id']) ? trim((string)$post['id']) : '';
     $detail_url = $id !== '' ? AINEWS_BASE_URL . '?id=' . rawurlencode($id) : AINEWS_BASE_URL;
@@ -26,6 +27,11 @@ function ainews_build_sns_notice($post) {
     $lines[] = '';
     $lines[] = '詳細:';
     $lines[] = $detail_url;
+    if ($article_url !== '') {
+        $lines[] = '';
+        $lines[] = '記事:';
+        $lines[] = $article_url;
+    }
     if ($tweet_url !== '') {
         $lines[] = '';
         $lines[] = '元投稿:';
@@ -63,6 +69,24 @@ function ainews_post_sns_notice($post) {
         'ok' => true,
         'id' => isset($data['item']['id']) ? $data['item']['id'] : null,
     );
+}
+
+function ainews_extract_urls_from_text($text) {
+    preg_match_all('/https?:\/\/[^\s<>"\']+/u', (string)$text, $matches);
+    $urls = isset($matches[0]) ? $matches[0] : array();
+    $clean = array();
+    foreach ($urls as $url) {
+        $url = rtrim($url, "。、，,.)]}>\"'");
+        if ($url !== '') {
+            $clean[] = $url;
+        }
+    }
+    return array_values(array_unique($clean));
+}
+
+function ainews_strip_urls($text) {
+    $text = preg_replace('/https?:\/\/[^\s<>"\']+/u', '', (string)$text);
+    return trim(preg_replace('/[ \t]+/u', ' ', $text));
 }
 
 session_start();
@@ -137,7 +161,13 @@ if (!empty($tweet['entities']['urls'])) {
         }
     }
 }
+foreach (ainews_extract_urls_from_text($tweet_text) as $exp) {
+    if (!preg_match('/twimg\.com|x\.com|twitter\.com|t\.co/', $exp)) {
+        $article_urls[] = $exp;
+    }
+}
 $article_urls = array_values(array_unique($article_urls));
+$article_url = !empty($article_urls) ? $article_urls[0] : '';
 
 /* 記事HTML取得 */
 $title = '';
@@ -200,7 +230,8 @@ if (!empty($article_urls)) {
 }
 
 if ($title === '') {
-    $title = mb_substr($tweet_text, 0, 80);
+    $title_source = ainews_strip_urls($tweet_text);
+    $title = mb_substr($title_source !== '' ? $title_source : $tweet_text, 0, 120);
 }
 
 /* Ollama */
@@ -263,6 +294,7 @@ $id = md5($tweet_url . date('YmdHis'));
 $new_post = array(
     'id'         => $id,
     'tweet_url'  => $tweet_url,
+    'article_url'=> $article_url,
     'author'     => $author,
     'title'      => $title,
     'summary'    => $summary,
