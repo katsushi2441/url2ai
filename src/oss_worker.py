@@ -503,6 +503,11 @@ def run_job(period='daily', top_n=3):
         status = res.get('status', '')
         if status == 'ok':
             log.info('登録完了: %s', res.get('id'))
+            sns_notice = res.get('sns_notice') or {}
+            if sns_notice.get('ok'):
+                log.info('AIxEC SNS投稿完了: id=%s author=oss', sns_notice.get('id'))
+            else:
+                log.warning('AIxEC SNS投稿未完了: %s', sns_notice.get('error', 'unknown'))
             registered.add(r['url'])
             success += 1
 
