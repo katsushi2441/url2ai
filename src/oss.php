@@ -171,7 +171,7 @@ if ($detail_id) {
 $all_tags = array();
 foreach ($posts as $post) {
     if (!empty($post['tags'])) {
-        foreach ($post['tags'] as $tag) {
+        foreach (array_slice($post['tags'], 0, 1) as $tag) {
             $all_tags[$tag] = isset($all_tags[$tag]) ? $all_tags[$tag] + 1 : 1;
         }
     }
@@ -858,7 +858,7 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
         <?php if (!empty($detail_post['tags'])): ?>
         <div class="detail-section-title">タグ</div>
         <div class="tags" style="margin-top:8px;">
-            <?php foreach ($detail_post['tags'] as $tag): ?>
+            <?php foreach (array_slice($detail_post['tags'], 0, 1) as $tag): ?>
             <a class="tag" href="oss.php?tag=<?php echo urlencode($tag); ?>" rel="tag">#<?php echo htmlspecialchars($tag); ?></a>
             <?php endforeach; ?>
         </div>
@@ -897,7 +897,7 @@ function buildDetailText(post) {
     lines.push(post.github_url);
     lines.push(detailPageUrl);
     if (post.tags && post.tags.length) {
-        lines.push(post.tags.map(function(t){ return '#' + t; }).join(' '));
+        lines.push(post.tags.slice(0, 1).map(function(t){ return '#' + t; }).join(' '));
     }
     return lines.join('\n');
 }
@@ -1004,7 +1004,7 @@ function renderPosts(from, to) {
         var idx  = i;
         var tags = '';
         if (post.tags && post.tags.length) {
-            for (var t = 0; t < post.tags.length; t++) {
+            for (var t = 0; t < Math.min(1, post.tags.length); t++) {
                 tags += '<a class="tag" href="oss.php?tag=' + encodeURIComponent(post.tags[t]) + '" rel="tag">#' + esc(post.tags[t]) + '</a>';
             }
         }
@@ -1089,7 +1089,7 @@ function buildPostText(post) {
     lines.push(post.github_url);
     lines.push(getDetailUrl(post));
     if (post.tags && post.tags.length) {
-        lines.push(post.tags.map(function(t){ return '#' + t; }).join(' '));
+        lines.push(post.tags.slice(0, 1).map(function(t){ return '#' + t; }).join(' '));
     }
     return lines.join('\n');
 }

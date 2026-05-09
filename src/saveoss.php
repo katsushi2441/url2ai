@@ -321,7 +321,7 @@ function extract_tags($post_text, $repo_name) {
             $result[] = $t;
         }
     }
-    return $result;
+    return array_slice($result, 0, 1);
 }
 
 // ========== Ollama動作確認 ==========
@@ -627,7 +627,8 @@ $github_url = isset($input['github_url']) ? trim($input['github_url']) : '';
 $title      = isset($input['title'])      ? trim($input['title'])      : '';
 $analysis   = isset($input['analysis'])   ? trim($input['analysis'])   : '';
 $post_text  = isset($input['post_text'])  ? trim($input['post_text'])  : '';
-$tags       = isset($input['tags'])       ? $input['tags']             : array();
+$tags       = isset($input['tags']) && is_array($input['tags']) ? array_values($input['tags']) : array();
+$tags       = array_slice(array_values(array_filter($tags, function($t) { return trim((string)$t) !== ''; })), 0, 1);
 
 if (!$github_url || !$title) {
     http_response_code(400);

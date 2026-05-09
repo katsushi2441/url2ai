@@ -287,6 +287,9 @@ if ($res) {
 if ($summary === '') {
     $summary = '考察できませんでした。';
 }
+$tags = array_slice(array_values(array_unique(array_filter($tags, function($t) {
+    return trim((string)$t) !== '';
+}))), 0, 1);
 
 /* 保存 */
 $id = md5($tweet_url . date('YmdHis'));
