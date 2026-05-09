@@ -183,16 +183,29 @@ uksort($all_tags, function($a, $b) {
 
 function oss_fetch_book_rankings($limit = 10) {
     $limit = max(1, min(10, (int)$limit));
-    $url = 'https://aixec.exbridge.jp/books_ranking_api.php?limit=' . $limit;
+    $url = 'https://aixec.exbridge.jp/books_ranking_api.php?tab=ai&limit=' . $limit;
+    $json = false;
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Accept: application/json'));
+        curl_setopt($ch, CURLOPT_USERAGENT, 'OSSTimeline/1.0');
+        $json = curl_exec($ch);
+        curl_close($ch);
+    }
+    if (!$json) {
     $ctx = stream_context_create(array(
         'http' => array(
             'method' => 'GET',
-            'timeout' => 3,
+            'timeout' => 10,
             'header' => "User-Agent: OSSTimeline/1.0\r\nAccept: application/json\r\n",
             'ignore_errors' => true
         )
     ));
-    $json = @file_get_contents($url, false, $ctx);
+        $json = @file_get_contents($url, false, $ctx);
+    }
     if (!$json) {
         return array();
     }
@@ -212,8 +225,8 @@ function oss_render_book_ranking($books, $extra_class = '', $limit = 10) {
     $class = trim('book-ranking ' . $extra_class);
     $books = array_slice($books, 0, max(1, (int)$limit));
     ?>
-    <aside class="<?php echo htmlspecialchars($class); ?>" aria-label="書籍ランキング">
-        <div class="book-ranking-title">書籍ランキング</div>
+    <aside class="<?php echo htmlspecialchars($class); ?>" aria-label="AIテクノロジー書籍ランキング">
+        <div class="book-ranking-title">AIテクノロジー書籍</div>
         <div class="book-ranking-list">
             <?php foreach ($books as $i => $book):
                 $title = isset($book['title']) ? $book['title'] : '';
