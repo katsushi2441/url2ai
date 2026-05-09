@@ -4,6 +4,66 @@ date_default_timezone_set('Asia/Tokyo');
 header('Content-Type: application/json; charset=UTF-8');
 
 define('DATA_FILE', __DIR__ . '/data/ainews_posts.json');
+define('AIXEC_SNS_API_URL', 'https://aixec.exbridge.jp/api.php?path=posts');
+define('AINEWS_BASE_URL', 'https://aiknowledgecms.exbridge.jp/ainews.php');
+
+function ainews_build_sns_notice($post) {
+    $title = isset($post['title']) ? trim((string)$post['title']) : '';
+    $summary = isset($post['summary']) ? trim((string)$post['summary']) : '';
+    $tweet_url = isset($post['tweet_url']) ? trim((string)$post['tweet_url']) : '';
+    $id = isset($post['id']) ? trim((string)$post['id']) : '';
+    $detail_url = $id !== '' ? AINEWS_BASE_URL . '?id=' . rawurlencode($id) : AINEWS_BASE_URL;
+
+    $lines = array('📰 AI News Radarに新しいニュースを登録しました');
+    if ($title !== '') {
+        $lines[] = '';
+        $lines[] = $title;
+    }
+    if ($summary !== '') {
+        $lines[] = '';
+        $lines[] = $summary;
+    }
+    $lines[] = '';
+    $lines[] = '詳細:';
+    $lines[] = $detail_url;
+    if ($tweet_url !== '') {
+        $lines[] = '';
+        $lines[] = '元投稿:';
+        $lines[] = $tweet_url;
+    }
+    return trim(implode("\n", $lines));
+}
+
+function ainews_post_sns_notice($post) {
+    $content = ainews_build_sns_notice($post);
+    if ($content === '') {
+        return array('ok' => false, 'error' => 'empty notice');
+    }
+
+    $payload = json_encode(array(
+        'author' => 'ainews',
+        'content' => $content,
+    ), JSON_UNESCAPED_UNICODE);
+    $opts = array('http' => array(
+        'method' => 'POST',
+        'header' => "Content-Type: application/json; charset=utf-8\r\n",
+        'content' => $payload,
+        'timeout' => 12,
+        'ignore_errors' => true,
+    ));
+    $res = @file_get_contents(AIXEC_SNS_API_URL, false, stream_context_create($opts));
+    $data = $res ? json_decode($res, true) : null;
+    if (!is_array($data) || empty($data['ok'])) {
+        return array(
+            'ok' => false,
+            'error' => is_array($data) && isset($data['error']) ? $data['error'] : 'sns post failed',
+        );
+    }
+    return array(
+        'ok' => true,
+        'id' => isset($data['item']['id']) ? $data['item']['id'] : null,
+    );
+}
 
 session_start();
 $session_user = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
@@ -214,5 +274,7 @@ array_unshift($posts, $new_post);
 
 file_put_contents(DATA_FILE, json_encode($posts, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 
-echo json_encode(array('status' => 'ok', 'title' => $title), JSON_UNESCAPED_UNICODE);
+$sns_notice = ainews_post_sns_notice($new_post);
+
+echo json_encode(array('status' => 'ok', 'title' => $title, 'sns_notice' => $sns_notice), JSON_UNESCAPED_UNICODE);
 exit;
