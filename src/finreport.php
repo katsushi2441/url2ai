@@ -173,6 +173,46 @@ $is_admin  = ($username === 'xb_bittensor');
 
 function h($s) { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
 
+function fr_post_sns_notice($data) {
+    global $BASE_URL;
+    $ticker = isset($data['ticker']) ? trim((string)$data['ticker']) : '';
+    $company = isset($data['company_name']) ? trim((string)$data['company_name']) : '';
+    $summary = isset($data['summary']) ? trim((string)$data['summary']) : '';
+    $detail_url = $BASE_URL . '/finreportv.php?ticker=' . urlencode($ticker);
+    $title = $company !== '' ? $ticker . ' / ' . $company : $ticker;
+
+    $lines = array('📈 FinReportに新しい投資レポートを登録しました');
+    if ($title !== '') {
+        $lines[] = '';
+        $lines[] = $title;
+    }
+    if ($summary !== '') {
+        $lines[] = '';
+        $lines[] = mb_substr($summary, 0, 220);
+    }
+    $lines[] = '';
+    $lines[] = '詳細:';
+    $lines[] = $detail_url;
+
+    $payload = json_encode(array(
+        'author' => 'finreport',
+        'content' => trim(implode("\n", $lines)),
+    ), JSON_UNESCAPED_UNICODE);
+    $opts = array('http' => array(
+        'method' => 'POST',
+        'header' => "Content-Type: application/json; charset=utf-8\r\n",
+        'content' => $payload,
+        'timeout' => 12,
+        'ignore_errors' => true,
+    ));
+    $res = @file_get_contents('https://aixec.exbridge.jp/api.php?path=posts', false, stream_context_create($opts));
+    $res_data = $res ? json_decode($res, true) : null;
+    if (!is_array($res_data) || empty($res_data['ok'])) {
+        return array('ok' => false, 'error' => is_array($res_data) && isset($res_data['error']) ? $res_data['error'] : 'sns post failed');
+    }
+    return array('ok' => true, 'id' => isset($res_data['item']['id']) ? $res_data['item']['id'] : null);
+}
+
 function fr_slug($ticker) {
     return preg_replace('/[^a-zA-Z0-9_\-]/', '_', strtolower(trim($ticker)));
 }
@@ -508,10 +548,12 @@ if (isset($_GET['api']) && $_GET['api'] !== '') {
             'paragraph_posted_at' => isset($body['paragraph_posted_at']) ? trim((string) $body['paragraph_posted_at']) : '',
         );
         fr_save($ticker, $save_data);
+        $sns_notice = fr_post_sns_notice($save_data);
         $saved = fr_load($ticker);
         $created_ts = $saved ? fr_created_ts($saved) : time();
         fr_json_response(array(
             'ok' => true,
+            'sns_notice' => $sns_notice,
             'item' => array(
                 'id'         => fr_slug($ticker) . '-' . date('YmdHis', $created_ts),
                 'ticker'     => $ticker,
@@ -692,6 +734,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin && $action === 'generate'
         'created_at'      => date('Y-m-d H:i:s'),
     );
     fr_save($ticker, $save_data);
+    fr_post_sns_notice($save_data);
     header('Location: ' . $x_redirect_uri . '?ticker=' . urlencode($ticker)); exit;
 }
 ?><!DOCTYPE html>

@@ -4,6 +4,8 @@ date_default_timezone_set('Asia/Tokyo');
 header('Content-Type: application/json; charset=UTF-8');
 
 define('DATA_FILE',    __DIR__ . '/data/aitech_posts.json');
+define('AITECH_SNS_API_URL', 'https://aixec.exbridge.jp/api.php?path=posts');
+define('AITECH_BASE_URL', 'https://aiknowledgecms.exbridge.jp/aitech.php');
 
 session_start();
 $session_user = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
@@ -154,6 +156,50 @@ function extract_tags_from_text($text) {
         }
     }
     return normalize_tags($tags);
+}
+
+function aitech_post_sns_notice($post) {
+    $title = isset($post['title']) ? trim((string)$post['title']) : '';
+    $summary = isset($post['summary']) ? trim((string)$post['summary']) : '';
+    $url = isset($post['url']) ? trim((string)$post['url']) : '';
+    $id = isset($post['id']) ? trim((string)$post['id']) : '';
+    $detail_url = $id !== '' ? AITECH_BASE_URL . '?id=' . rawurlencode($id) : AITECH_BASE_URL;
+
+    $lines = array('🤖 AI Techに新しい技術記事を登録しました');
+    if ($title !== '') {
+        $lines[] = '';
+        $lines[] = $title;
+    }
+    if ($summary !== '') {
+        $lines[] = '';
+        $lines[] = mb_substr($summary, 0, 220);
+    }
+    $lines[] = '';
+    $lines[] = '詳細:';
+    $lines[] = $detail_url;
+    if ($url !== '') {
+        $lines[] = '';
+        $lines[] = '元記事:';
+        $lines[] = $url;
+    }
+
+    $payload = json_encode(array(
+        'author' => 'aitech',
+        'content' => trim(implode("\n", $lines)),
+    ), JSON_UNESCAPED_UNICODE);
+    $opts = array('http' => array(
+        'method' => 'POST',
+        'header' => "Content-Type: application/json; charset=utf-8\r\n",
+        'content' => $payload,
+        'timeout' => 12,
+        'ignore_errors' => true,
+    ));
+    $res = @file_get_contents(AITECH_SNS_API_URL, false, stream_context_create($opts));
+    $data = $res ? json_decode($res, true) : null;
+    if (!is_array($data) || empty($data['ok'])) {
+        return array('ok' => false, 'error' => is_array($data) && isset($data['error']) ? $data['error'] : 'sns post failed');
+    }
+    return array('ok' => true, 'id' => isset($data['item']['id']) ? $data['item']['id'] : null);
 }
 
 /* =========================================================
@@ -360,10 +406,12 @@ if (!write_json_atomic(DATA_FILE, $posts)) {
     echo json_encode(array('status' => 'error', 'error' => '保存に失敗しました'));
     exit;
 }
+$sns_notice = aitech_post_sns_notice($new_post);
 
 echo json_encode(array(
     'status' => 'ok',
     'title'  => $title,
     'id'     => $id,
+    'sns_notice' => $sns_notice,
 ), JSON_UNESCAPED_UNICODE);
 exit;

@@ -1613,7 +1613,7 @@ function adminRegister() {
             status.className   = 'admin-status err';
         }
     };
-    xhr2.send(JSON.stringify({ action: 'manual_register', github_url: url }));
+    xhr2.send(JSON.stringify({ action: 'manual_register', github_url: url, sns_author: 'osszenn' }));
 }
 
 document.getElementById('admin-url-input').addEventListener('keydown', function(e) {

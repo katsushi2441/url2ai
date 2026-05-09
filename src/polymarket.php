@@ -174,6 +174,45 @@ $is_admin  = ($username === $ADMIN);
 
 function h($s) { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
 
+function pm_post_sns_notice($data) {
+    global $BASE_URL;
+    $query = isset($data['query']) ? trim((string)$data['query']) : '';
+    $summary = isset($data['summary']) ? trim((string)$data['summary']) : '';
+    $depth = isset($data['depth']) ? trim((string)$data['depth']) : '';
+    $detail_url = $BASE_URL . '/polymarket.php?query=' . urlencode($query);
+
+    $lines = array('🔮 Polymarket Intelligenceに新しい予測市場レポートを登録しました');
+    if ($query !== '') {
+        $lines[] = '';
+        $lines[] = $depth !== '' ? $query . ' (' . $depth . ')' : $query;
+    }
+    if ($summary !== '') {
+        $lines[] = '';
+        $lines[] = mb_substr($summary, 0, 220);
+    }
+    $lines[] = '';
+    $lines[] = '詳細:';
+    $lines[] = $detail_url;
+
+    $payload = json_encode(array(
+        'author' => 'polymarket',
+        'content' => trim(implode("\n", $lines)),
+    ), JSON_UNESCAPED_UNICODE);
+    $opts = array('http' => array(
+        'method' => 'POST',
+        'header' => "Content-Type: application/json; charset=utf-8\r\n",
+        'content' => $payload,
+        'timeout' => 12,
+        'ignore_errors' => true,
+    ));
+    $res = @file_get_contents('https://aixec.exbridge.jp/api.php?path=posts', false, stream_context_create($opts));
+    $res_data = $res ? json_decode($res, true) : null;
+    if (!is_array($res_data) || empty($res_data['ok'])) {
+        return array('ok' => false, 'error' => is_array($res_data) && isset($res_data['error']) ? $res_data['error'] : 'sns post failed');
+    }
+    return array('ok' => true, 'id' => isset($res_data['item']['id']) ? $res_data['item']['id'] : null);
+}
+
 function pm_slug($query) {
     return preg_replace('/[^a-zA-Z0-9_\-]/', '_', strtolower(trim($query)));
 }
@@ -366,10 +405,12 @@ if (isset($_GET['api']) && $_GET['api'] !== '') {
             'paragraph_post_id' => isset($body['paragraph_post_id']) ? trim((string) $body['paragraph_post_id']) : '',
         );
         pm_save($query, $save_data);
+        $sns_notice = pm_post_sns_notice($save_data);
         $saved = pm_load($query);
         $created_ts = $saved ? pm_created_ts($saved) : time();
         pm_json_response(array(
             'ok' => true,
+            'sns_notice' => $sns_notice,
             'item' => array(
                 'id'              => pm_slug($query) . '-' . date('YmdHis', $created_ts),
                 'query'           => $query,
@@ -563,7 +604,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin && $action === 'generate'
         $_SESSION['pm_flash_error'] = 'レポート生成に失敗しました (HTTP ' . $http_code . ')';
         header('Location: ' . $x_redirect_uri); exit;
     }
-    pm_save($query, array(
+    $save_data = array(
         'query'           => $query,
         'depth'           => $depth,
         'report'          => $res['report'],
@@ -571,7 +612,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin && $action === 'generate'
         'matched_markets' => isset($res['matched_markets']) ? $res['matched_markets'] : array(),
         'sources'         => isset($res['sources'])         ? $res['sources']         : array(),
         'created_at'      => date('Y-m-d H:i:s'),
-    ));
+    );
+    pm_save($query, $save_data);
+    pm_post_sns_notice($save_data);
     header('Location: ' . $x_redirect_uri . '?query=' . urlencode($query)); exit;
 }
 

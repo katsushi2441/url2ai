@@ -57,7 +57,12 @@ function oss_delete_post($id) {
     return false;
 }
 
-function oss_build_sns_notice($post) {
+function oss_notice_author($value) {
+    $value = trim((string)$value);
+    return $value === 'osszenn' ? 'osszenn' : 'oss';
+}
+
+function oss_build_sns_notice($post, $author) {
     global $OSS_BASE_URL;
     $title = isset($post['title']) ? trim((string)$post['title']) : '';
     $post_text = isset($post['post_text']) ? trim((string)$post['post_text']) : '';
@@ -65,7 +70,10 @@ function oss_build_sns_notice($post) {
     $id = isset($post['id']) ? trim((string)$post['id']) : '';
     $detail_url = $id !== '' ? $OSS_BASE_URL . '?id=' . rawurlencode($id) : $OSS_BASE_URL;
 
-    $lines = array('🧩 AI OSS Timelineに新しいOSSを登録しました');
+    $headline = $author === 'osszenn'
+        ? '🧩 OSS Zennに新しいOSSを登録しました'
+        : '🧩 AI OSS Timelineに新しいOSSを登録しました';
+    $lines = array($headline);
     if ($title !== '') {
         $lines[] = '';
         $lines[] = $title;
@@ -85,15 +93,16 @@ function oss_build_sns_notice($post) {
     return trim(implode("\n", $lines));
 }
 
-function oss_post_sns_notice($post) {
+function oss_post_sns_notice($post, $author = 'oss') {
     global $AIXEC_SNS_API_URL;
-    $content = oss_build_sns_notice($post);
+    $author = oss_notice_author($author);
+    $content = oss_build_sns_notice($post, $author);
     if ($content === '') {
         return array('ok' => false, 'error' => 'empty notice');
     }
 
     $payload = json_encode(array(
-        'author' => 'oss',
+        'author' => $author,
         'content' => $content,
     ), JSON_UNESCAPED_UNICODE);
     $opts = array('http' => array(
@@ -343,6 +352,7 @@ if ($action === 'manual_register') {
     }
 
     $github_url = isset($input['github_url']) ? trim($input['github_url']) : '';
+    $sns_author = oss_notice_author(isset($input['sns_author']) ? $input['sns_author'] : 'oss');
     if (!$github_url || strpos($github_url, 'github.com/') === false) {
         http_response_code(400);
         echo json_encode(array('error' => 'invalid github_url'));
@@ -461,7 +471,7 @@ if ($action === 'manual_register') {
         echo json_encode(array('error' => 'Failed to save'));
         exit;
     }
-    $sns_notice = oss_post_sns_notice($new_post);
+    $sns_notice = oss_post_sns_notice($new_post, $sns_author);
     $status = $found ? 'updated' : 'ok';
     echo json_encode(array('status' => $status, 'id' => $repo_id, 'title' => $title, 'sns_notice' => $sns_notice), JSON_UNESCAPED_UNICODE);
     exit;
