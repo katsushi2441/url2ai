@@ -7,6 +7,8 @@ $ADMIN     = 'xb_bittensor';
 $DATA_DIR  = __DIR__ . '/data';
 $DATA_FILE = $DATA_DIR . '/oss_posts.json'; // 旧形式（移行用）
 $BANKR_DISCOVER_URL = 'https://bankr.bot/discover/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3';
+$AIXEC_SNS_API_URL = 'https://aixec.exbridge.jp/api.php?path=posts';
+$OSS_BASE_URL = 'https://aiknowledgecms.exbridge.jp/oss.php';
 
 function oss_post_file($id) {
     global $DATA_DIR;
@@ -53,6 +55,66 @@ function oss_delete_post($id) {
         return unlink($file);
     }
     return false;
+}
+
+function oss_build_sns_notice($post) {
+    global $OSS_BASE_URL;
+    $title = isset($post['title']) ? trim((string)$post['title']) : '';
+    $post_text = isset($post['post_text']) ? trim((string)$post['post_text']) : '';
+    $github_url = isset($post['github_url']) ? trim((string)$post['github_url']) : '';
+    $id = isset($post['id']) ? trim((string)$post['id']) : '';
+    $detail_url = $id !== '' ? $OSS_BASE_URL . '?id=' . rawurlencode($id) : $OSS_BASE_URL;
+
+    $lines = array('🧩 AI OSS Timelineに新しいOSSを登録しました');
+    if ($title !== '') {
+        $lines[] = '';
+        $lines[] = $title;
+    }
+    if ($post_text !== '') {
+        $lines[] = '';
+        $lines[] = $post_text;
+    }
+    $lines[] = '';
+    $lines[] = '詳細:';
+    $lines[] = $detail_url;
+    if ($github_url !== '' && strpos($post_text, $github_url) === false) {
+        $lines[] = '';
+        $lines[] = 'GitHub:';
+        $lines[] = $github_url;
+    }
+    return trim(implode("\n", $lines));
+}
+
+function oss_post_sns_notice($post) {
+    global $AIXEC_SNS_API_URL;
+    $content = oss_build_sns_notice($post);
+    if ($content === '') {
+        return array('ok' => false, 'error' => 'empty notice');
+    }
+
+    $payload = json_encode(array(
+        'author' => 'oss',
+        'content' => $content,
+    ), JSON_UNESCAPED_UNICODE);
+    $opts = array('http' => array(
+        'method' => 'POST',
+        'header' => "Content-Type: application/json; charset=utf-8\r\n",
+        'content' => $payload,
+        'timeout' => 12,
+        'ignore_errors' => true,
+    ));
+    $res = @file_get_contents($AIXEC_SNS_API_URL, false, stream_context_create($opts));
+    $data = $res ? json_decode($res, true) : null;
+    if (!is_array($data) || empty($data['ok'])) {
+        return array(
+            'ok' => false,
+            'error' => is_array($data) && isset($data['error']) ? $data['error'] : 'sns post failed',
+        );
+    }
+    return array(
+        'ok' => true,
+        'id' => isset($data['item']['id']) ? $data['item']['id'] : null,
+    );
 }
 
 function paragraph_api_get_json($url, $headers = array()) {
@@ -399,8 +461,9 @@ if ($action === 'manual_register') {
         echo json_encode(array('error' => 'Failed to save'));
         exit;
     }
+    $sns_notice = oss_post_sns_notice($new_post);
     $status = $found ? 'updated' : 'ok';
-    echo json_encode(array('status' => $status, 'id' => $repo_id, 'title' => $title), JSON_UNESCAPED_UNICODE);
+    echo json_encode(array('status' => $status, 'id' => $repo_id, 'title' => $title, 'sns_notice' => $sns_notice), JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -601,7 +664,8 @@ $post = array(
 );
 
 if (oss_save_post($post)) {
-    echo json_encode(array('status' => 'ok', 'id' => $post['id']));
+    $sns_notice = oss_post_sns_notice($post);
+    echo json_encode(array('status' => 'ok', 'id' => $post['id'], 'sns_notice' => $sns_notice));
 } else {
     http_response_code(500);
     echo json_encode(array('error' => 'Failed to save'));
