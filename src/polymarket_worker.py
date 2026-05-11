@@ -84,8 +84,9 @@ OLLAMA_MODEL = os.environ.get(
     CONF.get("ollama", {}).get("default_model", "gemma4:e4b"),
 )
 POLYMARKET_PARAGRAPH_STATUS = os.environ.get("POLYMARKET_PARAGRAPH_STATUS", "published")
-RUN_TIMES_JST     = [(4, 30), (10, 30), (16, 30), (22, 30)]
-MAX_ITEMS_PER_DAY = int(os.environ.get("POLYMARKET_WORKER_MAX_ITEMS", "4"))
+RUN_TIMES_JST     = [(10, 0)]
+MAX_ITEMS_PER_DAY = int(os.environ.get("POLYMARKET_WORKER_MAX_ITEMS", "1"))
+MAX_CANDIDATES_PER_RUN = int(os.environ.get("POLYMARKET_WORKER_CANDIDATES", "10"))
 FETCH_POOL_SIZE   = int(os.environ.get("POLYMARKET_WORKER_POOL_SIZE", "50"))
 BANKR_DISCOVER_URL = "https://bankr.bot/discover/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3"
 
@@ -384,7 +385,7 @@ def process_candidates(dry_run: bool) -> int:
     # Walk down the volume-ranked list, skipping already-processed slugs
     candidates = []
     for m in pool:
-        if len(candidates) >= MAX_ITEMS_PER_DAY:
+        if len(candidates) >= MAX_CANDIDATES_PER_RUN:
             break
         slug  = m.get("slug", "")
         query = (m.get("question") or m.get("title") or "").strip()
@@ -406,6 +407,8 @@ def process_candidates(dry_run: bool) -> int:
     created = 0
     generated_items: list[dict] = []
     for item in candidates:
+        if created >= MAX_ITEMS_PER_DAY:
+            break
         slug  = item["slug"]
         query = item["query"]
         processed_slugs.add(slug)
@@ -423,6 +426,9 @@ def process_candidates(dry_run: bool) -> int:
             continue
         if not result.get("report"):
             log(f"empty report for {query}")
+            continue
+        if not result.get("matched_markets"):
+            log(f"no matched markets for {query}, skipping")
             continue
 
         path        = save_polymarketreport(query, result)
