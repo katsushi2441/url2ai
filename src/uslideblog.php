@@ -199,12 +199,34 @@ function usb_fetch_url($url) {
     if (preg_match('/<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']/i', $html, $m) || preg_match('/<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']/i', $html, $m)) {
         $image = usb_abs_url($m[1], $url);
     }
-    $body = $html;
-    $body = preg_replace('/<script\b[^>]*>.*?<\/script>/is', ' ', $body);
-    $body = preg_replace('/<style\b[^>]*>.*?<\/style>/is', ' ', $body);
-    $body = preg_replace('/<\/(h[1-6]|p|li|pre|blockquote|section|article|div)>/i', "\n", $body);
-    $body = preg_replace('/<[^>]+>/', ' ', $body);
-    $body = html_entity_decode($body, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $body = '';
+    if (preg_match_all('/<script[^>]+type=["\']application\/ld\+json["\'][^>]*>(.*?)<\/script>/is', $html, $json_scripts)) {
+        foreach ($json_scripts[1] as $json_text) {
+            $json_text = html_entity_decode(trim($json_text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $json = json_decode($json_text, true);
+            if (is_array($json)) {
+                if (isset($json['text']) && trim($json['text']) !== '') {
+                    $body = trim($json['text']);
+                    break;
+                }
+                if (isset($json['articleBody']) && trim($json['articleBody']) !== '') {
+                    $body = trim($json['articleBody']);
+                    break;
+                }
+                if (isset($json['description']) && trim($json['description']) !== '') {
+                    $body = trim($json['description']);
+                }
+            }
+        }
+    }
+    if ($body === '') {
+        $body = $html;
+        $body = preg_replace('/<script\b[^>]*>.*?<\/script>/is', ' ', $body);
+        $body = preg_replace('/<style\b[^>]*>.*?<\/style>/is', ' ', $body);
+        $body = preg_replace('/<\/(h[1-6]|p|li|pre|blockquote|section|article|div)>/i', "\n", $body);
+        $body = preg_replace('/<[^>]+>/', ' ', $body);
+        $body = html_entity_decode($body, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
     $body = preg_replace('/[ \t]+/u', ' ', $body);
     $body = preg_replace('/\R{3,}/u', "\n\n", $body);
     $body = trim($body);
@@ -267,8 +289,8 @@ function usb_fallback_slides($title, $description, $body) {
     );
 }
 function usb_build_prompt($source) {
-    $body = mb_substr($source['body'], 0, 3600, 'UTF-8');
-    return "以下のURL本文を、原文の主張を崩さずに日本語のスライド型ブログへ変換してください。\n\n最重要条件:\n- 原文に書かれていない論点、サービス名、導入手順、注意点を勝手に追加しない\n- 原文の語り手の主張、熱量、結論を維持する\n- 要約しすぎて一般論にしない\n- 各スライドは、原文の流れに沿って分割する\n- 具体例がある場合は必ず残す\n- 断定の強さを弱めすぎない\n\n構成条件:\n- 5〜7枚のスライドにする\n- 各スライドは title, body, note, layout を持つ\n- body は原文の意味を忠実に保った2〜4文程度\n- tags は 3〜8個。例: VibeCoding, ClaudeCode, Cursor, Codex, v0, AI, BusinessAutomation\n- JSONのみを返す。説明文やMarkdownフェンスは禁止\n\n出力JSON形式:\n{\"title\":\"...\",\"description\":\"...\",\"tags\":[\"...\"],\"slides\":[{\"title\":\"...\",\"body\":\"...\",\"note\":\"...\",\"layout\":\"cover\"}]}\n\nURL: " . $source['url'] . "\nタイトル: " . $source['title'] . "\n説明: " . $source['description'] . "\n本文抜粋:\n" . $body;
+    $body = mb_substr($source['body'], 0, 6000, 'UTF-8');
+    return "あなたは、入力本文を別の記事に書き換えるのではなく、本文の主張をスライドに分割する編集者です。\n\n目的:\n- URL本文の内容を、原文の意味・順番・結論を保ったままスライド化する\n- 文章を短く整えることはよいが、主張を変えない\n- 前半だけで終わらせず、本文全体を網羅する\n\n絶対条件:\n- 原文に書かれていない論点、サービス名、導入手順、注意点を追加しない\n- 原文にある重要な文、具体例、結論を落とさない\n- 全ての段落を必ずどこかのスライドに反映する\n- 最後の段落・結論段落を必ず独立したスライド、または最後のまとめスライドに反映する\n- 要約しすぎて一般論にしない\n- 原文の語り手の主張、熱量、断定の強さを維持する\n- タイトルを過度に煽った別タイトルへ変えない\n\n特に重視する観点:\n- チャットAIを使うだけではAIの本当の力は見えない、という問題意識を残す\n- 企業経営に大きな影響を与えるのは、AIがコードを書き、実行し、業務そのものを変えていくバイブコーディングである、という中心主張を必ず残す\n- 見積書作成、EC運営、営業資料生成、SNS運用、データ整理、OCR処理などの具体例を必ず残す\n- バイブコーディングは単なるプログラム開発手法ではなく、会社業務そのものをAIで再構築する考え方である、という結論を必ず残す\n- チャットAI活用の数倍から数十倍、企業経営に革新を与える可能性がある、という結論を必ず残す\n\nスライド化ルール:\n- 原文の段落順に沿って 6〜9枚のスライドに分割する\n- 各スライドは、原文のどの部分を扱っているかが分かる見出しにする\n- body は原文の意味を忠実に保った2〜4文程度にする\n- 具体例は省略せず、必要なら1枚のスライドとして独立させる\n- 最後のスライドは、原文の結論を弱めずにまとめる\n- 各スライドは title, body, note, layout を持つ\n- tags は 3〜8個。例: VibeCoding, ClaudeCode, Cursor, Codex, v0, AI, BusinessAutomation\n- JSONのみを返す。説明文やMarkdownフェンスは禁止\n\n出力JSON形式:\n{\"title\":\"...\",\"description\":\"...\",\"tags\":[\"...\"],\"slides\":[{\"title\":\"...\",\"body\":\"...\",\"note\":\"...\",\"layout\":\"cover\"}]}\n\nURL: " . $source['url'] . "\nタイトル: " . $source['title'] . "\n説明: " . $source['description'] . "\n本文:\n" . $body;
 }
 function usb_markdown($post) {
     $out = '# ' . $post['title'] . "\n\n";
