@@ -547,12 +547,23 @@ $jsonld = $detail ? array(
 .generate-status{display:none;grid-column:1/-1;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:6px;padding:10px 12px;font-size:13px}
 .is-generating .generate-status{display:block}
 .is-generating button[type=submit]{opacity:.7;cursor:wait}
-.reveal-wrap{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.reveal{height:72vh;min-height:520px;background:#fff}
-.reveal .slides{text-align:left}
-.reveal .slides section{padding:26px}
-.reveal h2{font-size:1.35em;line-height:1.3;color:#172033}
-.reveal p{font-size:.62em;line-height:1.75;color:#334155;white-space:pre-wrap}
+.slide-player{position:relative;background:#0f172a;border-radius:10px;overflow:hidden;min-height:720px;height:calc(100vh - 210px);height:calc(100dvh - 210px)}
+.slide-feed{height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:#0f172a}
+.slide-feed::-webkit-scrollbar{display:none}
+.slide-page{height:100%;min-height:620px;scroll-snap-align:start;display:flex;align-items:center;justify-content:center;padding:34px;background:#f8fafc;color:#172033;position:relative}
+.slide-page:nth-child(3n+1){background:linear-gradient(135deg,#eff6ff,#f8fafc)}
+.slide-page:nth-child(3n+2){background:linear-gradient(135deg,#f0fdfa,#fff)}
+.slide-page:nth-child(3n){background:linear-gradient(135deg,#fff,#f8fafc)}
+.slide-content{width:min(980px,100%);min-height:58%;display:flex;flex-direction:column;justify-content:center}
+.slide-count{position:absolute;top:18px;right:20px;font-size:13px;color:#64748b;font-weight:700}
+.slide-page h2{font-size:clamp(28px,4.6vw,54px);line-height:1.25;margin:0 0 22px;color:#172033}
+.slide-page p{font-size:clamp(17px,2.1vw,25px);line-height:1.85;margin:0;white-space:pre-wrap;color:#334155}
+.slide-page .note{font-size:14px;margin-top:22px;color:#64748b}
+.slide-side{position:absolute;right:14px;bottom:24px;display:flex;flex-direction:column;gap:12px;z-index:4}
+.slide-side button,.pc-slide-nav button{background:rgba(15,23,42,.7);border:1px solid rgba(255,255,255,.18);border-radius:50%;width:46px;height:46px;color:#fff;font-size:22px;cursor:pointer;backdrop-filter:blur(4px)}
+.pc-slide-nav{position:absolute;left:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:12px;z-index:4}
+.slide-hint{position:absolute;left:18px;bottom:18px;color:rgba(255,255,255,.7);font-size:12px;z-index:4;background:rgba(15,23,42,.45);padding:4px 9px;border-radius:999px}
+@media(max-width:860px){.slide-player{border-radius:0;margin-left:-18px;margin-right:-18px;min-height:calc(100vh - 124px);min-height:calc(100dvh - 124px);height:calc(100vh - 124px);height:calc(100dvh - 124px)}.slide-page{min-height:calc(100vh - 124px);min-height:calc(100dvh - 124px);padding:26px 22px}.pc-slide-nav{display:none}.slide-side{right:10px;bottom:18px}.slide-hint{display:none}.slide-page h2{font-size:clamp(25px,8vw,38px)}.slide-page p{font-size:clamp(16px,4.8vw,21px)}}
 .tiptap-editor{border:1px solid var(--line);border-radius:6px;background:#fff;min-height:120px;padding:10px 12px;line-height:1.7}
 .tiptap-source{display:none}
 .oss-note{background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:12px 14px;color:var(--muted);font-size:13px;margin:10px 0 16px}
@@ -645,19 +656,29 @@ $jsonld = $detail ? array(
       <button class="btn sub" type="button" id="pptx-download">PPTX</button>
       <a class="btn sub" href="<?php echo h($THIS_FILE . '?id=' . urlencode($detail['id']) . '&format=json'); ?>">JSON</a>
     </div>
-    <div class="oss-note">表示は Reveal.js、HTML出力は Marp、PPTX出力は PptxGenJS、編集UIは Tiptap を使う構成です。図解編集は Excalidraw / diagrams.net ブロックとして拡張します。</div>
-    <div class="reveal-wrap">
-      <div class="reveal">
-      <div class="slides">
+    <div class="oss-note">表示はリール型スライドビュー、HTML出力は Marp、PPTX出力は PptxGenJS、編集UIは Tiptap を使う構成です。図解編集は Excalidraw / diagrams.net ブロックとして拡張します。</div>
+    <div class="slide-player">
+      <div class="pc-slide-nav">
+        <button type="button" onclick="goSlide(currentSlide-1)" aria-label="前のスライド">&#8593;</button>
+        <button type="button" onclick="goSlide(currentSlide+1)" aria-label="次のスライド">&#8595;</button>
+      </div>
+      <div class="slide-feed" id="slide-feed">
       <?php foreach ($detail['slides'] as $i => $s): $layout = isset($s['layout']) ? $s['layout'] : 'points'; ?>
-        <section data-layout="<?php echo h($i === 0 ? 'cover' : $layout); ?>" id="s<?php echo (int)$i; ?>">
-          <h2><?php echo h(isset($s['title']) ? $s['title'] : ''); ?></h2>
-          <p><?php echo h(isset($s['body']) ? $s['body'] : ''); ?></p>
-          <?php if (!empty($s['note'])): ?><aside class="notes"><?php echo h($s['note']); ?></aside><?php endif; ?>
+        <section class="slide-page" data-layout="<?php echo h($i === 0 ? 'cover' : $layout); ?>" id="s<?php echo (int)$i; ?>">
+          <div class="slide-count"><?php echo (int)($i + 1); ?> / <?php echo (int)count($detail['slides']); ?></div>
+          <div class="slide-content">
+            <h2><?php echo h(isset($s['title']) ? $s['title'] : ''); ?></h2>
+            <p><?php echo h(isset($s['body']) ? $s['body'] : ''); ?></p>
+            <?php if (!empty($s['note'])): ?><div class="note"><?php echo h($s['note']); ?></div><?php endif; ?>
+          </div>
         </section>
       <?php endforeach; ?>
       </div>
+      <div class="slide-side">
+        <button type="button" onclick="goSlide(currentSlide-1)" aria-label="前のスライド">&#8593;</button>
+        <button type="button" onclick="goSlide(currentSlide+1)" aria-label="次のスライド">&#8595;</button>
       </div>
+      <div class="slide-hint">上下キー / スクロールで切替</div>
     </div>
   </article>
   <?php endif; ?>
@@ -688,15 +709,39 @@ $jsonld = $detail ? array(
 <?php if ($detail && empty($_GET['edit'])): ?>
 window.USLIDEBLOG_POST = <?php echo json_encode($detail, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 <?php endif; ?>
+var currentSlide = 0;
+var slidePages = Array.from(document.querySelectorAll('.slide-page'));
+var slideFeed = document.getElementById('slide-feed');
+function goSlide(idx) {
+  if (!slidePages.length) return;
+  if (idx < 0) idx = 0;
+  if (idx >= slidePages.length) idx = slidePages.length - 1;
+  currentSlide = idx;
+  slidePages[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (history.replaceState) history.replaceState(null, '', '#s' + idx);
+}
 (function(){
-  if (window.Reveal && document.querySelector('.reveal')) {
-    Reveal.initialize({
-      hash: true,
-      slideNumber: true,
-      controls: true,
-      progress: true,
-      center: true
+  if (!slideFeed || !slidePages.length) return;
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        currentSlide = slidePages.indexOf(entry.target);
+      }
     });
+  }, { root: slideFeed, threshold: 0.62 });
+  slidePages.forEach(function(page) { observer.observe(page); });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+      e.preventDefault();
+      goSlide(currentSlide + 1);
+    }
+    if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+      e.preventDefault();
+      goSlide(currentSlide - 1);
+    }
+  });
+  if (location.hash && /^#s\d+$/.test(location.hash)) {
+    goSlide(parseInt(location.hash.substring(2), 10));
   }
 })();
 (function(){
