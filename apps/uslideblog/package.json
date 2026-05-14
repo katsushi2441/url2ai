@@ -1,0 +1,18 @@
+{
+  "name": "@url2ai/uslideblog",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "USlideBlog rendering service using Marp, Reveal.js-compatible data, and PptxGenJS.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@marp-team/marp-core": "^4.1.0",
+    "pptxgenjs": "^4.0.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

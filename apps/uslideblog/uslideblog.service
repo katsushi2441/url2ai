@@ -1,0 +1,15 @@
+[Unit]
+Description=URL2AI USlideBlog renderer
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/kojima/exdirect/url2ai/apps/uslideblog
+Environment=HOST=0.0.0.0
+Environment=PORT=8022
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

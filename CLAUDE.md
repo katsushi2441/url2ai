@@ -39,7 +39,7 @@ cd src && python3 ftpphp.py
 - `apps/ernie-image-turbo/` — Python, image generation server
 - `x402/` — Bankr x402 TypeScript handlers, deployed via `bankr x402 deploy`
 
-## Port Map (8010–8020)
+## Port Map (8010–8022)
 
 | Port | Service | Stack | Notes |
 |------|---------|-------|-------|
@@ -55,6 +55,7 @@ cd src && python3 ftpphp.py
 | 8019 | **llm-gateway** | Node.js | LLM2API Bankr x402 endpoint (Gemma 4 E4B via Ollama)。systemd: `llm-gateway.service` |
 | 8020 | **llm-gateway-jpyc** | Node.js | LLM2API JPYC x402 gateway (proxies to 8019)。systemd: `llm-gateway-jpyc.service` |
 | 8021 | **cdp-gateway** | Node.js | OSS2API + LLM2API 統合 CDP x402 gateway。Coinbase Bazaar discovery対応（discoverable:true）。systemd: `cdp-gateway.service` |
+| 8022 | **uslideblog** | Node.js | USlideBlog renderer。Marp / PptxGenJS によるMarkdown・HTML・PPTX変換。systemd: `uslideblog.service` |
 
 ### api_gateway (port 8010) の再起動方法
 

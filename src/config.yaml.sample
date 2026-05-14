@@ -24,6 +24,9 @@ finreport:
 polymarket:
   api_url:
 
+uslideblog:
+  renderer_api: http://exbridge.ddns.net:8022
+
 paragraph:
   api_key: 
   publication_slug: 
