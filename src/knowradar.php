@@ -79,12 +79,28 @@ function kr_x_get($url, $token) {
     if (!$res) { $res = '{}'; }
     return json_decode($res, true);
 }
+function url2ai_kr_safe_return($return) {
+    global $BASE_URL;
+    $return = trim((string)$return);
+    if ($return === '') { return $BASE_URL . '/knowradar.php'; }
+    if (preg_match('#^https?://#i', $return)) {
+        $host = parse_url($return, PHP_URL_HOST);
+        $base_host = parse_url($BASE_URL, PHP_URL_HOST);
+        if ($host === $base_host) { return $return; }
+        return $BASE_URL . '/knowradar.php';
+    }
+    if (strpos($return, '/') === 0 && strpos($return, '//') !== 0) {
+        return $BASE_URL . $return;
+    }
+    return $BASE_URL . '/knowradar.php';
+}
 
 if (isset($_GET['kr_logout'])) {
+    $return_to = isset($_GET['return']) ? url2ai_kr_safe_return($_GET['return']) : $x_redirect_uri;
     session_destroy();
     setcookie(session_name(), '', time() - 3600, '/',
         'aiknowledgecms.exbridge.jp', true, true);
-    header('Location: ' . $x_redirect_uri);
+    header('Location: ' . $return_to);
     exit;
 }
 if (isset($_GET['kr_login'])) {
@@ -93,6 +109,9 @@ if (isset($_GET['kr_login'])) {
     $state     = md5(uniqid('', true));
     $_SESSION['kr_code_verifier'] = $verifier;
     $_SESSION['kr_oauth_state']   = $state;
+    if (isset($_GET['return'])) {
+        $_SESSION['kr_return_to'] = url2ai_kr_safe_return($_GET['return']);
+    }
     $params = array(
         'response_type'         => 'code',
         'client_id'             => $x_client_id,
@@ -132,7 +151,9 @@ if (isset($_GET['code']) && isset($_GET['state']) && isset($_SESSION['kr_oauth_s
             }
         }
     }
-    header('Location: ' . $x_redirect_uri);
+    $return_to = isset($_SESSION['kr_return_to']) ? $_SESSION['kr_return_to'] : $x_redirect_uri;
+    unset($_SESSION['kr_return_to']);
+    header('Location: ' . $return_to);
     exit;
 }
 
@@ -305,6 +326,19 @@ $services = array(
         'desc'     => '技術系サイトのAI要約リンク集',
     ),
     array(
+        'id'       => 'uslideblog',
+        'name'     => 'USlideBlog',
+        'name_ja'  => 'URLスライド要約',
+        'emoji'    => '🖥️',
+        'color'    => '#2563eb',
+        'bg'       => '#eff6ff',
+        'view_url' => $BASE_URL . '/uslideblog.php',
+        'edit_url' => $BASE_URL . '/uslideblog.php',
+        'feed_url' => $BASE_URL . '/uslideblog.php?feed',
+        'image_url'=> $BASE_URL . '/images/uslideblog.png',
+        'desc'     => 'URLの内容を短いスライドに要約',
+    ),
+    array(
         'id'       => 'usong',
         'name'     => 'USong',
         'name_ja'  => 'AI作詞',
@@ -379,6 +413,7 @@ function kr_detect_system($url) {
     if (strpos($u, 'osszenn')   !== false)                                        return 'osszenn';
     if (strpos($u, 'saveoss')   !== false || strpos($u, '/oss')     !== false)   return 'oss';
     if (strpos($u, 'aitech')    !== false)                                        return 'aitech';
+    if (strpos($u, 'uslideblog') !== false)                                       return 'uslideblog';
     if (strpos($u, 'aitrend')   !== false)                                        return 'aitrend';
     if (strpos($u, 'newskeyword') !== false)                                      return 'newskeyword';
     if (strpos($u, 'aiknowledgecms') !== false || strpos($u, 'kw=') !== false)  return 'cms';
@@ -390,7 +425,6 @@ $today      = date('Y-m-d');
 $pv_today   = array();
 $pv_total   = array();
 
-if ($is_admin) {
 $bot_words  = array('bot','crawler','spider','curl','python','wget','scrapy','headless','phantom','selenium');
 
 if (file_exists($logfile)) {
@@ -416,7 +450,6 @@ if (file_exists($logfile)) {
             $pv_today[$sys]++;
         }
     }
-}
 }
 
 if (!empty($pv_total)) {

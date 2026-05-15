@@ -1,5 +1,13 @@
 # CLAUDE.md — URL2AI Project Rules
 
+## Common Application Rules
+
+Before adding or changing URL2AI web apps, read:
+
+- `docs/COMMON_RULES.md`
+
+It defines the shared rules for login/session handling, copy-button behavior, embed code, HTML sanitization, URL source extraction, and FTP deployment expectations.
+
 ## PHP Version Constraint
 
 **The production server (aiknowledgecms.exbridge.jp) runs PHP 5.x.**

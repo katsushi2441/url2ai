@@ -1,113 +1,29 @@
 <?php
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth_common.php';
 date_default_timezone_set('Asia/Tokyo');
-
-if (session_status() === PHP_SESSION_NONE) {
-    $session_lifetime = 60 * 60 * 24 * 30;
-    ini_set('session.gc_maxlifetime', $session_lifetime);
-    ini_set('session.cookie_lifetime', $session_lifetime);
-    ini_set('session.cookie_path', '/');
-    ini_set('session.cookie_domain', AIGM_COOKIE_DOMAIN);
-    ini_set('session.cookie_secure', '1');
-    ini_set('session.cookie_httponly', '1');
-    session_cache_expire(60 * 24 * 30);
-    session_start();
-    if (isset($_COOKIE[session_name()])) {
-        setcookie(session_name(), session_id(), time() + $session_lifetime, '/', AIGM_COOKIE_DOMAIN, true, true);
-    }
-}
 
 $BASE_URL = AIGM_BASE_URL;
 $THIS_FILE = 'uslideblog.php';
 $SITE_NAME = 'USlideBlog';
 $ADMIN = AIGM_ADMIN;
 $DATA_DIR = __DIR__ . '/data/uslideblog';
-$DEFAULT_IMAGE = $BASE_URL . '/images/url2ai-agent.svg';
+$DEFAULT_IMAGE = $BASE_URL . '/images/uslideblog.png';
 $RENDERER_API = (isset($_aigm_config['uslideblog']['renderer_api']) && $_aigm_config['uslideblog']['renderer_api'] !== '') ? $_aigm_config['uslideblog']['renderer_api'] : 'http://exbridge.ddns.net:8022';
 if (!is_dir($DATA_DIR)) { @mkdir($DATA_DIR, 0755, true); }
 
-/* =========================================================
-   X OAuth login
-========================================================= */
-$x_keys_file = __DIR__ . '/x_api_keys.sh';
-$x_keys = array();
-if (file_exists($x_keys_file)) {
-    $lines = file($x_keys_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        if (preg_match('/(?:export\s+)?(\w+)=["\']?([^"\'#\r\n]*)["\']?/', $line, $m)) {
-            $x_keys[trim($m[1])] = trim($m[2]);
-        }
-    }
-}
-$x_client_id = isset($x_keys['X_API_KEY']) ? $x_keys['X_API_KEY'] : '';
-$x_client_secret = isset($x_keys['X_API_SECRET']) ? $x_keys['X_API_SECRET'] : '';
-$x_redirect_uri = $BASE_URL . '/' . $THIS_FILE;
-
-function usb_base64url($data) { return rtrim(strtr(base64_encode($data), '+/', '-_'), '='); }
-function usb_gen_verifier() { $b = ''; for ($i = 0; $i < 32; $i++) { $b .= chr(mt_rand(0, 255)); } return usb_base64url($b); }
-function usb_gen_challenge($v) { return usb_base64url(hash('sha256', $v, true)); }
-function usb_http_post_form($url, $data, $headers) {
-    $opts = array('http' => array('method' => 'POST', 'header' => implode("\r\n", $headers) . "\r\n", 'content' => $data, 'timeout' => 12, 'ignore_errors' => true));
-    $res = @file_get_contents($url, false, stream_context_create($opts));
-    return json_decode($res ? $res : '{}', true);
-}
-function usb_x_get($url, $token) {
-    $opts = array('http' => array('method' => 'GET', 'header' => "Authorization: Bearer " . $token . "\r\nUser-Agent: USlideBlog/1.0\r\n", 'timeout' => 12, 'ignore_errors' => true));
-    $res = @file_get_contents($url, false, stream_context_create($opts));
-    return json_decode($res ? $res : '{}', true);
-}
-
 if (isset($_GET['usb_logout'])) {
-    session_destroy();
-    setcookie(session_name(), '', time() - 3600, '/', AIGM_COOKIE_DOMAIN, true, true);
-    header('Location: ' . $x_redirect_uri);
+    header('Location: ' . url2ai_auth_logout_url('/' . $THIS_FILE));
     exit;
 }
 if (isset($_GET['usb_login'])) {
-    $verifier = usb_gen_verifier();
-    $challenge = usb_gen_challenge($verifier);
-    $state = md5(uniqid('', true));
-    $_SESSION['usb_code_verifier'] = $verifier;
-    $_SESSION['usb_oauth_state'] = $state;
-    $params = array(
-        'response_type' => 'code',
-        'client_id' => $x_client_id,
-        'redirect_uri' => $x_redirect_uri,
-        'scope' => 'tweet.read users.read offline.access',
-        'state' => $state,
-        'code_challenge' => $challenge,
-        'code_challenge_method' => 'S256',
-    );
-    header('Location: https://twitter.com/i/oauth2/authorize?' . http_build_query($params));
-    exit;
-}
-if (isset($_GET['code']) && isset($_GET['state']) && isset($_SESSION['usb_oauth_state'])) {
-    if ($_GET['state'] === $_SESSION['usb_oauth_state']) {
-        $post = http_build_query(array(
-            'grant_type' => 'authorization_code',
-            'code' => $_GET['code'],
-            'redirect_uri' => $x_redirect_uri,
-            'code_verifier' => $_SESSION['usb_code_verifier'],
-            'client_id' => $x_client_id,
-        ));
-        $cred = base64_encode($x_client_id . ':' . $x_client_secret);
-        $data = usb_http_post_form('https://api.twitter.com/2/oauth2/token', $post, array('Content-Type: application/x-www-form-urlencoded', 'Authorization: Basic ' . $cred));
-        if (isset($data['access_token'])) {
-            $_SESSION['session_access_token'] = $data['access_token'];
-            $_SESSION['session_token_expires'] = time() + (isset($data['expires_in']) ? (int)$data['expires_in'] : 7200);
-            if (!empty($data['refresh_token'])) { $_SESSION['session_refresh_token'] = $data['refresh_token']; }
-            $me = usb_x_get('https://api.twitter.com/2/users/me', $data['access_token']);
-            if (isset($me['data']['username'])) { $_SESSION['session_username'] = $me['data']['username']; }
-        }
-        unset($_SESSION['usb_oauth_state'], $_SESSION['usb_code_verifier']);
-    }
-    header('Location: ' . $x_redirect_uri);
+    header('Location: ' . url2ai_auth_login_url(url2ai_auth_current_path()));
     exit;
 }
 
-$logged_in = isset($_SESSION['session_access_token']) && $_SESSION['session_access_token'] !== '';
-$session_user = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
-$is_admin = ($session_user === $ADMIN);
+$auth = url2ai_auth_bootstrap();
+$logged_in = $auth['logged_in'];
+$session_user = $auth['session_user'];
+$is_admin = $auth['is_admin'];
 
 /* =========================================================
    Helpers
@@ -174,7 +90,91 @@ function usb_abs_url($url, $base) {
     $path = isset($p['path']) ? preg_replace('#/[^/]*$#', '/', $p['path']) : '/';
     return $root . $path . $url;
 }
+function usb_extract_tweet_id($url) {
+    if (preg_match('/(?:x|twitter)\.com\/(?:i\/status|[^\/?#]+\/status(?:es)?)\/(\d{15,20})/i', (string)$url, $m)) {
+        return $m[1];
+    }
+    if (preg_match('/(?:^|\/)status(?:es)?\/(\d{15,20})/i', (string)$url, $m)) {
+        return $m[1];
+    }
+    return '';
+}
+function usb_fetch_x_tweet($url) {
+    $tweet_id = usb_extract_tweet_id($url);
+    if ($tweet_id === '') { return null; }
+    $opts = array('http' => array(
+        'method' => 'GET',
+        'header' => "User-Agent: Mozilla/5.0\r\nAccept: application/json\r\n",
+        'timeout' => 15,
+        'ignore_errors' => true,
+    ));
+    $res = @file_get_contents('https://api.fxtwitter.com/i/status/' . $tweet_id, false, stream_context_create($opts));
+    if (!$res) {
+        return array('ok' => false, 'error' => 'X投稿を取得できませんでした。');
+    }
+    $data = json_decode($res, true);
+    if (empty($data['tweet']) || empty($data['tweet']['text'])) {
+        return array('ok' => false, 'error' => 'X投稿本文を取得できませんでした。');
+    }
+    $tweet = $data['tweet'];
+    $text = trim((string)$tweet['text']);
+    $author = isset($tweet['author']['screen_name']) ? '@' . $tweet['author']['screen_name'] : 'X投稿';
+    $title_text = preg_replace('#https?://\S+#u', '', $text);
+    $title_text = trim(preg_replace('/\s+/u', ' ', $title_text));
+    $title = $title_text !== '' ? mb_substr($title_text, 0, 70, 'UTF-8') : $author . ' の投稿';
+    $image = '';
+    if (!empty($tweet['media']['photos'][0]['url'])) {
+        $image = $tweet['media']['photos'][0]['url'];
+    } else if (!empty($tweet['media']['videos'][0]['thumbnail_url'])) {
+        $image = $tweet['media']['videos'][0]['thumbnail_url'];
+    }
+    return array(
+        'ok' => true,
+        'title' => $title,
+        'description' => mb_substr($text, 0, 220, 'UTF-8'),
+        'image' => $image,
+        'body' => $author . ":\n" . $text,
+        'source_title' => $author . ' のX投稿',
+    );
+}
+function usb_fetch_aixsns_post($url) {
+    if (!preg_match('~^https?://aixec\.exbridge\.jp/sns\.php\?[^#]*\bid=(\d+)~i', (string)$url, $m)) {
+        return null;
+    }
+    $id = $m[1];
+    $api = 'https://aixec.exbridge.jp/api.php?path=' . rawurlencode('posts/' . $id);
+    $opts = array('http' => array(
+        'method' => 'GET',
+        'header' => "User-Agent: USlideBlog/1.0\r\nAccept: application/json\r\n",
+        'timeout' => 15,
+        'ignore_errors' => true,
+    ));
+    $res = @file_get_contents($api, false, stream_context_create($opts));
+    if (!$res) {
+        return array('ok' => false, 'error' => 'AIxSNS投稿を取得できませんでした。');
+    }
+    $data = json_decode($res, true);
+    $post = isset($data['item']) && is_array($data['item']) ? $data['item'] : $data;
+    $content = isset($post['content']) ? trim(strip_tags((string)$post['content'])) : '';
+    if ($content === '') {
+        return array('ok' => false, 'error' => 'AIxSNS投稿本文を取得できませんでした。');
+    }
+    $title = trim(strtok($content, "\n"));
+    if ($title === '') { $title = 'AIxSNS投稿 #' . $id; }
+    return array(
+        'ok' => true,
+        'title' => mb_substr($title, 0, 100, 'UTF-8'),
+        'description' => mb_substr($content, 0, 220, 'UTF-8'),
+        'image' => '',
+        'body' => $content,
+        'source_title' => 'AIxSNS投稿 #' . $id,
+    );
+}
 function usb_fetch_url($url) {
+    $sns_source = usb_fetch_aixsns_post($url);
+    if ($sns_source !== null) { return $sns_source; }
+    $x_source = usb_fetch_x_tweet($url);
+    if ($x_source !== null) { return $x_source; }
     $opts = array('http' => array(
         'method' => 'GET',
         'header' => "User-Agent: Mozilla/5.0 (compatible; USlideBlog/1.0)\r\nAccept: text/html,application/xhtml+xml,text/plain,application/pdf\r\n",
@@ -230,6 +230,12 @@ function usb_fetch_url($url) {
     $body = preg_replace('/[ \t]+/u', ' ', $body);
     $body = preg_replace('/\R{3,}/u', "\n\n", $body);
     $body = trim($body);
+    if (preg_match('/JavaScript is not available|Something went wrong|Please enable JavaScript|supported browsers in our Help Center/i', $body)) {
+        return array('ok' => false, 'error' => '本文取得に失敗しました。X投稿は投稿本文取得APIで取得してください。');
+    }
+    if (mb_strlen($body, 'UTF-8') < 40) {
+        return array('ok' => false, 'error' => '本文が短すぎるため、スライドを生成できませんでした。');
+    }
     if ($title === '') { $title = $url; }
     return array('ok' => true, 'title' => mb_substr($title, 0, 140, 'UTF-8'), 'description' => mb_substr($description, 0, 220, 'UTF-8'), 'image' => $image, 'body' => mb_substr($body, 0, 7000, 'UTF-8'));
 }
@@ -255,42 +261,20 @@ function usb_parse_json_response($text) {
     return is_array($d) ? $d : null;
 }
 function usb_default_tags($title, $body) {
-    $src = $title . ' ' . $body;
-    $map = array(
-        'VibeCoding' => array('バイブ', 'vibe', 'vibecoding'),
-        'ClaudeCode' => array('Claude Code', 'claude'),
-        'Codex' => array('Codex', 'codex'),
-        'Ollama' => array('Ollama', 'ollama'),
-        'Gemma' => array('Gemma', 'gemma'),
-        'OSS' => array('OSS', 'GitHub', 'README'),
-        'AIAgent' => array('agent', 'エージェント'),
-        'GPU' => array('GPU', 'CUDA'),
-        'AI' => array('AI', 'LLM', '人工知能'),
-    );
-    $tags = array();
-    foreach ($map as $tag => $words) {
-        foreach ($words as $w) {
-            if (mb_stripos($src, $w, 0, 'UTF-8') !== false) { $tags[] = $tag; break; }
-        }
-    }
-    if (!$tags) { $tags = array('AI', 'Tech'); }
-    return $tags;
+    return array();
 }
 function usb_fallback_slides($title, $description, $body) {
-    $excerpt = usb_excerpt($body, 220);
+    $excerpt = usb_excerpt($body, 120);
     return array(
-        array('title' => $title, 'body' => ($description !== '' ? $description : $excerpt), 'note' => 'URLから抽出した内容の概要です。', 'layout' => 'cover'),
-        array('title' => 'この技術で何ができる？', 'body' => $excerpt, 'note' => '読者が得られる価値を整理します。', 'layout' => 'points'),
-        array('title' => '構成と仕組み', 'body' => '入力、処理、出力の流れを分解し、どこでAIや自動化が効いているかを確認します。', 'note' => '', 'layout' => 'diagram'),
-        array('title' => '実装ポイント', 'body' => '導入時に見るべきAPI、設定、データ構造、運用上の注意点を整理します。', 'note' => '', 'layout' => 'code'),
-        array('title' => '活用方法', 'body' => '既存業務や開発フローにどう組み込めるか、具体的な利用シーンに落とし込みます。', 'note' => '', 'layout' => 'points'),
-        array('title' => '注意点', 'body' => '制約、ライセンス、セキュリティ、品質確認、運用コストを事前に確認します。', 'note' => '', 'layout' => 'warn'),
-        array('title' => 'まとめ', 'body' => '技術の価値、導入の第一歩、次に読むべき関連情報をまとめます。', 'note' => '', 'layout' => 'summary'),
+        array('title' => $title, 'body' => ($description !== '' ? usb_excerpt($description, 120) : $excerpt), 'note' => 'URLから抽出した内容の概要です。', 'layout' => 'cover'),
+        array('title' => '要点', 'body' => $excerpt, 'note' => '', 'layout' => 'points'),
+        array('title' => '大切な内容', 'body' => '本文から読み取れる重要な内容を短く整理します。', 'note' => '', 'layout' => 'points'),
+        array('title' => 'まとめ', 'body' => '入力URLの内容をもとに、結論や印象に残る点を整理します。', 'note' => '', 'layout' => 'summary'),
     );
 }
 function usb_build_prompt($source) {
     $body = mb_substr($source['body'], 0, 6000, 'UTF-8');
-    return "あなたは、入力本文を別の記事に書き換えるのではなく、本文の主張をスライドに分割する編集者です。\n\n目的:\n- URL本文の内容を、原文の意味・順番・結論を保ったままスライド化する\n- 文章を短く整えることはよいが、主張を変えない\n- 前半だけで終わらせず、本文全体を網羅する\n\n絶対条件:\n- 原文に書かれていない論点、サービス名、導入手順、注意点を追加しない\n- 原文にある重要な文、具体例、結論を落とさない\n- 全ての段落を必ずどこかのスライドに反映する\n- 最後の段落・結論段落を必ず独立したスライド、または最後のまとめスライドに反映する\n- 要約しすぎて一般論にしない\n- 原文の語り手の主張、熱量、断定の強さを維持する\n- タイトルを過度に煽った別タイトルへ変えない\n\n特に重視する観点:\n- チャットAIを使うだけではAIの本当の力は見えない、という問題意識を残す\n- 企業経営に大きな影響を与えるのは、AIがコードを書き、実行し、業務そのものを変えていくバイブコーディングである、という中心主張を必ず残す\n- 見積書作成、EC運営、営業資料生成、SNS運用、データ整理、OCR処理などの具体例を必ず残す\n- バイブコーディングは単なるプログラム開発手法ではなく、会社業務そのものをAIで再構築する考え方である、という結論を必ず残す\n- チャットAI活用の数倍から数十倍、企業経営に革新を与える可能性がある、という結論を必ず残す\n\nスライド化ルール:\n- 原文の段落順に沿って 6〜9枚のスライドに分割する\n- 各スライドは、原文のどの部分を扱っているかが分かる見出しにする\n- body は原文の意味を忠実に保った2〜4文程度にする\n- 具体例は省略せず、必要なら1枚のスライドとして独立させる\n- 最後のスライドは、原文の結論を弱めずにまとめる\n- 各スライドは title, body, note, layout を持つ\n- tags は 3〜8個。例: VibeCoding, ClaudeCode, Cursor, Codex, v0, AI, BusinessAutomation\n- JSONのみを返す。説明文やMarkdownフェンスは禁止\n\n出力JSON形式:\n{\"title\":\"...\",\"description\":\"...\",\"tags\":[\"...\"],\"slides\":[{\"title\":\"...\",\"body\":\"...\",\"note\":\"...\",\"layout\":\"cover\"}]}\n\nURL: " . $source['url'] . "\nタイトル: " . $source['title'] . "\n説明: " . $source['description'] . "\n本文:\n" . $body;
+    return "あなたは、入力URL本文だけを材料にして、プレゼンで読める短いスライドへ要約する編集者です。\n\n目的:\n- URL本文の主張、順番、結論は変えない\n- 本文をそのまま貼らず、スライドとして読める短い要点に圧縮する\n- 前半だけで終わらせず、本文全体の論点を網羅する\n\n絶対条件:\n- 入力本文にない論点、製品名、技術名、事例、結論を追加しない\n- 以前の会話や固定テーマを混ぜない\n- 原文の中心主張、具体例、結論を落とさない\n- 各段落の役割を理解し、似た内容は統合して短くする\n- 長文の文をそのままコピーしない。短い箇条書き風の文にする\n- 1枚のスライドに長文を詰め込まない\n- 最後の段落・結論段落は必ず最後のまとめに反映する\n\nスライド化ルール:\n- 6〜9枚のスライドにする\n- title は短い見出し。18文字前後を目安にする\n- body は短い要点を2〜4行。1行は25文字前後を目安にする\n- body は改行区切りの箇条書き風にする。ただし記号の乱用はしない\n- note は補足説明。空でもよい。本文の長文コピーは禁止\n- 具体例は1枚にまとめるか、要点として短く列挙する\n- 最後のスライドは、原文の結論を短く強くまとめる\n- 各スライドは title, body, note, layout を持つ\n- tags は入力本文から自然に抽出した 3〜8個にする\n- JSONのみを返す。説明文やMarkdownフェンスは禁止\n\n良いbody例:\n\"重要な論点を短く整理\\n具体例は要点だけ残す\\n最後に結論を明確化\"\n\n悪いbody例:\n原文の段落をそのまま貼り付けた長文。\n入力本文にない別テーマを混ぜた内容。\n\n出力JSON形式:\n{\"title\":\"...\",\"description\":\"...\",\"tags\":[\"...\"],\"slides\":[{\"title\":\"...\",\"body\":\"...\",\"note\":\"...\",\"layout\":\"cover\"}]}\n\nURL: " . $source['url'] . "\nタイトル: " . $source['title'] . "\n説明: " . $source['description'] . "\n本文:\n" . $body;
 }
 function usb_markdown($post) {
     $out = '# ' . $post['title'] . "\n\n";
@@ -328,9 +312,9 @@ if (isset($_GET['feed'])) {
     header('Content-Type: application/rss+xml; charset=UTF-8');
     echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
     echo '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>' . "\n";
-    echo '<title>' . x($SITE_NAME . ' | AIスライド技術ブログ') . '</title>' . "\n";
+    echo '<title>' . x($SITE_NAME . ' | URLスライド要約') . '</title>' . "\n";
     echo '<link>' . x($BASE_URL . '/' . $THIS_FILE) . '</link>' . "\n";
-    echo '<description>' . x('技術解説URLをAIがスライドブログ化した記事一覧。') . '</description>' . "\n";
+    echo '<description>' . x('入力URLの内容を短いスライドに要約した記事一覧。') . '</description>' . "\n";
     echo '<language>ja</language>' . "\n";
     echo '<atom:link href="' . x($BASE_URL . '/' . $THIS_FILE . '?feed') . '" rel="self" type="application/rss+xml"/>' . "\n";
     foreach (array_slice($posts, 0, 30) as $p) {
@@ -425,7 +409,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'title' => $title,
                     'description' => $desc,
                     'source_url' => $url,
-                    'source_title' => $src['title'],
+                    'source_title' => isset($src['source_title']) ? $src['source_title'] : $src['title'],
                     'image' => $src['image'],
                     'tags' => array_values($tags),
                     'slides' => array_values($slides),
@@ -515,15 +499,15 @@ if ($detail) {
     $page_type = 'article';
     $page_image = !empty($detail['image']) ? $detail['image'] : $DEFAULT_IMAGE;
 } else {
-    $page_title = $tag_filter !== '' ? '#' . $tag_filter . ' のスライドブログ | ' . $SITE_NAME : $SITE_NAME . ' | AIスライド技術ブログ';
-    $page_description = '技術解説URLをAIが解析し、編集可能なスライド型技術ブログへ変換するURL2AIシリーズのWebシステムです。';
+    $page_title = $tag_filter !== '' ? '#' . $tag_filter . ' のスライド要約 | ' . $SITE_NAME : $SITE_NAME . ' | URLスライド要約';
+    $page_description = '入力したURLの内容を、短く読みやすいスライド形式に要約するWebシステムです。';
     $page_url = $BASE_URL . '/' . $THIS_FILE . ($tag_filter !== '' ? '?tag=' . urlencode($tag_filter) : '');
     $page_type = 'website';
     $page_image = $DEFAULT_IMAGE;
 }
 $jsonld = $detail ? array(
     '@context' => 'https://schema.org',
-    '@type' => 'TechArticle',
+    '@type' => 'Article',
     'headline' => $detail['title'],
     'description' => $page_description,
     'url' => $page_url,
@@ -539,6 +523,8 @@ $jsonld = $detail ? array(
     'description' => $page_description,
     'url' => $page_url,
 );
+$is_embed = ($detail && isset($_GET['embed']));
+$embed_url = $detail ? $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($detail['id']) . '&embed=1' : '';
 ?><!doctype html>
 <html lang="ja">
 <head>
@@ -569,42 +555,46 @@ $jsonld = $detail ? array(
 .generate-status{display:none;grid-column:1/-1;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:6px;padding:10px 12px;font-size:13px}
 .is-generating .generate-status{display:block}
 .is-generating button[type=submit]{opacity:.7;cursor:wait}
-.slide-player{position:relative;background:#0f172a;border-radius:10px;overflow:hidden;min-height:720px;height:calc(100vh - 210px);height:calc(100dvh - 210px)}
+.slide-player{position:relative;background:#0f172a;border-radius:10px;overflow:hidden;min-height:420px;height:min(520px,calc(100vh - 310px));height:min(520px,calc(100dvh - 310px));max-width:900px;margin:0 auto}
 .slide-feed{height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:#0f172a}
 .slide-feed::-webkit-scrollbar{display:none}
-.slide-page{height:100%;min-height:620px;scroll-snap-align:start;display:flex;align-items:center;justify-content:center;padding:34px;background:#f8fafc;color:#172033;position:relative}
+.slide-page{height:100%;min-height:400px;scroll-snap-align:start;display:flex;align-items:center;justify-content:center;padding:22px;background:#f8fafc;color:#172033;position:relative}
 .slide-page:nth-child(3n+1){background:linear-gradient(135deg,#eff6ff,#f8fafc)}
 .slide-page:nth-child(3n+2){background:linear-gradient(135deg,#f0fdfa,#fff)}
 .slide-page:nth-child(3n){background:linear-gradient(135deg,#fff,#f8fafc)}
-.slide-content{width:min(980px,100%);min-height:58%;display:flex;flex-direction:column;justify-content:center}
+.slide-content{width:min(760px,100%);min-height:42%;display:flex;flex-direction:column;justify-content:center}
 .slide-count{position:absolute;top:18px;right:20px;font-size:13px;color:#64748b;font-weight:700}
-.slide-page h2{font-size:clamp(28px,4.6vw,54px);line-height:1.25;margin:0 0 22px;color:#172033}
-.slide-page p{font-size:clamp(17px,2.1vw,25px);line-height:1.85;margin:0;white-space:pre-wrap;color:#334155}
+.slide-page h2,.slide-page .title-inline{font-size:clamp(22px,3vw,36px);line-height:1.25;margin:0 0 14px;color:#172033;font-weight:800}
+.slide-page p,.slide-page .body-inline{font-size:clamp(14px,1.35vw,18px);line-height:1.66;margin:0;white-space:pre-wrap;color:#334155}
 .slide-page .note{font-size:14px;margin-top:22px;color:#64748b}
 .slide-side{position:absolute;right:14px;bottom:24px;display:flex;flex-direction:column;gap:12px;z-index:4}
-.slide-side button,.pc-slide-nav button{background:rgba(15,23,42,.7);border:1px solid rgba(255,255,255,.18);border-radius:50%;width:46px;height:46px;color:#fff;font-size:22px;cursor:pointer;backdrop-filter:blur(4px)}
+.slide-side button,.pc-slide-nav button{background:rgba(15,23,42,.7);border:1px solid rgba(255,255,255,.18);border-radius:50%;width:38px;height:38px;color:#fff;font-size:18px;cursor:pointer;backdrop-filter:blur(4px)}
 .pc-slide-nav{position:absolute;left:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:12px;z-index:4}
 .slide-hint{position:absolute;left:18px;bottom:18px;color:rgba(255,255,255,.7);font-size:12px;z-index:4;background:rgba(15,23,42,.45);padding:4px 9px;border-radius:999px}
-@media(max-width:860px){.slide-player{border-radius:0;margin-left:-18px;margin-right:-18px;min-height:calc(100vh - 124px);min-height:calc(100dvh - 124px);height:calc(100vh - 124px);height:calc(100dvh - 124px)}.slide-page{min-height:calc(100vh - 124px);min-height:calc(100dvh - 124px);padding:26px 22px}.pc-slide-nav{display:none}.slide-side{right:10px;bottom:18px}.slide-hint{display:none}.slide-page h2{font-size:clamp(25px,8vw,38px)}.slide-page p{font-size:clamp(16px,4.8vw,21px)}}
-.tiptap-editor{border:1px solid var(--line);border-radius:6px;background:#fff;min-height:120px;padding:10px 12px;line-height:1.7}
+@media(max-width:860px){.slide-player{border-radius:0;margin-left:-18px;margin-right:-18px;min-height:calc(100vh - 124px);min-height:calc(100dvh - 124px);height:calc(100vh - 124px);height:calc(100dvh - 124px)}.slide-page{min-height:calc(100vh - 124px);min-height:calc(100dvh - 124px);padding:26px 22px}.pc-slide-nav{display:none}.slide-side{right:10px;bottom:18px}.slide-hint{display:none}.slide-page h2,.slide-page .title-inline{font-size:clamp(25px,8vw,38px)}.slide-page p,.slide-page .body-inline{font-size:clamp(16px,4.8vw,21px)}}
+.slide-edit-form{margin:0 0 18px}.slide-edit-form .article-tools{margin:0 0 8px}.slide-edit-form .oss-note{display:none}.slide-edit-form .slide-player{border:2px solid var(--accent);min-height:360px;height:min(450px,calc(100vh - 210px));height:min(450px,calc(100dvh - 210px));max-width:820px}.slide-edit-form .slide-page{min-height:0;padding:16px 20px;overflow:hidden}.slide-edit-form .slide-content{width:min(700px,100%);height:100%;min-height:0;overflow:hidden}.slide-edit-form .title-inline{font-size:clamp(18px,2.4vw,28px);line-height:1.2;margin-bottom:8px;max-height:72px;overflow:auto}.slide-edit-form .body-inline{font-size:clamp(12px,1.08vw,15px);line-height:1.48;max-height:210px;overflow:auto}.slide-edit-form .note{font-size:11px;line-height:1.4;margin-top:8px;max-height:54px;overflow:auto}.slide-edit-form .slide-side button,.slide-edit-form .pc-slide-nav button{width:34px;height:34px;font-size:16px}
+.fabric-wrap{width:100%;height:100%;min-height:320px;background:rgba(255,255,255,.28);border:1px dashed rgba(37,99,235,.28);border-radius:8px;overflow:hidden}
+.fabric-wrap canvas{display:block}
 .tiptap-source{display:none}
 .oss-note{background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:12px 14px;color:var(--muted);font-size:13px;margin:10px 0 16px}
+body.embed{background:#fff}.embed .main{max-width:none;padding:0}.embed .slide-player{border-radius:0;max-width:none;width:100%;height:520px;min-height:420px}.embed .slide-page{min-height:420px}.embed .slide-hint{display:none}
 </style>
 </head>
-<body>
+<body class="<?php echo $is_embed ? 'embed' : ''; ?>">
+<?php if (!$is_embed): ?>
 <header class="top"><div class="wrap"><div class="bar">
-  <a class="brand" href="<?php echo h($THIS_FILE); ?>"><div class="logo">US</div><div><b>USlideBlog</b><span>URLをAIスライド技術ブログへ</span></div></a>
+  <a class="brand" href="<?php echo h($THIS_FILE); ?>"><div class="logo">US</div><div><b>USlideBlog</b><span>URLをスライド要約へ</span></div></a>
   <nav class="nav">
     <a class="btn" href="knowradar.php">KnowRadar</a>
     <a class="btn" href="url2ai.html">URL2AI</a>
     <a class="btn sub" href="<?php echo h($THIS_FILE); ?>?feed">RSS</a>
-    <?php if ($logged_in): ?><span class="btn">@<?php echo h($session_user); ?></span><a class="btn" href="?usb_logout=1">logout</a><?php else: ?><a class="btn primary" href="?usb_login=1">X login</a><?php endif; ?>
+    <?php if ($logged_in): ?><span class="btn">@<?php echo h($session_user); ?></span><a class="btn" href="<?php echo h($auth['logout_url']); ?>">logout</a><?php else: ?><a class="btn primary" href="<?php echo h($auth['login_url']); ?>">X login</a><?php endif; ?>
   </nav>
 </div></div></header>
 
 <section class="hero">
-  <h1>技術記事を、AIがスライドブログ化。</h1>
-  <p class="lead">技術ブログ、GitHub README、Zenn、Qiita、OSSドキュメントなどのURLを入力すると、AIが内容を解析し、編集可能なスライド型技術ブログを生成します。</p>
+  <h1>URLの内容を、短いスライドに要約。</h1>
+  <p class="lead">ブログ、記事、解説ページ、日常生活のノウハウなど、入力したURLの内容を読みやすいスライド形式にまとめます。</p>
   <?php if ($is_admin): ?>
   <div class="genbox">
     <form method="post" id="generate-form">
@@ -612,17 +602,13 @@ $jsonld = $detail ? array(
       <input class="input" type="url" name="source_url" placeholder="https://example.com/tech-article" required>
       <button class="btn primary" type="submit" id="generate-button">スライドブログ生成</button>
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)"><input type="checkbox" name="published" value="1" checked> 生成後に公開</label>
-      <select name="theme"><option value="blue">Blue Tech</option><option value="green">Green OSS</option><option value="dark">Dark Code</option></select>
+      <select name="theme"><option value="blue">Blue</option><option value="green">Green</option><option value="dark">Dark</option></select>
       <div class="generate-status" id="generate-status">URLを取得してAIでスライド構成を生成しています。30秒から90秒ほどかかることがあります。この画面のままお待ちください。</div>
     </form>
   </div>
   <?php endif; ?>
-  <div class="chips">
-    <?php foreach (array('VibeCoding','ClaudeCode','Codex','Ollama','Gemma','OSS','AIAgent','GPU') as $t): ?>
-      <a class="chip" href="?tag=<?php echo urlencode($t); ?>">#<?php echo h($t); ?></a>
-    <?php endforeach; ?>
-  </div>
 </section>
+<?php endif; ?>
 
 <main class="main">
 <?php if ($error !== ''): ?><div class="msg err"><?php echo h($error); ?></div><?php endif; ?>
@@ -630,55 +616,67 @@ $jsonld = $detail ? array(
 
 <?php if ($detail): ?>
   <?php if (isset($_GET['edit']) && $is_admin): ?>
-  <form class="editor" method="post">
+  <form class="slide-edit-form" method="post">
     <input type="hidden" name="action" value="save">
     <input type="hidden" name="id" value="<?php echo h($detail['id']); ?>">
+    <input type="hidden" name="title" value="<?php echo h($detail['title']); ?>">
+    <input type="hidden" name="description" value="<?php echo h(isset($detail['description']) ? $detail['description'] : ''); ?>">
+    <input type="hidden" name="source_url" value="<?php echo h(isset($detail['source_url']) ? $detail['source_url'] : ''); ?>">
+    <input type="hidden" name="image" value="<?php echo h(isset($detail['image']) ? $detail['image'] : ''); ?>">
+    <input type="hidden" name="tags" value="<?php echo h(!empty($detail['tags']) ? implode(',', $detail['tags']) : ''); ?>">
+    <input type="hidden" name="theme" value="<?php echo h(isset($detail['theme']) ? $detail['theme'] : 'blue'); ?>">
+    <input type="hidden" name="published" value="<?php echo !empty($detail['published']) ? '1' : '0'; ?>">
     <div class="article-tools">
       <button class="btn primary" type="submit">保存</button>
       <a class="btn" href="<?php echo h($THIS_FILE . '?id=' . urlencode($detail['id'])); ?>">公開表示</a>
-      <a class="btn sub" href="<?php echo h($THIS_FILE . '?id=' . urlencode($detail['id']) . '&format=md'); ?>">Markdown</a>
-      <a class="btn sub" href="<?php echo h($THIS_FILE . '?id=' . urlencode($detail['id']) . '&format=json'); ?>">JSON</a>
     </div>
-    <p><label>タイトル<br><input class="input" name="title" value="<?php echo h($detail['title']); ?>"></label></p>
-    <p><label>説明<br><textarea class="textarea" name="description"><?php echo h(isset($detail['description']) ? $detail['description'] : ''); ?></textarea></label></p>
-    <div class="editor-grid">
-      <label>ソースURL<br><input class="input" name="source_url" value="<?php echo h(isset($detail['source_url']) ? $detail['source_url'] : ''); ?>"></label>
-      <label>OGP画像URL<br><input class="input" name="image" value="<?php echo h(isset($detail['image']) ? $detail['image'] : ''); ?>"></label>
-      <label>タグ（カンマ区切り）<br><input class="input" name="tags" value="<?php echo h(!empty($detail['tags']) ? implode(',', $detail['tags']) : ''); ?>"></label>
-      <label>テーマ<br><select name="theme"><option value="blue">Blue Tech</option><option value="green"<?php echo (isset($detail['theme']) && $detail['theme'] === 'green') ? ' selected' : ''; ?>>Green OSS</option><option value="dark"<?php echo (isset($detail['theme']) && $detail['theme'] === 'dark') ? ' selected' : ''; ?>>Dark Code</option></select></label>
-      <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="published" value="1"<?php echo !empty($detail['published']) ? ' checked' : ''; ?>> 公開する</label>
-    </div>
-    <h2>スライド編集</h2>
-    <div class="editor-grid" id="slide-editor">
-      <?php foreach ($detail['slides'] as $i => $s): ?>
-      <div class="slide-edit">
-        <h3>Slide <?php echo (int)($i + 1); ?></h3>
-        <p><input class="input" name="slide_title[]" value="<?php echo h(isset($s['title']) ? $s['title'] : ''); ?>" placeholder="タイトル"></p>
-        <p><textarea class="textarea tiptap-source" name="slide_body[]" placeholder="本文"><?php echo h(isset($s['body']) ? $s['body'] : ''); ?></textarea><div class="tiptap-editor" data-target="slide_body[]"><?php echo nl2br(h(isset($s['body']) ? $s['body'] : '')); ?></div></p>
-        <p><textarea class="textarea" name="slide_note[]" placeholder="補足・発表ノート"><?php echo h(isset($s['note']) ? $s['note'] : ''); ?></textarea></p>
-        <p><select name="slide_layout[]"><option value="cover">cover</option><option value="points"<?php echo (isset($s['layout']) && $s['layout'] === 'points') ? ' selected' : ''; ?>>points</option><option value="diagram"<?php echo (isset($s['layout']) && $s['layout'] === 'diagram') ? ' selected' : ''; ?>>diagram</option><option value="code"<?php echo (isset($s['layout']) && $s['layout'] === 'code') ? ' selected' : ''; ?>>code</option><option value="warn"<?php echo (isset($s['layout']) && $s['layout'] === 'warn') ? ' selected' : ''; ?>>warn</option><option value="summary"<?php echo (isset($s['layout']) && $s['layout'] === 'summary') ? ' selected' : ''; ?>>summary</option></select></p>
+    <div class="oss-note">ローカル配置したFabric.jsで、スライド上の文字を直接編集します。上下ボタンでページを切り替えて、編集後に保存してください。</div>
+    <div class="slide-player">
+      <div class="pc-slide-nav">
+        <button type="button" onclick="goSlide(currentSlide-1)" aria-label="前のスライド">&#8593;</button>
+        <button type="button" onclick="goSlide(currentSlide+1)" aria-label="次のスライド">&#8595;</button>
       </div>
+      <div class="slide-feed" id="slide-feed">
+      <?php foreach ($detail['slides'] as $i => $s): $layout = isset($s['layout']) ? $s['layout'] : 'points'; ?>
+        <section class="slide-page" data-layout="<?php echo h($i === 0 ? 'cover' : $layout); ?>" id="s<?php echo (int)$i; ?>">
+          <input type="hidden" name="slide_layout[]" value="<?php echo h($layout); ?>">
+          <div class="slide-count"><?php echo (int)($i + 1); ?> / <?php echo (int)count($detail['slides']); ?></div>
+          <div class="slide-content">
+            <textarea class="tiptap-source" name="slide_title[]"><?php echo h(isset($s['title']) ? $s['title'] : ''); ?></textarea>
+            <textarea class="tiptap-source" name="slide_body[]"><?php echo h(isset($s['body']) ? $s['body'] : ''); ?></textarea>
+            <textarea class="tiptap-source" name="slide_note[]"><?php echo h(isset($s['note']) ? $s['note'] : ''); ?></textarea>
+            <div class="fabric-wrap"><canvas class="slide-canvas" data-slide="<?php echo (int)$i; ?>"></canvas></div>
+          </div>
+        </section>
       <?php endforeach; ?>
+      </div>
+      <div class="slide-side">
+        <button type="button" onclick="goSlide(currentSlide-1)" aria-label="前のスライド">&#8593;</button>
+        <button type="button" onclick="goSlide(currentSlide+1)" aria-label="次のスライド">&#8595;</button>
+      </div>
+      <div class="slide-hint">上下キー / スクロールで切替</div>
     </div>
   </form>
+  <?php if (!$is_embed): ?>
   <form method="post" onsubmit="return confirm('削除しますか？')" style="margin-top:-8px">
     <input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?php echo h($detail['id']); ?>"><button class="btn danger" type="submit">削除</button>
   </form>
+  <?php endif; ?>
   <?php else: ?>
   <article>
+    <?php if (!$is_embed): ?>
     <h1 style="font-size:30px;line-height:1.35;margin:0 0 6px"><?php echo h($detail['title']); ?></h1>
-    <div class="meta"><?php echo h(isset($detail['created_at']) ? $detail['created_at'] : ''); ?> / <?php echo (int)(isset($detail['views']) ? $detail['views'] : 0); ?> views / Source: <a href="<?php echo h(isset($detail['source_url']) ? $detail['source_url'] : ''); ?>" target="_blank" rel="noopener"><?php echo h(isset($detail['source_title']) && $detail['source_title'] !== '' ? $detail['source_title'] : (isset($detail['source_url']) ? $detail['source_url'] : '')); ?></a></div>
+    <div class="meta"><?php echo h(isset($detail['created_at']) ? $detail['created_at'] : ''); ?> / <?php echo (int)(isset($detail['views']) ? $detail['views'] : 0); ?> views<?php if ($logged_in): ?> / Source: <a href="<?php echo h(isset($detail['source_url']) ? $detail['source_url'] : ''); ?>" target="_blank" rel="noopener"><?php echo h(isset($detail['source_title']) && $detail['source_title'] !== '' ? $detail['source_title'] : (isset($detail['source_url']) ? $detail['source_url'] : '')); ?></a><?php endif; ?></div>
     <div class="tagrow" style="margin:10px 0"><?php if (!empty($detail['tags'])): foreach ($detail['tags'] as $t): ?><a class="tag" href="?tag=<?php echo urlencode($t); ?>">#<?php echo h($t); ?></a><?php endforeach; endif; ?></div>
     <p class="lead"><?php echo h(isset($detail['description']) ? $detail['description'] : ''); ?></p>
     <div class="article-tools">
       <?php if ($is_admin): ?><a class="btn primary" href="<?php echo h($THIS_FILE . '?id=' . urlencode($detail['id']) . '&edit=1'); ?>">編集</a><?php endif; ?>
-      <button class="btn" onclick="window.print()">PDF/印刷</button>
-      <a class="btn sub" href="<?php echo h($THIS_FILE . '?id=' . urlencode($detail['id']) . '&format=md'); ?>">Markdown</a>
-      <a class="btn sub" href="<?php echo h($THIS_FILE . '?id=' . urlencode($detail['id']) . '&format=html'); ?>">HTML</a>
-      <button class="btn sub" type="button" id="pptx-download">PPTX</button>
-      <a class="btn sub" href="<?php echo h($THIS_FILE . '?id=' . urlencode($detail['id']) . '&format=json'); ?>">JSON</a>
+      <button class="btn sub" type="button" id="copy-share">コピー</button>
+      <button class="btn sub" type="button" id="copy-embed">&lt;/&gt; 埋め込み</button>
+      <button class="btn" type="button" onclick="window.print()">PDF出力</button>
+      <a class="btn" href="<?php echo h($THIS_FILE . '?id=' . urlencode($detail['id']) . '&format=pptx'); ?>">PPTX出力</a>
     </div>
-    <div class="oss-note">表示はリール型スライドビュー、HTML出力は Marp、PPTX出力は PptxGenJS、編集UIは Tiptap を使う構成です。図解編集は Excalidraw / diagrams.net ブロックとして拡張します。</div>
+    <?php endif; ?>
     <div class="slide-player">
       <div class="pc-slide-nav">
         <button type="button" onclick="goSlide(currentSlide-1)" aria-label="前のスライド">&#8593;</button>
@@ -706,7 +704,7 @@ $jsonld = $detail ? array(
   <?php endif; ?>
 <?php else: ?>
   <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px">
-    <div><h2 style="margin:0;font-size:22px"><?php echo $tag_filter !== '' ? '#' . h($tag_filter) : '公開スライドブログ'; ?></h2><div class="meta">URL2AIシリーズのAIスライド型技術ブログ一覧</div></div>
+    <div><h2 style="margin:0;font-size:22px"><?php echo $tag_filter !== '' ? '#' . h($tag_filter) : '公開スライド要約'; ?></h2><div class="meta">URLから生成したスライド要約一覧</div></div>
   </div>
   <?php if (!$posts): ?><div class="msg err">まだスライドブログがありません。</div><?php endif; ?>
   <div class="grid">
@@ -724,16 +722,42 @@ $jsonld = $detail ? array(
   </div>
 <?php endif; ?>
 </main>
-<footer class="footer">USlideBlog / URL2AI series</footer>
-<script src="https://unpkg.com/reveal.js@5/dist/reveal.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js"></script>
+<?php if (!$is_embed): ?><footer class="footer">USlideBlog / URL2AI series</footer><?php endif; ?>
 <script>
-<?php if ($detail && empty($_GET['edit'])): ?>
-window.USLIDEBLOG_POST = <?php echo json_encode($detail, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
-<?php endif; ?>
 var currentSlide = 0;
 var slidePages = Array.from(document.querySelectorAll('.slide-page'));
 var slideFeed = document.getElementById('slide-feed');
+<?php if ($detail): ?>
+var USLIDE_SHARE_TEXT = <?php echo json_encode(trim($detail['title'] . "\n\n" . usb_excerpt(isset($detail['description']) ? $detail['description'] : '', 120) . "\n\n" . $page_url), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+var USLIDE_EMBED_CODE = <?php echo json_encode('<div class="uslideblog-embed">' . "\n" . '  <div style="font-weight:bold;margin-bottom:8px;">USlideBlog：' . h($detail['title']) . '</div>' . "\n" . '  <iframe src="' . h($embed_url) . '" width="100%" height="520" frameborder="0" allowfullscreen></iframe>' . "\n" . '</div>', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+<?php endif; ?>
+function copyToClipboard(text, btn) {
+  if (!text) return;
+  var oldText = btn ? btn.textContent : '';
+  function done(){
+    if (!btn) return;
+    btn.textContent = 'コピーしました';
+    btn.disabled = true;
+    setTimeout(function(){ btn.textContent = oldText; btn.disabled = false; }, 1200);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(function(){ fallbackCopy(text, done); });
+  } else {
+    fallbackCopy(text, done);
+  }
+}
+function fallbackCopy(text, done) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try { document.execCommand('copy'); if (done) done(); }
+  catch(e) {}
+  document.body.removeChild(ta);
+}
 function goSlide(idx) {
   if (!slidePages.length) return;
   if (idx < 0) idx = 0;
@@ -767,29 +791,10 @@ function goSlide(idx) {
   }
 })();
 (function(){
-  var btn = document.getElementById('pptx-download');
-  if (!btn || !window.USLIDEBLOG_POST) return;
-  btn.onclick = function(){
-    if (!window.pptxgen) {
-      location.href = '<?php echo $detail ? h($THIS_FILE . '?id=' . urlencode($detail['id']) . '&format=pptx') : ''; ?>';
-      return;
-    }
-    var post = window.USLIDEBLOG_POST;
-    var pptx = new pptxgen();
-    pptx.layout = 'LAYOUT_WIDE';
-    pptx.author = 'USlideBlog';
-    pptx.subject = post.description || post.title || '';
-    pptx.title = post.title || 'USlideBlog';
-    (post.slides || []).forEach(function(slide, i){
-      var s = pptx.addSlide();
-      var cover = i === 0 || slide.layout === 'cover';
-      s.background = { color: cover ? 'EFF6FF' : 'FFFFFF' };
-      s.addText(slide.title || post.title || '', { x: 0.65, y: cover ? 1.15 : 0.48, w: 11.1, h: cover ? 1.25 : 0.65, fontSize: cover ? 34 : 25, bold: true, color: '172033', fit: 'shrink' });
-      s.addText(slide.body || '', { x: 0.75, y: cover ? 2.65 : 1.45, w: 10.9, h: cover ? 2.5 : 4.4, fontSize: cover ? 20 : 17, color: '334155', fit: 'shrink', valign: 'mid' });
-      if (slide.note) s.addNotes(slide.note);
-    });
-    pptx.writeFile({ fileName: (post.id || 'uslideblog') + '.pptx' });
-  };
+  var share = document.getElementById('copy-share');
+  var embed = document.getElementById('copy-embed');
+  if (share) share.onclick = function(){ copyToClipboard(USLIDE_SHARE_TEXT, share); };
+  if (embed) embed.onclick = function(){ copyToClipboard(USLIDE_EMBED_CODE, embed); };
 })();
 (function(){
   var form = document.getElementById('generate-form');
@@ -810,27 +815,72 @@ function goSlide(idx) {
   };
 })();
 </script>
-<script type="module">
-import { Editor } from 'https://esm.sh/@tiptap/core@2.11.5';
-import StarterKit from 'https://esm.sh/@tiptap/starter-kit@2.11.5';
-
-document.querySelectorAll('.tiptap-editor').forEach(function(el) {
-  var source = el.previousElementSibling;
-  if (!source || source.tagName !== 'TEXTAREA') return;
-  var editor = new Editor({
-    element: el,
-    extensions: [StarterKit],
-    content: source.value ? source.value.replace(/\n/g, '<br>') : '',
-    onUpdate: function(ctx) {
-      source.value = ctx.editor.getText({ blockSeparator: "\n" });
+<?php if ($detail && isset($_GET['edit']) && $is_admin): ?>
+<script src="vendor/fabric.min.js"></script>
+<script>
+(function(){
+  if (!window.fabric) return;
+  var editors = [];
+  function fitText(obj, maxHeight, minSize) {
+    while (obj.calcTextHeight && obj.calcTextHeight() > maxHeight && obj.fontSize > minSize) {
+      obj.set('fontSize', obj.fontSize - 1);
     }
-  });
-  if (el.closest('form')) {
-    el.closest('form').addEventListener('submit', function() {
-      source.value = editor.getText({ blockSeparator: "\n" });
-    });
   }
+  document.querySelectorAll('.slide-canvas').forEach(function(node) {
+    var page = node.closest('.slide-page');
+    var wrap = node.closest('.fabric-wrap');
+    var textareas = page ? page.querySelectorAll('textarea') : [];
+    if (!wrap || textareas.length < 3) return;
+    var w = Math.max(320, wrap.clientWidth || 700);
+    var h = Math.max(260, wrap.clientHeight || 340);
+    node.width = w;
+    node.height = h;
+    var canvas = new fabric.Canvas(node, {
+      backgroundColor: 'rgba(255,255,255,0)',
+      selection: false,
+      preserveObjectStacking: true
+    });
+    var title = new fabric.Textbox(textareas[0].value || 'タイトル', {
+      left: 28, top: 26, width: w - 56,
+      fontSize: Math.max(20, Math.min(30, w / 24)),
+      fontWeight: 800, fill: '#172033', lineHeight: 1.16
+    });
+    var body = new fabric.Textbox(textareas[1].value || '本文', {
+      left: 32, top: Math.min(112, h * 0.28), width: w - 64,
+      fontSize: Math.max(13, Math.min(17, w / 46)),
+      fill: '#334155', lineHeight: 1.34
+    });
+    var note = new fabric.Textbox(textareas[2].value || '', {
+      left: 32, top: h - 64, width: w - 64,
+      fontSize: 11, fill: '#64748b', lineHeight: 1.25
+    });
+    fitText(title, 78, 16);
+    fitText(body, Math.max(120, h - 190), 11);
+    canvas.add(title, body, note);
+    canvas.setActiveObject(body);
+    function sync() {
+      textareas[0].value = title.text || '';
+      textareas[1].value = body.text || '';
+      textareas[2].value = note.text || '';
+    }
+    canvas.on('text:changed', function(e) {
+      if (e.target === title) fitText(title, 78, 16);
+      if (e.target === body) fitText(body, Math.max(120, h - 190), 11);
+      sync();
+    });
+    editors.push(sync);
+  });
+  window.usbSyncFabricEditors = function() { editors.forEach(function(fn) { fn(); }); };
+})();
+document.querySelectorAll('.slide-edit-form').forEach(function(form) {
+  form.addEventListener('submit', function() {
+    if (window.usbSyncFabricEditors) window.usbSyncFabricEditors();
+    var firstTitle = form.querySelector('textarea[name="slide_title[]"]');
+    var title = form.querySelector('input[name="title"]');
+    if (firstTitle && title) title.value = firstTitle.value;
+  });
 });
 </script>
+<?php endif; ?>
 </body>
 </html>
