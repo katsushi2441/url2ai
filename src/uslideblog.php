@@ -414,7 +414,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'tags' => array_values($tags),
                     'slides' => array_values($slides),
                     'theme' => isset($_POST['theme']) ? trim($_POST['theme']) : 'blue',
-                    'published' => !empty($_POST['published']) ? 1 : 0,
+                    'published' => 1,
                     'views' => 0,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
@@ -610,7 +610,6 @@ body.embed{background:#fff}.embed .main{max-width:none;padding:0}.embed .slide-p
       <input type="hidden" name="action" value="generate">
       <input class="input" type="url" name="source_url" placeholder="https://example.com/tech-article" required>
       <button class="btn primary" type="submit" id="generate-button">スライドブログ生成</button>
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)"><input type="checkbox" name="published" value="1" checked> 生成後に公開</label>
       <select name="theme"><option value="blue">Blue</option><option value="green">Green</option><option value="dark">Dark</option></select>
       <div class="generate-status" id="generate-status">URLを取得してAIでスライド構成を生成しています。30秒から90秒ほどかかることがあります。この画面のままお待ちください。</div>
     </form>
