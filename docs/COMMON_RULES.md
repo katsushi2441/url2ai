@@ -97,8 +97,34 @@ URL入力型アプリは、入力元に応じて取得方法を分ける。
 
 外部CDNに依存しない方針が必要な場合は、`src/vendor/` に配置して使う。
 
+## アクセス解析
+
+公開ページを持つURL2AIアプリには、Google Analytics と `simpletrack.php` を入れる。
+
+- GA: `AIGM_GTAG_ID` が設定されている場合だけ `gtag.js` を読み込む
+- simpletrack: `simpletrack.php?url=...&ref=...` を読み込む
+- OGP用やRSS用の軽量出力では、不要な場合は入れない
+- 通常のHTMLページでは入れ忘れない
+
+基本形:
+
+```php
+<?php if (AIGM_GTAG_ID !== ''): ?>
+<script async src="https://www.googletagmanager.com/gtag/js?id=<?php echo h(AIGM_GTAG_ID); ?>"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','<?php echo h(AIGM_GTAG_ID); ?>');</script>
+<?php endif; ?>
+<script>
+(function () {
+    var s = document.createElement('script');
+    s.src = '<?php echo h(AIGM_BASE_URL); ?>/simpletrack.php'
+        + '?url=' + encodeURIComponent(location.href)
+        + '&ref=' + encodeURIComponent(document.referrer);
+    document.head.appendChild(s);
+})();
+</script>
+```
+
 ## FTP反映
 
 `src/*.php` や `src/vendor/*` を変更したら、本番確認が必要な作業ではFTPアップロードまで行う。  
 ローカル修正だけで完了扱いにしない。
-

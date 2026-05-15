@@ -312,7 +312,7 @@ if (isset($_GET['feed'])) {
     header('Content-Type: application/rss+xml; charset=UTF-8');
     echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
     echo '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>' . "\n";
-    echo '<title>' . x($SITE_NAME . ' | URLスライド要約') . '</title>' . "\n";
+    echo '<title>' . x($SITE_NAME . ' | URL要約スライド') . '</title>' . "\n";
     echo '<link>' . x($BASE_URL . '/' . $THIS_FILE) . '</link>' . "\n";
     echo '<description>' . x('入力URLの内容を短いスライドに要約した記事一覧。') . '</description>' . "\n";
     echo '<language>ja</language>' . "\n";
@@ -499,7 +499,7 @@ if ($detail) {
     $page_type = 'article';
     $page_image = !empty($detail['image']) ? $detail['image'] : $DEFAULT_IMAGE;
 } else {
-    $page_title = $tag_filter !== '' ? '#' . $tag_filter . ' のスライド要約 | ' . $SITE_NAME : $SITE_NAME . ' | URLスライド要約';
+    $page_title = $tag_filter !== '' ? '#' . $tag_filter . ' の要約スライド | ' . $SITE_NAME : $SITE_NAME . ' | URL要約スライド';
     $page_description = '入力したURLの内容を、短く読みやすいスライド形式に要約するWebシステムです。';
     $page_url = $BASE_URL . '/' . $THIS_FILE . ($tag_filter !== '' ? '?tag=' . urlencode($tag_filter) : '');
     $page_type = 'website';
@@ -547,6 +547,15 @@ $embed_url = $detail ? $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($detail
 <script async src="https://www.googletagmanager.com/gtag/js?id=<?php echo h(AIGM_GTAG_ID); ?>"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','<?php echo h(AIGM_GTAG_ID); ?>');</script>
 <?php endif; ?>
+<script>
+(function () {
+    var s = document.createElement('script');
+    s.src = '<?php echo h($BASE_URL); ?>/simpletrack.php'
+        + '?url=' + encodeURIComponent(location.href)
+        + '&ref=' + encodeURIComponent(document.referrer);
+    document.head.appendChild(s);
+})();
+</script>
 <style>
 :root{--ink:#172033;--muted:#64748b;--line:#dbe3ef;--soft:#f6f8fb;--paper:#fff;--accent:#2563eb;--accent2:#14b8a6;--danger:#dc2626}
 *{box-sizing:border-box}body{margin:0;background:var(--soft);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic",Meiryo,sans-serif;letter-spacing:0;line-height:1.75}a{color:inherit}.top{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}.wrap{max-width:1180px;margin:0 auto;padding:12px 18px}.bar{display:flex;align-items:center;justify-content:space-between;gap:14px}.brand{text-decoration:none;display:flex;align-items:center;gap:10px;min-width:0}.logo{width:38px;height:38px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800}.brand b{display:block;font-size:19px;line-height:1}.brand span{display:block;font-size:12px;color:var(--muted);white-space:nowrap}.nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}.btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#fff;color:var(--ink);text-decoration:none;border-radius:6px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer;min-height:36px}.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.sub{background:#eef6ff;border-color:#bfdbfe;color:#1d4ed8}.btn.danger{background:#fff1f2;border-color:#fecdd3;color:#be123c}.hero{max-width:1180px;margin:0 auto;padding:34px 18px 18px}.hero h1{font-size:34px;line-height:1.35;margin:0 0 10px}.lead{max-width:780px;color:var(--muted);font-size:15px;margin:0}.genbox{margin-top:20px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px}.genbox form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}.input,.textarea,select{width:100%;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:#fff;font:inherit}.textarea{min-height:88px}.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.chip{display:inline-flex;border:1px solid #c7d2fe;background:#eef2ff;color:#3730a3;border-radius:999px;padding:3px 9px;font-size:12px;text-decoration:none;font-weight:700}.main{max-width:1180px;margin:0 auto;padding:16px 18px 54px}.msg{border-radius:8px;padding:12px 14px;margin-bottom:14px}.err{background:#fff1f2;border:1px solid #fecdd3;color:#be123c}.ok{background:#ecfdf5;border:1px solid #bbf7d0;color:#047857}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.card{background:#fff;border:1px solid var(--line);border-radius:8px;text-decoration:none;overflow:hidden;display:flex;flex-direction:column;min-height:250px}.thumb{height:128px;background:linear-gradient(135deg,#e0f2fe,#f0fdfa);display:flex;align-items:center;justify-content:center;color:#1d4ed8;font-weight:800;text-align:center;padding:14px}.thumb img{width:100%;height:100%;object-fit:cover}.cardbody{padding:14px;display:flex;flex-direction:column;gap:8px;flex:1}.card h2{font-size:16px;line-height:1.5;margin:0}.meta{font-size:12px;color:var(--muted)}.tagrow{display:flex;flex-wrap:wrap;gap:5px}.tag{font-size:11px;color:#0f766e;background:#f0fdfa;border:1px solid #99f6e4;border-radius:999px;padding:1px 7px;text-decoration:none}.slide-shell{display:grid;grid-template-columns:220px minmax(0,1fr);gap:18px;align-items:start}.toc{position:sticky;top:76px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px}.toc a{display:block;text-decoration:none;font-size:13px;color:var(--muted);padding:7px 8px;border-radius:5px}.toc a:hover{background:#f1f5f9;color:var(--ink)}.slides{display:grid;gap:16px}.slide{min-height:430px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:34px;display:flex;flex-direction:column;justify-content:center;box-shadow:0 10px 24px rgba(15,23,42,.05)}.slide.cover{background:linear-gradient(135deg,#eff6ff,#f0fdfa)}.slide h2{font-size:32px;line-height:1.35;margin:0 0 18px}.slide p{font-size:18px;line-height:1.9;margin:0;white-space:pre-wrap}.note{margin-top:20px;border-left:3px solid var(--accent2);padding-left:12px;color:var(--muted);font-size:14px}.article-tools{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 18px}.editor{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:16px}.editor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.slide-edit{border:1px solid var(--line);border-radius:8px;padding:12px;background:#fbfdff}.slide-edit h3{font-size:13px;margin:0 0 8px;color:var(--muted)}.footer{text-align:center;padding:24px 18px;color:var(--muted);font-size:12px}@media(max-width:860px){.bar{align-items:flex-start;flex-direction:column}.nav{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;width:100%}.genbox form{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.slide-shell{grid-template-columns:1fr}.toc{position:static}.editor-grid{grid-template-columns:1fr}.hero h1{font-size:28px}.slide{min-height:360px;padding:24px}.slide h2{font-size:25px}.slide p{font-size:16px}.brand span{white-space:normal}}@media print{.top,.genbox,.toc,.article-tools,.editor .article-tools,.footer{display:none}.hero,.main{max-width:none;padding:0}.slide-shell{display:block}.slide{page-break-after:always;border:0;box-shadow:none;min-height:auto;height:90vh}.slide h2{font-size:30px}}
@@ -583,7 +592,7 @@ body.embed{background:#fff}.embed .main{max-width:none;padding:0}.embed .slide-p
 <body class="<?php echo $is_embed ? 'embed' : ''; ?>">
 <?php if (!$is_embed): ?>
 <header class="top"><div class="wrap"><div class="bar">
-  <a class="brand" href="<?php echo h($THIS_FILE); ?>"><div class="logo">US</div><div><b>USlideBlog</b><span>URLをスライド要約へ</span></div></a>
+  <a class="brand" href="<?php echo h($THIS_FILE); ?>"><div class="logo">US</div><div><b>USlideBlog</b><span>URLを要約スライドへ</span></div></a>
   <nav class="nav">
     <a class="btn" href="knowradar.php">KnowRadar</a>
     <a class="btn" href="url2ai.html">URL2AI</a>
@@ -704,7 +713,7 @@ body.embed{background:#fff}.embed .main{max-width:none;padding:0}.embed .slide-p
   <?php endif; ?>
 <?php else: ?>
   <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px">
-    <div><h2 style="margin:0;font-size:22px"><?php echo $tag_filter !== '' ? '#' . h($tag_filter) : '公開スライド要約'; ?></h2><div class="meta">URLから生成したスライド要約一覧</div></div>
+    <div><h2 style="margin:0;font-size:22px"><?php echo $tag_filter !== '' ? '#' . h($tag_filter) : '公開要約スライド'; ?></h2><div class="meta">URLから生成した要約スライド一覧</div></div>
   </div>
   <?php if (!$posts): ?><div class="msg err">まだスライドブログがありません。</div><?php endif; ?>
   <div class="grid">

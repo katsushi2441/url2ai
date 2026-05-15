@@ -328,7 +328,7 @@ $services = array(
     array(
         'id'       => 'uslideblog',
         'name'     => 'USlideBlog',
-        'name_ja'  => 'URLスライド要約',
+        'name_ja'  => 'URL要約スライド',
         'emoji'    => '🖥️',
         'color'    => '#2563eb',
         'bg'       => '#eff6ff',
