@@ -99,6 +99,118 @@ function usb_extract_tweet_id($url) {
     }
     return '';
 }
+function usb_first_url_from_text($text) {
+    if (preg_match('#https?://[^\s<>"\']+#u', (string)$text, $m)) {
+        return rtrim($m[0], "。、，．,.)]}\n\r\t");
+    }
+    return '';
+}
+function usb_fetch_ogp_image($url) {
+    $url = trim((string)$url);
+    if (!preg_match('#^https?://#i', $url)) { return ''; }
+    $opts = array('http' => array(
+        'method' => 'GET',
+        'header' => "User-Agent: Mozilla/5.0 (compatible; USlideBlog/1.0)\r\nAccept: text/html,application/xhtml+xml\r\n",
+        'timeout' => 12,
+        'ignore_errors' => true,
+    ));
+    $html = @file_get_contents($url, false, stream_context_create($opts));
+    if (!$html) { return ''; }
+    if (strlen($html) > 500000) { $html = substr($html, 0, 500000); }
+    if (preg_match('/<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']/i', $html, $m) || preg_match('/<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']/i', $html, $m)) {
+        return usb_abs_url($m[1], $url);
+    }
+    return '';
+}
+function usb_x_default_image() {
+    global $BASE_URL;
+    return $BASE_URL . '/images/x.svg';
+}
+function usb_cached_display_image($url) {
+    global $DATA_DIR;
+    $url = trim((string)$url);
+    if ($url === '') { return ''; }
+    $cache_dir = $DATA_DIR . '/image_cache';
+    if (!is_dir($cache_dir)) { @mkdir($cache_dir, 0755, true); }
+    $cache_file = $cache_dir . '/' . sha1($url) . '.txt';
+    $tweet_id = usb_extract_tweet_id($url);
+    if (is_readable($cache_file) && filemtime($cache_file) > time() - 604800) {
+        $cached_image = trim((string)file_get_contents($cache_file));
+        if ($tweet_id === '') { return $cached_image; }
+        if ($cached_image !== '' && strpos($cached_image, 'icon-ios') === false) { return $cached_image; }
+    }
+    $image = '';
+    if ($tweet_id !== '') {
+        $tweet = usb_fetch_x_tweet($url);
+        if (is_array($tweet) && !empty($tweet['image'])) {
+            $image = $tweet['image'];
+        }
+    }
+    if ($image === '') {
+        $image = usb_fetch_ogp_image($url);
+    }
+    if ($image === '' && $tweet_id !== '') {
+        $image = usb_x_default_image();
+    }
+    if (is_dir($cache_dir) && is_writable($cache_dir)) {
+        @file_put_contents($cache_file, $image, LOCK_EX);
+    }
+    return $image;
+}
+function usb_fetch_aixsns_content($url) {
+    if (!preg_match('~^https?://aixec\.exbridge\.jp/sns\.php\?[^#]*\bid=(\d+)~i', (string)$url, $m)) {
+        return '';
+    }
+    $api = 'https://aixec.exbridge.jp/api.php?path=' . rawurlencode('posts/' . $m[1]);
+    $opts = array('http' => array(
+        'method' => 'GET',
+        'header' => "User-Agent: USlideBlog/1.0\r\nAccept: application/json\r\n",
+        'timeout' => 12,
+        'ignore_errors' => true,
+    ));
+    $res = @file_get_contents($api, false, stream_context_create($opts));
+    if (!$res) { return ''; }
+    $data = json_decode($res, true);
+    $post = isset($data['item']) && is_array($data['item']) ? $data['item'] : $data;
+    return isset($post['content']) ? trim(strip_tags((string)$post['content'])) : '';
+}
+function usb_aixsns_linked_image($url) {
+    global $DATA_DIR;
+    $url = trim((string)$url);
+    if ($url === '') { return ''; }
+    $cache_dir = $DATA_DIR . '/image_cache';
+    if (!is_dir($cache_dir)) { @mkdir($cache_dir, 0755, true); }
+    $cache_file = $cache_dir . '/' . sha1('aixsns-linked:' . $url) . '.txt';
+    if (is_readable($cache_file) && filemtime($cache_file) > time() - 604800) {
+        return trim((string)file_get_contents($cache_file));
+    }
+    $content = usb_fetch_aixsns_content($url);
+    $linked_url = usb_first_url_from_text($content);
+    $image = '';
+    if ($linked_url !== '' && $linked_url !== $url) {
+        $image = usb_cached_display_image($linked_url);
+    }
+    if (is_dir($cache_dir) && is_writable($cache_dir)) {
+        @file_put_contents($cache_file, $image, LOCK_EX);
+    }
+    return $image;
+}
+function usb_display_image($post) {
+    global $BASE_URL;
+    $image = isset($post['image']) ? trim((string)$post['image']) : '';
+    if ($image !== '') { return $image; }
+    $source_url = isset($post['source_url']) ? (string)$post['source_url'] : '';
+    if (usb_extract_tweet_id($source_url) !== '') {
+        $image = usb_cached_display_image($source_url);
+        if ($image !== '') { return $image; }
+    }
+    if (preg_match('~^https?://aixec\.exbridge\.jp/sns\.php\?~i', $source_url)) {
+        $image = usb_aixsns_linked_image($source_url);
+        if ($image !== '') { return $image; }
+        return 'https://aixec.exbridge.jp/images/sns.png';
+    }
+    return '';
+}
 function usb_fetch_x_tweet($url) {
     $tweet_id = usb_extract_tweet_id($url);
     if ($tweet_id === '') { return null; }
@@ -127,6 +239,8 @@ function usb_fetch_x_tweet($url) {
         $image = $tweet['media']['photos'][0]['url'];
     } else if (!empty($tweet['media']['videos'][0]['thumbnail_url'])) {
         $image = $tweet['media']['videos'][0]['thumbnail_url'];
+    } else {
+        $image = usb_x_default_image();
     }
     return array(
         'ok' => true,
@@ -161,11 +275,20 @@ function usb_fetch_aixsns_post($url) {
     }
     $title = trim(strtok($content, "\n"));
     if ($title === '') { $title = 'AIxSNS投稿 #' . $id; }
+    $linked_url = usb_first_url_from_text($content);
+    $image = '';
+    if ($linked_url !== '' && $linked_url !== $url) {
+        $image = usb_cached_display_image($linked_url);
+    }
+    if ($image === '') {
+        $image = usb_fetch_ogp_image($url);
+    }
+    if ($image === '') { $image = 'https://aixec.exbridge.jp/images/sns.png'; }
     return array(
         'ok' => true,
         'title' => mb_substr($title, 0, 100, 'UTF-8'),
         'description' => mb_substr($content, 0, 220, 'UTF-8'),
-        'image' => '',
+        'image' => $image,
         'body' => $content,
         'source_title' => 'AIxSNS投稿 #' . $id,
     );
@@ -413,7 +536,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'image' => $src['image'],
                     'tags' => array_values($tags),
                     'slides' => array_values($slides),
-                    'theme' => isset($_POST['theme']) ? trim($_POST['theme']) : 'blue',
                     'published' => 1,
                     'views' => 0,
                     'created_at' => date('Y-m-d H:i:s'),
@@ -436,7 +558,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $post['description'] = isset($_POST['description']) ? trim($_POST['description']) : '';
             $post['source_url'] = isset($_POST['source_url']) ? trim($_POST['source_url']) : '';
             $post['image'] = isset($_POST['image']) ? trim($_POST['image']) : '';
-            $post['theme'] = isset($_POST['theme']) ? trim($_POST['theme']) : 'blue';
             $post['published'] = !empty($_POST['published']) ? 1 : 0;
             $tag_text = isset($_POST['tags']) ? trim($_POST['tags']) : '';
             $tags = preg_split('/[,、\s]+/u', $tag_text);
@@ -497,7 +618,8 @@ if ($detail) {
     $page_description = isset($detail['description']) ? $detail['description'] : '';
     $page_url = $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($detail['id']);
     $page_type = 'article';
-    $page_image = !empty($detail['image']) ? $detail['image'] : $DEFAULT_IMAGE;
+    $display_image = usb_display_image($detail);
+    $page_image = $display_image !== '' ? $display_image : $DEFAULT_IMAGE;
 } else {
     $page_title = $tag_filter !== '' ? '#' . $tag_filter . ' の要約スライド | ' . $SITE_NAME : $SITE_NAME . ' | URL要約スライド';
     $page_description = '入力したURLの内容を、短く読みやすいスライド形式に要約するWebシステムです。';
@@ -610,7 +732,6 @@ body.embed{background:#fff}.embed .main{max-width:none;padding:0}.embed .slide-p
       <input type="hidden" name="action" value="generate">
       <input class="input" type="url" name="source_url" placeholder="https://example.com/tech-article" required>
       <button class="btn primary" type="submit" id="generate-button">スライドブログ生成</button>
-      <select name="theme"><option value="blue">Blue</option><option value="green">Green</option><option value="dark">Dark</option></select>
       <div class="generate-status" id="generate-status">URLを取得してAIでスライド構成を生成しています。30秒から90秒ほどかかることがあります。この画面のままお待ちください。</div>
     </form>
   </div>
@@ -632,7 +753,6 @@ body.embed{background:#fff}.embed .main{max-width:none;padding:0}.embed .slide-p
     <input type="hidden" name="source_url" value="<?php echo h(isset($detail['source_url']) ? $detail['source_url'] : ''); ?>">
     <input type="hidden" name="image" value="<?php echo h(isset($detail['image']) ? $detail['image'] : ''); ?>">
     <input type="hidden" name="tags" value="<?php echo h(!empty($detail['tags']) ? implode(',', $detail['tags']) : ''); ?>">
-    <input type="hidden" name="theme" value="<?php echo h(isset($detail['theme']) ? $detail['theme'] : 'blue'); ?>">
     <input type="hidden" name="published" value="<?php echo !empty($detail['published']) ? '1' : '0'; ?>">
     <div class="article-tools">
       <button class="btn primary" type="submit">保存</button>
@@ -718,7 +838,8 @@ body.embed{background:#fff}.embed .main{max-width:none;padding:0}.embed .slide-p
   <div class="grid">
   <?php foreach ($posts as $p): if (empty($p['published']) && !$is_admin) { continue; } ?>
     <a class="card" href="<?php echo h($THIS_FILE . '?id=' . urlencode($p['id'])); ?>">
-      <div class="thumb"><?php if (!empty($p['image'])): ?><img src="<?php echo h($p['image']); ?>" alt=""><?php else: ?>USlideBlog<?php endif; ?></div>
+      <?php $card_image = usb_display_image($p); ?>
+      <div class="thumb"><?php if ($card_image !== ''): ?><img src="<?php echo h($card_image); ?>" alt=""><?php else: ?>USlideBlog<?php endif; ?></div>
       <div class="cardbody">
         <h2><?php echo h($p['title']); ?></h2>
         <div class="meta"><?php echo h(isset($p['created_at']) ? $p['created_at'] : ''); ?> / <?php echo (int)(isset($p['views']) ? $p['views'] : 0); ?> views</div>
