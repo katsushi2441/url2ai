@@ -84,8 +84,36 @@ OLLAMA_MODEL = os.environ.get(
     CONF.get("ollama", {}).get("default_model", "gemma4:e4b"),
 )
 FINREPORT_PARAGRAPH_STATUS = os.environ.get("FINREPORT_PARAGRAPH_STATUS", "published")
-RUN_HOURS_JST = [3, 9, 15, 21]
-MAX_ITEMS_PER_DAY = int(os.environ.get("FINREPORT_WORKER_MAX_ITEMS", "4"))
+
+
+def parse_run_hours(raw: str) -> list[int]:
+    hours: list[int] = []
+    for part in re.split(r"[,\s]+", raw.strip()):
+        if not part:
+            continue
+        try:
+            hour = int(part)
+        except ValueError:
+            log(f"ignore invalid run hour: {part}")
+            continue
+        if 0 <= hour <= 23 and hour not in hours:
+            hours.append(hour)
+        else:
+            log(f"ignore invalid run hour: {part}")
+    return sorted(hours)
+
+
+def parse_positive_int(raw: str, default: int) -> int:
+    try:
+        value = int(raw)
+    except ValueError:
+        log(f"ignore invalid positive integer: {raw}")
+        return default
+    return max(1, value)
+
+
+RUN_HOURS_JST = parse_run_hours(os.environ.get("FINREPORT_WORKER_RUN_HOURS", "9,21")) or [9, 21]
+MAX_ITEMS_PER_DAY = parse_positive_int(os.environ.get("FINREPORT_WORKER_MAX_ITEMS", "2"), 2)
 BANKR_DISCOVER_URL = "https://bankr.bot/discover/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3"
 
 GOOGLE_NEWS_FEEDS = [
@@ -380,12 +408,17 @@ def process_candidates(dry_run: bool) -> int:
 
     processed_news_ids = set(state.get("processed_news_ids", []))
     queries_today = set(state.get("queries_today", []))
+    remaining_today = MAX_ITEMS_PER_DAY - len(queries_today)
+    if remaining_today <= 0:
+        log(f"daily report limit reached: {len(queries_today)}/{MAX_ITEMS_PER_DAY}")
+        return 0
+
     fresh_news = [item for item in fetch_news_items() if item["news_id"] not in processed_news_ids]
     if not fresh_news:
         log("new news items: 0")
         return 0
 
-    candidates = select_report_queries(fresh_news, MAX_ITEMS_PER_DAY)
+    candidates = select_report_queries(fresh_news, remaining_today)
     if not candidates:
         log("selected report topics: 0")
         return 0
@@ -402,6 +435,8 @@ def process_candidates(dry_run: bool) -> int:
             log(f"dry-run candidate: {query} <- {item['title']}")
             queries_today.add(query.lower())
             created += 1
+            if created >= remaining_today:
+                break
             continue
         try:
             result = generate_finreport(query)
@@ -429,6 +464,8 @@ def process_candidates(dry_run: bool) -> int:
         generated_items.append(report_item)
         queries_today.add(query.lower())
         created += 1
+        if created >= remaining_today:
+            break
 
     state["processed_news_ids"] = list(processed_news_ids)[-500:]
     state["queries_today"] = list(queries_today)

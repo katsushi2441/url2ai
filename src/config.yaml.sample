@@ -20,6 +20,9 @@ x_api:
 
 finreport:
   api_url:
+  # 自動生成ワーカーのデフォルトは環境変数で調整します:
+  # FINREPORT_WORKER_RUN_HOURS=9,21
+  # FINREPORT_WORKER_MAX_ITEMS=2
 
 polymarket:
   api_url:

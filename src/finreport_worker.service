@@ -11,6 +11,8 @@ Restart=always
 RestartSec=20
 Environment=PYTHONUNBUFFERED=1
 Environment=PARAGRAPH_API_KEY=
+Environment=FINREPORT_WORKER_RUN_HOURS=9,21
+Environment=FINREPORT_WORKER_MAX_ITEMS=2
 StandardOutput=append:/home/kojima/finreport_worker.log
 StandardError=append:/home/kojima/finreport_worker.log
 
