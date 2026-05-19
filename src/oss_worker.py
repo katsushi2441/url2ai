@@ -19,8 +19,6 @@ import logging
 
 # ========== 設定 ==========
 API_URL  = 'https://aiknowledgecms.exbridge.jp/saveoss.php'
-OLLAMA   = 'https://exbridge.ddns.net/api/generate'
-MODEL    = 'gemma4:e4b'
 LOG_FILE = os.path.expanduser('~/oss_worker.log')
 
 def _load_config():
@@ -44,19 +42,33 @@ def _load_config():
 
 _conf = _load_config()
 
+OLLAMA = os.environ.get(
+    'OLLAMA_API',
+    _conf.get('ollama', {}).get('api_url', 'https://exbridge.ddns.net/api/generate')
+)
+MODEL = os.environ.get(
+    'OLLAMA_MODEL',
+    _conf.get('ollama', {}).get('default_model', 'gemma4:e4b')
+)
+OLLAMA_FALLBACK_API = os.environ.get('OLLAMA_FALLBACK_API', 'http://127.0.0.1:11434/api/generate')
+OLLAMA_FALLBACK_MODEL = os.environ.get('OLLAMA_FALLBACK_MODEL', 'gemma4:26b')
+OLLAMA_TIMEOUT = int(os.environ.get('OSS_WORKER_OLLAMA_TIMEOUT', '15'))
+_ollama_primary_failed = False
+
 _pg_env = os.environ.get('PARAGRAPH_API_KEY')
 PARAGRAPH_API_KEY = _pg_env if _pg_env is not None else _conf.get('paragraph', {}).get('api_key', '')
 PARAGRAPH_API_URL = 'https://public.api.paragraph.com/api/v1/posts'
 BANKR_DISCOVER_URL = 'https://bankr.bot/discover/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3'
 
-# 1日4回実行する時刻（24h）
-DAILY_HOURS  = [6, 12, 18, 0]
-DAILY_TOP_N  = 3   # 1回あたり何件登録するか
+# 1日1回実行する時刻（24h）
+DAILY_HOURS  = [6]
+DAILY_TOP_N  = 2   # 1回あたり何件登録するか
 
-# 週間トレンドは月曜6時のみ
+# 週間トレンドの追加実行はデフォルト無効
+WEEKLY_ENABLED = False
 WEEKLY_DAY   = 0   # 0=月曜
 WEEKLY_HOUR  = 6
-WEEKLY_TOP_N = 5
+WEEKLY_TOP_N = 2
 
 SKIP_REPO_WORDS = [
     'awesome', 'collection', 'list', 'resources', 'roadmap',
@@ -263,18 +275,38 @@ def fetch_github_readme(github_url):
     return ''
 
 def ollama_request(prompt):
+    global _ollama_primary_failed
+    endpoints = [(OLLAMA_FALLBACK_API, OLLAMA_FALLBACK_MODEL)] if _ollama_primary_failed else [
+        (OLLAMA, MODEL),
+        (OLLAMA_FALLBACK_API, OLLAMA_FALLBACK_MODEL),
+    ]
+    for endpoint, model in endpoints:
+        response_text = _ollama_request_once(endpoint, model, prompt)
+        if response_text:
+            return response_text
+        if endpoint != OLLAMA_FALLBACK_API:
+            _ollama_primary_failed = True
+            log.warning('Ollama primary failed; fallback to %s model=%s', OLLAMA_FALLBACK_API, OLLAMA_FALLBACK_MODEL)
+    return ''
+
+def _ollama_request_once(endpoint, model, prompt):
     payload = json.dumps({
-        'model': MODEL, 'prompt': prompt, 'stream': False
+        'model': model, 'prompt': prompt, 'stream': False
     }, ensure_ascii=False)
     cmd = [
-        'curl', '-s', '--max-time', '120',
-        OLLAMA,
+        'curl', '-sS', '--max-time', str(OLLAMA_TIMEOUT),
+        endpoint,
         '-H', 'Content-Type: application/json',
         '-d', payload
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
     raw = result.stdout.strip()
     if not raw:
+        err = result.stderr.strip()
+        if err:
+            log.warning('Ollama応答なし: endpoint=%s model=%s error=%s', endpoint, model, err[:200])
+        else:
+            log.warning('Ollama応答なし: endpoint=%s model=%s returncode=%s', endpoint, model, result.returncode)
         return ''
 
     response_text = ''
@@ -295,7 +327,7 @@ def ollama_request(prompt):
             data = json.loads(raw)
             response_text = data.get('response', '')
         except Exception:
-            log.warning('Ollama応答エラー: %s', raw[:100])
+            log.warning('Ollama応答エラー: endpoint=%s model=%s raw=%s', endpoint, model, raw[:100])
             return ''
 
     response_text = '\n'.join(line.strip() for line in response_text.splitlines())
@@ -555,7 +587,7 @@ def main():
         date = now.date()
         key  = (date, hour)
 
-        # デイリー4回実行チェック
+        # デイリー実行チェック
         if hour in DAILY_HOURS and key not in done:
             done[key] = True
             try:
@@ -563,8 +595,8 @@ def main():
             except Exception as e:
                 log.error('デイリージョブエラー: %s', e)
 
-            # 月曜6時は週間トレンドも追加実行
-            if now.weekday() == WEEKLY_DAY and hour == WEEKLY_HOUR:
+            # 週間トレンドの追加実行（必要なときだけ有効化）
+            if WEEKLY_ENABLED and now.weekday() == WEEKLY_DAY and hour == WEEKLY_HOUR:
                 weekly_key = (date, 'weekly')
                 if weekly_key not in done:
                     done[weekly_key] = True
