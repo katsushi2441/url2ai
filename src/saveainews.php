@@ -3,6 +3,13 @@ require_once __DIR__ . '/config.php';
 date_default_timezone_set('Asia/Tokyo');
 header('Content-Type: application/json; charset=UTF-8');
 
+if (!defined('OLLAMA_API')) {
+    define('OLLAMA_API', 'https://exbridge.ddns.net/api/generate');
+}
+if (!defined('OLLAMA_MODEL')) {
+    define('OLLAMA_MODEL', 'gemma4:e4b');
+}
+
 define('DATA_FILE', __DIR__ . '/data/ainews_posts.json');
 define('AIXEC_SNS_API_URL', 'https://aixec.exbridge.jp/api.php?path=posts');
 define('AINEWS_BASE_URL', 'https://aiknowledgecms.exbridge.jp/ainews.php');
