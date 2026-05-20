@@ -89,6 +89,34 @@ function ainews_strip_urls($text) {
     return trim(preg_replace('/[ \t]+/u', ' ', $text));
 }
 
+function ainews_clean_utf8($value) {
+    if (is_array($value)) {
+        $clean = array();
+        foreach ($value as $k => $v) {
+            $clean[$k] = ainews_clean_utf8($v);
+        }
+        return $clean;
+    }
+    if (is_string($value)) {
+        $value = iconv('UTF-8', 'UTF-8//IGNORE', $value);
+        return $value === false ? '' : $value;
+    }
+    return $value;
+}
+
+function ainews_json_response($data) {
+    $data = ainews_clean_utf8($data);
+    $json = json_encode($data, JSON_UNESCAPED_UNICODE);
+    if ($json === false) {
+        $json = json_encode(array(
+            'status' => 'error',
+            'error' => 'JSON生成に失敗しました: ' . json_last_error_msg(),
+        ));
+    }
+    echo $json;
+    exit;
+}
+
 function ainews_normalize_encoding($enc) {
     $enc = strtoupper(trim((string)$enc, " \t\r\n\"'"));
     $enc = str_replace('_', '-', $enc);
@@ -110,8 +138,7 @@ function ainews_normalize_encoding($enc) {
 session_start();
 $session_user = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
 if ($session_user !== AIGM_ADMIN) {
-    echo json_encode(array('status' => 'error', 'error' => '権限がありません'));
-    exit;
+    ainews_json_response(array('status' => 'error', 'error' => '権限がありません'));
 }
 
 $input     = json_decode(file_get_contents('php://input'), true);
@@ -120,8 +147,7 @@ $action    = isset($input['action'])    ? $input['action']          : '';
 $tweet_url = isset($input['tweet_url']) ? trim($input['tweet_url']) : '';
 
 if ($action !== 'register' || $tweet_url === '') {
-    echo json_encode(array('status' => 'error', 'error' => '無効なリクエスト'));
-    exit;
+    ainews_json_response(array('status' => 'error', 'error' => '無効なリクエスト'));
 }
 
 /* 既存データ読み込み */
@@ -134,15 +160,13 @@ if (file_exists(DATA_FILE)) {
 /* 重複チェック */
 foreach ($posts as $p) {
     if (isset($p['tweet_url']) && $p['tweet_url'] === $tweet_url) {
-        echo json_encode(array('status' => 'duplicate', 'title' => isset($p['title']) ? $p['title'] : $tweet_url));
-        exit;
+        ainews_json_response(array('status' => 'duplicate', 'title' => isset($p['title']) ? $p['title'] : $tweet_url));
     }
 }
 
 /* fxtwitter でX投稿取得 */
 if (!preg_match('/(\d{15,20})/', $tweet_url, $m)) {
-    echo json_encode(array('status' => 'error', 'error' => 'tweet_id取得失敗'));
-    exit;
+    ainews_json_response(array('status' => 'error', 'error' => 'tweet_id取得失敗'));
 }
 $tweet_id = $m[1];
 
@@ -155,14 +179,12 @@ $fx_opts = array('http' => array(
 
 $fx_res = @file_get_contents('https://api.fxtwitter.com/i/status/' . $tweet_id, false, stream_context_create($fx_opts));
 if (!$fx_res) {
-    echo json_encode(array('status' => 'error', 'error' => 'X投稿取得失敗'));
-    exit;
+    ainews_json_response(array('status' => 'error', 'error' => 'X投稿取得失敗'));
 }
 
 $fx = json_decode($fx_res, true);
 if (empty($fx['tweet'])) {
-    echo json_encode(array('status' => 'error', 'error' => 'ツイートデータなし'));
-    exit;
+    ainews_json_response(array('status' => 'error', 'error' => 'ツイートデータなし'));
 }
 
 $tweet      = $fx['tweet'];
@@ -262,7 +284,7 @@ $prompt = "以下はX投稿と記事内容です。
 @{$author}: {$tweet_text}
 {$article_context}
 
-考察とタグを出力してください。
+考察とタグを出力してください。前置き、表、Markdown見出し、追加説明は禁止です。
 
 形式:
 考察: xxx
@@ -271,7 +293,11 @@ $prompt = "以下はX投稿と記事内容です。
 $payload = json_encode(array(
     'model'   => OLLAMA_MODEL,
     'prompt'  => $prompt,
-    'stream'  => false
+    'stream'  => false,
+    'options' => array(
+        'temperature' => 0.2,
+        'num_predict' => 512,
+    )
 ), JSON_UNESCAPED_UNICODE);
 
 $ollama_opts = array('http' => array(
@@ -330,9 +356,11 @@ $new_post = array(
 
 array_unshift($posts, $new_post);
 
-file_put_contents(DATA_FILE, json_encode($posts, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+$save_json = json_encode(ainews_clean_utf8($posts), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+if ($save_json === false || file_put_contents(DATA_FILE, $save_json) === false) {
+    ainews_json_response(array('status' => 'error', 'error' => '保存に失敗しました'));
+}
 
 $sns_notice = ainews_post_sns_notice($new_post);
 
-echo json_encode(array('status' => 'ok', 'title' => $title, 'sns_notice' => $sns_notice), JSON_UNESCAPED_UNICODE);
-exit;
+ainews_json_response(array('status' => 'ok', 'title' => $title, 'sns_notice' => $sns_notice));
