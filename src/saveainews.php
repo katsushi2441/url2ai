@@ -89,6 +89,24 @@ function ainews_strip_urls($text) {
     return trim(preg_replace('/[ \t]+/u', ' ', $text));
 }
 
+function ainews_normalize_encoding($enc) {
+    $enc = strtoupper(trim((string)$enc, " \t\r\n\"'"));
+    $enc = str_replace('_', '-', $enc);
+    if ($enc === 'SHIFT-JIS' || $enc === 'SJIS' || $enc === 'WINDOWS-31J' || $enc === 'CP932') {
+        return 'SJIS-win';
+    }
+    if ($enc === 'UTF8') {
+        return 'UTF-8';
+    }
+    if ($enc === 'EUCJP') {
+        return 'EUC-JP';
+    }
+    if ($enc === 'ISO-2022JP') {
+        return 'ISO-2022-JP';
+    }
+    return $enc;
+}
+
 session_start();
 $session_user = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
 if ($session_user !== AIGM_ADMIN) {
@@ -190,8 +208,8 @@ if (!empty($article_urls)) {
         $enc = '';
         if (isset($http_response_header)) {
             foreach ($http_response_header as $h) {
-                if (preg_match('/charset=([a-zA-Z0-9\-]+)/i', $h, $m2)) {
-                    $enc = strtoupper($m2[1]);
+                if (preg_match('/charset\s*=\s*["\']?([a-zA-Z0-9_\-]+)/i', $h, $m2)) {
+                    $enc = ainews_normalize_encoding($m2[1]);
                     break;
                 }
             }
@@ -201,9 +219,10 @@ if (!empty($article_urls)) {
         if (!$enc) {
             $enc = mb_detect_encoding($html, 'UTF-8, SJIS-win, EUC-JP, ISO-2022-JP', true);
         }
+        $enc = ainews_normalize_encoding($enc);
 
         // === ③ UTF-8に統一 ===
-        if ($enc) {
+        if ($enc && in_array($enc, mb_list_encodings(), true)) {
             $html = mb_convert_encoding($html, 'UTF-8', $enc);
         } else {
             $html = mb_convert_encoding($html, 'UTF-8', 'auto');
@@ -281,6 +300,10 @@ if ($res) {
             $t = preg_replace('/^#+/u', '', trim($t));
             if ($t !== '') $tags[] = $t;
         }
+    }
+
+    if ($summary === '' && $response !== '') {
+        $summary = trim(mb_substr($response, 0, 800));
     }
 }
 
