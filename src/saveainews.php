@@ -297,28 +297,25 @@ if ($title === '') {
 }
 
 /* Ollama */
-$article_context = $body ? "\n\n【記事本文】\n{$body}" : '';
+$article_excerpt = $body ? trim(mb_substr($body, 0, 900)) : '';
+$article_context = $article_excerpt ? "\n記事抜粋: {$article_excerpt}" : '';
 
-$prompt = "以下はX投稿と記事内容です。
+$prompt = "以下はX投稿と記事タイトルです。
 
-【X投稿】
-@{$author}: {$tweet_text}
+タイトル: {$title}
+X投稿: @{$author}: {$tweet_text}
 {$article_context}
 
-考察とタグを出力してください。前置き、表、Markdown見出し、追加説明は禁止です。
+ニュースの論点を短く考察し、タグを1つ出してください。
 
 形式:
 考察: xxx
-タグ: a,b,c";
+タグ: xxx";
 
 $payload = json_encode(array(
     'model'   => OLLAMA_MODEL,
     'prompt'  => $prompt,
-    'stream'  => false,
-    'options' => array(
-        'temperature' => 0.2,
-        'num_predict' => 512,
-    )
+    'stream'  => false
 ), JSON_UNESCAPED_UNICODE);
 
 $ollama_opts = array('http' => array(
@@ -347,6 +344,12 @@ if ($res) {
             $t = preg_replace('/^#+/u', '', trim($t));
             if ($t !== '') $tags[] = $t;
         }
+    } elseif (preg_match('/(?:\*\*)?タグ(?:\*\*)?\s*\n\s*#?([^\s,、，\n]+)/u', $response, $tm2)) {
+        $tags[] = preg_replace('/^#+/u', '', trim($tm2[1]));
+    }
+
+    if ($summary === '' && preg_match('/(?:\*\*)?考察(?:\*\*)?\s*\n\s*(.+?)(?=(?:\*\*)?タグ(?:\*\*)?|\z)/su', $response, $sm)) {
+        $summary = trim($sm[1]);
     }
 
     if ($summary === '' && $response !== '') {
