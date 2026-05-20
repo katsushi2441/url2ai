@@ -3,6 +3,13 @@ require_once __DIR__ . '/config.php';
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
+if (!defined('OLLAMA_API')) {
+    define('OLLAMA_API', 'https://exbridge.ddns.net/api/generate');
+}
+if (!defined('OLLAMA_MODEL')) {
+    define('OLLAMA_MODEL', 'gemma4:e4b');
+}
+
 $ADMIN     = 'xb_bittensor';
 $DATA_DIR  = __DIR__ . '/data';
 $DATA_FILE = $DATA_DIR . '/oss_posts.json'; // 旧形式（移行用）
@@ -53,6 +60,20 @@ function oss_delete_post($id) {
     $file = oss_post_file($id);
     if (file_exists($file)) {
         return unlink($file);
+    }
+    return false;
+}
+
+function oss_is_failed_ai_text($text) {
+    $text = trim((string)$text);
+    if ($text === '') {
+        return true;
+    }
+    if (preg_match('/^(申し訳|すみません|解析できません|分析できません|考察できません|生成できません|エラー)/u', $text)) {
+        return true;
+    }
+    if (stripos($text, 'Ollama') !== false && stripos($text, 'failed') !== false) {
+        return true;
     }
     return false;
 }
@@ -226,7 +247,15 @@ if ($action === 'delete') {
 // ========== Ollama呼び出し ==========
 function call_ollama($prompt) {
     $payload = json_encode(
-        array('model' => OLLAMA_MODEL, 'prompt' => $prompt, 'stream' => false),
+        array(
+            'model' => OLLAMA_MODEL,
+            'prompt' => $prompt,
+            'stream' => false,
+            'options' => array(
+                'temperature' => 0.2,
+                'num_predict' => 512,
+            )
+        ),
         JSON_UNESCAPED_UNICODE
     );
     $opts = array(
@@ -246,7 +275,8 @@ function call_ollama($prompt) {
     $lines    = explode("\n", $response);
     $trimmed  = array();
     foreach ($lines as $l) { $trimmed[] = trim($l); }
-    return trim(implode("\n", $trimmed));
+    $text = trim(implode("\n", $trimmed));
+    return oss_is_failed_ai_text($text) ? '' : $text;
 }
 
 // ========== タイトル抽出（改善版） ==========
@@ -444,6 +474,11 @@ if ($action === 'manual_register') {
 
     $analysis  = call_ollama($analysis_prompt);
     $post_text = call_ollama($post_prompt);
+    if (oss_is_failed_ai_text($analysis) || oss_is_failed_ai_text($post_text)) {
+        http_response_code(500);
+        echo json_encode(array('error' => 'Ollamaの考察生成に失敗したため登録しませんでした'), JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 
     $tags      = extract_tags($post_text, $reponame);
     $tag_str   = implode(' ', array_map(function($t){ return '#' . $t; }, $tags));
@@ -650,6 +685,11 @@ $tags       = array_slice(array_values(array_filter($tags, function($t) { return
 if (!$github_url || !$title) {
     http_response_code(400);
     echo json_encode(array('error' => 'github_url and title required'));
+    exit;
+}
+if (oss_is_failed_ai_text($analysis) || oss_is_failed_ai_text($post_text)) {
+    http_response_code(500);
+    echo json_encode(array('error' => 'Ollamaの考察生成に失敗したため登録しませんでした'), JSON_UNESCAPED_UNICODE);
     exit;
 }
 

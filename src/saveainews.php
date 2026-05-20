@@ -142,6 +142,20 @@ function ainews_normalize_encoding($enc) {
     return $enc;
 }
 
+function ainews_is_failed_analysis($summary, $tags) {
+    $summary = trim((string)$summary);
+    if ($summary === '' || $summary === '考察できませんでした。') {
+        return true;
+    }
+    if (empty($tags)) {
+        return true;
+    }
+    if (preg_match('/^(申し訳|すみません|解析できません|分析できません|考察できません|エラー)/u', $summary)) {
+        return true;
+    }
+    return false;
+}
+
 session_start();
 $session_user = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
 if ($session_user !== AIGM_ADMIN) {
@@ -340,12 +354,16 @@ if ($res) {
     }
 }
 
-if ($summary === '') {
-    $summary = '考察できませんでした。';
-}
 $tags = array_slice(array_values(array_unique(array_filter($tags, function($t) {
     return trim((string)$t) !== '';
 }))), 0, 1);
+
+if (ainews_is_failed_analysis($summary, $tags)) {
+    ainews_json_response(array(
+        'status' => 'error',
+        'error' => 'Ollamaの考察生成に失敗したため登録しませんでした',
+    ));
+}
 
 /* 保存 */
 $id = md5($tweet_url . date('YmdHis'));
