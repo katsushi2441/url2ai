@@ -1,43 +1,13 @@
 <?php
-session_start();
+require_once __DIR__ . '/auth_common.php';
 date_default_timezone_set("Asia/Tokyo");
 $DATA_DIR     = __DIR__ . '/data';
 $DATA_FILE    = $DATA_DIR . '/oss_posts.json'; // 旧形式（移行用）
-$BASE_URL     = 'https://aiknowledgecms.exbridge.jp';
+$BASE_URL     = AIGM_BASE_URL;
 $THIS_FILE    = 'oss.php';
 $SITE_NAME    = 'AIGM OSS Timeline';
-$ADMIN        = 'xb_bittensor';
+$ADMIN        = AIGM_ADMIN;
 
-/* X API キー読み込み */
-$x_keys_file = __DIR__ . '/x_api_keys.sh';
-$x_keys = array();
-if (file_exists($x_keys_file)) {
-    $lines = file($x_keys_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        if (preg_match('/(?:export\s+)?(\w+)=["\']?([^"\'#\r\n]*)["\']?/', $line, $m)) {
-            $x_keys[trim($m[1])] = trim($m[2]);
-        }
-    }
-}
-$x_client_id     = isset($x_keys['X_API_KEY'])    ? $x_keys['X_API_KEY']    : '';
-$x_client_secret = isset($x_keys['X_API_SECRET']) ? $x_keys['X_API_SECRET'] : '';
-$x_redirect_uri  = $BASE_URL . '/oss.php';
-
-function oss_base64url($d) { return rtrim(strtr(base64_encode($d), '+/', '-_'), '='); }
-function oss_gen_verifier() {
-    $b = ''; for ($i = 0; $i < 32; $i++) { $b .= chr(mt_rand(0, 255)); } return oss_base64url($b);
-}
-function oss_gen_challenge($v) { return oss_base64url(hash('sha256', $v, true)); }
-function oss_x_post($url, $data, $headers) {
-    $opts = array('http' => array('method' => 'POST', 'header' => implode("\r\n", $headers) . "\r\n", 'content' => $data, 'timeout' => 12, 'ignore_errors' => true));
-    $r = @file_get_contents($url, false, stream_context_create($opts));
-    if (!$r) { $r = '{}'; } return json_decode($r, true);
-}
-function oss_x_get($url, $token) {
-    $opts = array('http' => array('method' => 'GET', 'header' => "Authorization: Bearer $token\r\nUser-Agent: OSSTimeline/1.0\r\n", 'timeout' => 12, 'ignore_errors' => true));
-    $r = @file_get_contents($url, false, stream_context_create($opts));
-    if (!$r) { $r = '{}'; } return json_decode($r, true);
-}
 function oss_is_valid_paragraph_url($url) {
     $url = trim((string)$url);
     if ($url === '') {
@@ -54,36 +24,19 @@ function oss_is_valid_paragraph_url($url) {
     return (strpos($host, 'paragraph.com') !== false || strpos($host, 'paragraph.xyz') !== false);
 }
 
-if (isset($_GET['oss_logout'])) { session_destroy(); header('Location: ' . $x_redirect_uri); exit; }
-if (isset($_GET['oss_login'])) {
-    $ver = oss_gen_verifier();
-    $chal = oss_gen_challenge($ver);
-    $state = md5(uniqid('', true));
-    $_SESSION['oss_code_verifier'] = $ver;
-    $_SESSION['oss_oauth_state']   = $state;
-    $p = array('response_type' => 'code', 'client_id' => $x_client_id, 'redirect_uri' => $x_redirect_uri,
-               'scope' => 'tweet.read users.read', 'state' => $state, 'code_challenge' => $chal, 'code_challenge_method' => 'S256');
-    header('Location: https://twitter.com/i/oauth2/authorize?' . http_build_query($p)); exit;
+if (isset($_GET['oss_logout'])) {
+    header('Location: ' . url2ai_auth_logout_url('/' . $THIS_FILE));
+    exit;
 }
-if (isset($_GET['code']) && isset($_GET['state']) && isset($_SESSION['oss_oauth_state'])) {
-    if ($_GET['state'] === $_SESSION['oss_oauth_state']) {
-        $post = http_build_query(array('grant_type' => 'authorization_code', 'code' => $_GET['code'],
-            'redirect_uri' => $x_redirect_uri, 'code_verifier' => $_SESSION['oss_code_verifier'], 'client_id' => $x_client_id));
-        $cred = base64_encode($x_client_id . ':' . $x_client_secret);
-        $data = oss_x_post('https://api.twitter.com/2/oauth2/token', $post, array('Content-Type: application/x-www-form-urlencoded', 'Authorization: Basic ' . $cred));
-        if (isset($data['access_token'])) {
-            $_SESSION['session_access_token'] = $data['access_token'];
-            unset($_SESSION['oss_oauth_state'], $_SESSION['oss_code_verifier']);
-            $me = oss_x_get('https://api.twitter.com/2/users/me', $data['access_token']);
-            if (isset($me['data']['username'])) { $_SESSION['session_username'] = $me['data']['username']; }
-        }
-    }
-    header('Location: ' . $x_redirect_uri); exit;
+if (isset($_GET['oss_login'])) {
+    header('Location: ' . url2ai_auth_login_url('/' . $THIS_FILE));
+    exit;
 }
 
-$session_user = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
-$is_admin     = ($session_user === $ADMIN);
-$logged_in    = ($session_user !== '');
+$auth = url2ai_auth_bootstrap();
+$logged_in = $auth['logged_in'];
+$session_user = $auth['session_user'];
+$is_admin = $auth['is_admin'];
 
 $posts = array();
 /* 個別ファイル読み込み */

@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth_common.php';
 date_default_timezone_set('Asia/Tokyo');
 header('Content-Type: application/json; charset=UTF-8');
 
@@ -7,9 +7,8 @@ define('DATA_FILE',    __DIR__ . '/data/aitech_posts.json');
 define('AITECH_SNS_API_URL', 'https://aixec.exbridge.jp/api.php?path=posts');
 define('AITECH_BASE_URL', 'https://aiknowledgecms.exbridge.jp/aitech.php');
 
-session_start();
-$session_user = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
-if ($session_user !== AIGM_ADMIN) {
+$auth = url2ai_auth_bootstrap();
+if (empty($auth['is_admin'])) {
     echo json_encode(array('status' => 'error', 'error' => '権限がありません'));
     exit;
 }

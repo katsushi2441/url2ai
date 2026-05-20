@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth_common.php';
 date_default_timezone_set('Asia/Tokyo');
 header('Content-Type: application/json; charset=UTF-8');
 
@@ -156,9 +156,8 @@ function ainews_is_failed_analysis($summary, $tags) {
     return false;
 }
 
-session_start();
-$session_user = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
-if ($session_user !== AIGM_ADMIN) {
+$auth = url2ai_auth_bootstrap();
+if (empty($auth['is_admin'])) {
     ainews_json_response(array('status' => 'error', 'error' => '権限がありません'));
 }
 

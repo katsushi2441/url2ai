@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth_common.php';
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
@@ -10,7 +10,7 @@ if (!defined('OLLAMA_MODEL')) {
     define('OLLAMA_MODEL', 'gemma4:e4b');
 }
 
-$ADMIN     = 'xb_bittensor';
+$ADMIN     = AIGM_ADMIN;
 $DATA_DIR  = __DIR__ . '/data';
 $DATA_FILE = $DATA_DIR . '/oss_posts.json'; // 旧形式（移行用）
 $BANKR_DISCOVER_URL = 'https://bankr.bot/discover/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3';
@@ -377,9 +377,8 @@ if ($action === 'test_ollama') {
 
 // ========== 手動登録 ==========
 if ($action === 'manual_register') {
-    session_start();
-    $session_user = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
-    if ($session_user !== $ADMIN) {
+    $auth = url2ai_auth_bootstrap();
+    if (empty($auth['is_admin'])) {
         http_response_code(403);
         echo json_encode(array('error' => 'unauthorized'));
         exit;
@@ -552,9 +551,8 @@ if ($action === 'paragraph_update') {
 
 // ========== Paragraphへ投稿（管理画面から） ==========
 if ($action === 'paragraph_post') {
-    session_start();
-    $session_user = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
-    if ($session_user !== $ADMIN) {
+    $auth = url2ai_auth_bootstrap();
+    if (empty($auth['is_admin'])) {
         http_response_code(403);
         echo json_encode(array('error' => 'unauthorized'));
         exit;
