@@ -83,13 +83,13 @@ function oss_notice_author($value) {
     return $value === 'osszenn' ? 'osszenn' : 'oss';
 }
 
-function oss_build_sns_notice($post, $author) {
+function oss_build_sns_notice($post, $author, $use_detail_url = true) {
     global $OSS_BASE_URL;
     $title = isset($post['title']) ? trim((string)$post['title']) : '';
     $post_text = isset($post['post_text']) ? trim((string)$post['post_text']) : '';
     $github_url = isset($post['github_url']) ? trim((string)$post['github_url']) : '';
     $id = isset($post['id']) ? trim((string)$post['id']) : '';
-    $detail_url = $id !== '' ? $OSS_BASE_URL . '?id=' . rawurlencode($id) : $OSS_BASE_URL;
+    $detail_url = $use_detail_url && $id !== '' ? $OSS_BASE_URL . '?id=' . rawurlencode($id) : $OSS_BASE_URL;
 
     $headline = $author === 'osszenn'
         ? '🧩 OSS Zennに新しいOSSを登録しました'
@@ -122,6 +122,25 @@ function oss_post_sns_notice($post, $author = 'oss') {
         return array('ok' => false, 'error' => 'empty notice');
     }
 
+    $result = oss_send_sns_notice($AIXEC_SNS_API_URL, $author, $content);
+    if (!empty($result['ok'])) {
+        return $result;
+    }
+
+    // heteml SiteGuard can reject query-string detail URLs in long post bodies.
+    $fallback_content = oss_build_sns_notice($post, $author, false);
+    if ($fallback_content !== '' && $fallback_content !== $content) {
+        $fallback_result = oss_send_sns_notice($AIXEC_SNS_API_URL, $author, $fallback_content);
+        if (!empty($fallback_result['ok'])) {
+            $fallback_result['fallback'] = 'list_url';
+            return $fallback_result;
+        }
+        return $fallback_result;
+    }
+    return $result;
+}
+
+function oss_send_sns_notice($api_url, $author, $content) {
     $payload = json_encode(array(
         'author' => $author,
         'content' => $content,
@@ -133,7 +152,7 @@ function oss_post_sns_notice($post, $author = 'oss') {
         'timeout' => 12,
         'ignore_errors' => true,
     ));
-    $res = @file_get_contents($AIXEC_SNS_API_URL, false, stream_context_create($opts));
+    $res = @file_get_contents($api_url, false, stream_context_create($opts));
     $data = $res ? json_decode($res, true) : null;
     if (!is_array($data) || empty($data['ok'])) {
         return array(
