@@ -1133,8 +1133,13 @@ function adminRegister() {
             var res = JSON.parse(xhr.responseText);
             if (res.status === 'ok' || res.status === 'updated') {
                 var msg = res.status === 'updated' ? '更新完了: ' : '登録完了: ';
+                if (res.sns_notice && res.sns_notice.ok === false) {
+                    msg += 'AIxSNS投稿失敗: ';
+                }
                 status.textContent = msg + res.title;
-                status.className   = 'admin-status ok';
+                status.className   = (res.sns_notice && res.sns_notice.ok === false)
+                    ? 'admin-status err'
+                    : 'admin-status ok';
                 urlInput.value     = '';
                 setTimeout(function() { location.reload(); }, 1500);
             } else if (res.status === 'duplicate') {
