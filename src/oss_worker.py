@@ -50,10 +50,8 @@ MODEL = os.environ.get(
     'OLLAMA_MODEL',
     _conf.get('ollama', {}).get('default_model', 'gemma4:e4b')
 )
-OLLAMA_FALLBACK_API = os.environ.get('OLLAMA_FALLBACK_API', 'http://127.0.0.1:11434/api/generate')
-OLLAMA_FALLBACK_MODEL = os.environ.get('OLLAMA_FALLBACK_MODEL', 'gemma4:26b')
 OLLAMA_TIMEOUT = int(os.environ.get('OSS_WORKER_OLLAMA_TIMEOUT', '15'))
-_ollama_primary_failed = False
+OLLAMA_RETRIES = int(os.environ.get('OSS_WORKER_OLLAMA_RETRIES', '2'))
 
 _pg_env = os.environ.get('PARAGRAPH_API_KEY')
 PARAGRAPH_API_KEY = _pg_env if _pg_env is not None else _conf.get('paragraph', {}).get('api_key', '')
@@ -275,18 +273,12 @@ def fetch_github_readme(github_url):
     return ''
 
 def ollama_request(prompt):
-    global _ollama_primary_failed
-    endpoints = [(OLLAMA_FALLBACK_API, OLLAMA_FALLBACK_MODEL)] if _ollama_primary_failed else [
-        (OLLAMA, MODEL),
-        (OLLAMA_FALLBACK_API, OLLAMA_FALLBACK_MODEL),
-    ]
-    for endpoint, model in endpoints:
-        response_text = _ollama_request_once(endpoint, model, prompt)
+    for attempt in range(1, max(OLLAMA_RETRIES, 1) + 1):
+        response_text = _ollama_request_once(OLLAMA, MODEL, prompt)
         if response_text:
             return response_text
-        if endpoint != OLLAMA_FALLBACK_API:
-            _ollama_primary_failed = True
-            log.warning('Ollama primary failed; fallback to %s model=%s', OLLAMA_FALLBACK_API, OLLAMA_FALLBACK_MODEL)
+        if attempt < OLLAMA_RETRIES:
+            log.warning('Ollama retry: endpoint=%s model=%s next_attempt=%d', OLLAMA, MODEL, attempt + 1)
     return ''
 
 def _ollama_request_once(endpoint, model, prompt):
