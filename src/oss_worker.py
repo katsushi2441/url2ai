@@ -60,9 +60,9 @@ PARAGRAPH_API_KEY = _pg_env if _pg_env is not None else _conf.get('paragraph', {
 PARAGRAPH_API_URL = 'https://public.api.paragraph.com/api/v1/posts'
 BANKR_DISCOVER_URL = 'https://bankr.bot/discover/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3'
 
-# 1日1回実行する時刻（24h）
-DAILY_HOURS  = [6]
-DAILY_TOP_N  = 2   # 1回あたり何件登録するか
+# 1日4回実行する時刻（24h）
+DAILY_HOURS  = [0, 6, 12, 18]
+DAILY_TOP_N  = 1   # 1回あたり何件登録するか
 
 # 週間トレンドの追加実行はデフォルト無効
 WEEKLY_ENABLED = False
