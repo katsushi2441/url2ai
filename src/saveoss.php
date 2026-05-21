@@ -253,7 +253,7 @@ function call_ollama($prompt) {
             'stream' => false,
             'options' => array(
                 'temperature' => 0.2,
-                'num_predict' => 512,
+                'num_predict' => 2048,
             )
         ),
         JSON_UNESCAPED_UNICODE
