@@ -20,6 +20,17 @@ import logging
 # ========== 設定 ==========
 API_URL  = 'https://aiknowledgecms.exbridge.jp/saveoss.php'
 LOG_FILE = os.path.expanduser('~/oss_worker.log')
+DASHBOARD_REPORT_URL = 'http://exbridge.ddns.net:8081/worker/report'
+
+
+def report_worker(name, status, items, note=''):
+    import urllib.request as _ur
+    try:
+        payload = json.dumps({'name': name, 'status': status, 'items': items, 'note': note}).encode()
+        req = _ur.Request(DASHBOARD_REPORT_URL, data=payload, headers={'Content-Type': 'application/json'}, method='POST')
+        _ur.urlopen(req, timeout=10)
+    except Exception as exc:
+        log.warning('dashboard report失敗: %s', exc)
 
 def _load_config():
     config_path = os.path.join(os.path.dirname(__file__), 'config.yaml')
@@ -566,6 +577,7 @@ def run_job(period='daily', top_n=3):
     if success == 0:
         log.info('新規登録なし')
     log.info('===== JOB END =====')
+    return success
 
 def main():
     log.info('oss_worker 起動 - 実行時刻: %s', str(DAILY_HOURS))
@@ -583,9 +595,12 @@ def main():
         if hour in DAILY_HOURS and key not in done:
             done[key] = True
             try:
-                run_job(period='daily', top_n=DAILY_TOP_N)
+                report_worker('oss_worker', 'running', 0, 'daily実行中')
+                n = run_job(period='daily', top_n=DAILY_TOP_N)
+                report_worker('oss_worker', 'ok', n, 'daily完了 新規%d件' % n)
             except Exception as e:
                 log.error('デイリージョブエラー: %s', e)
+                report_worker('oss_worker', 'error', 0, str(e)[:80])
 
             # 週間トレンドの追加実行（必要なときだけ有効化）
             if WEEKLY_ENABLED and now.weekday() == WEEKLY_DAY and hour == WEEKLY_HOUR:

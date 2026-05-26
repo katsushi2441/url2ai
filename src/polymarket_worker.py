@@ -62,6 +62,19 @@ def load_config() -> dict:
 
 CONF = load_config()
 SITE_BASE_URL = CONF.get("site", {}).get("base_url", "https://aiknowledgecms.exbridge.jp")
+DASHBOARD_REPORT_URL = "http://exbridge.ddns.net:8081/worker/report"
+
+
+def report_worker(name: str, status: str, items: int, note: str = "") -> None:
+    try:
+        payload = json.dumps({"name": name, "status": status, "items": items, "note": note}).encode()
+        req = urllib.request.Request(
+            DASHBOARD_REPORT_URL, data=payload, headers={"Content-Type": "application/json"}, method="POST")
+        urllib.request.urlopen(req, timeout=10)
+    except Exception as exc:
+        log(f"dashboard report失敗: {exc}")
+
+
 POLYMARKET_API = os.environ.get(
     "POLYMARKET_API",
     CONF.get("polymarket", {}).get("api_url", "http://exbridge.ddns.net:8016/report"),
@@ -517,7 +530,8 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.once:
-        process_candidates(dry_run=args.dry_run)
+        n = process_candidates(dry_run=args.dry_run)
+        report_worker("polymarket_worker", "ok", n or 0, "once完了 %d件" % (n or 0))
         return 0
 
     log(f"watching schedule; run_times={RUN_TIMES_JST} interval={args.interval}s dry_run={args.dry_run}")
@@ -525,12 +539,15 @@ def main() -> int:
         now = dt.datetime.now()
         try:
             if should_run_now(now):
-                process_candidates(dry_run=args.dry_run)
+                report_worker("polymarket_worker", "running", 0, "実行中")
+                n = process_candidates(dry_run=args.dry_run)
+                report_worker("polymarket_worker", "ok", n or 0, "完了 %d件" % (n or 0))
                 mark_run_slot(now)
             else:
                 log("idle")
         except Exception as exc:
             log(f"error: {exc}")
+            report_worker("polymarket_worker", "error", 0, str(exc)[:80])
         time.sleep(max(args.interval, 60))
 
 

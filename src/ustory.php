@@ -352,15 +352,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin) {
     if (($action === 'fetch' || $action === 'analyze') && $thread_text !== '') {
         $prompt = str_replace('{thread}', $thread_text, $prompt_tmpl);
         $payload = json_encode(array(
-            'model'  => OLLAMA_MODEL,
-            'prompt' => $prompt,
-            'stream' => false,
-            'options' => array(
-                'num_ctx' => 2048,
-                'temperature' => 0.7,
-                'top_k' => 40,
-                'top_p' => 0.9
-            )
+            'prompt'      => $prompt,
+            'temperature' => 0.7,
+            'max_tokens'  => 2048,
         ));
         $opts = array('http' => array(
             'method'        => 'POST',
@@ -369,12 +363,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin) {
             'timeout'       => 120,
             'ignore_errors' => true,
         ));
-        $res = @file_get_contents(OLLAMA_API, false, stream_context_create($opts));
+        $res = @file_get_contents('https://aixec.exbridge.jp/api.php?path=claude/generate', false, stream_context_create($opts));
         if ($res) {
             $data  = json_decode($res, true);
             $story = isset($data['response']) ? trim($data['response']) : '応答が取得できませんでした';
         } else {
-            $story = 'Ollama APIに接続できませんでした';
+            $story = 'Claude APIに接続できませんでした';
         }
 
         /* JSON保存 */
