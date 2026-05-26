@@ -19,7 +19,7 @@ import logging
 
 # ========== 設定 ==========
 API_URL  = 'https://aiknowledgecms.exbridge.jp/saveoss.php'
-LOG_FILE = os.path.expanduser('~/oss_worker.log')
+LOG_FILE = os.environ.get('OSS_WORKER_LOG', os.path.expanduser('~/oss_worker.log'))
 DASHBOARD_REPORT_URL = 'http://exbridge.ddns.net:8081/worker/report'
 
 
@@ -61,7 +61,7 @@ MODEL = os.environ.get(
     'OLLAMA_MODEL',
     _conf.get('ollama', {}).get('default_model', 'gemma4:e4b')
 )
-OLLAMA_TIMEOUT = int(os.environ.get('OSS_WORKER_OLLAMA_TIMEOUT', '15'))
+OLLAMA_TIMEOUT = int(os.environ.get('OSS_WORKER_OLLAMA_TIMEOUT', '60'))
 OLLAMA_RETRIES = int(os.environ.get('OSS_WORKER_OLLAMA_RETRIES', '2'))
 
 _pg_env = os.environ.get('PARAGRAPH_API_KEY')
@@ -71,7 +71,7 @@ BANKR_DISCOVER_URL = 'https://bankr.bot/discover/0xDaecDda6AD112f0E1E4097fB735dD
 
 # 1日4回実行する時刻（24h）
 DAILY_HOURS  = [0, 6, 12, 18]
-DAILY_TOP_N  = 1   # 1回あたり何件登録するか
+DAILY_TOP_N  = 3   # 1回あたり何件登録するか
 
 # 週間トレンドの追加実行はデフォルト無効
 WEEKLY_ENABLED = False
