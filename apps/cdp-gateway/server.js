@@ -95,6 +95,52 @@ app.get(["/health", "/healthz"], (_req, res) => {
   res.json({ ok: true, service: "cdp-gateway", port: PORT });
 });
 
+const WALLET = PAY_TO;
+const X402_WELL_KNOWN = {
+  "version": "1",
+  "endpoints": [
+    {
+      "path": "/oss2api/image/remove-background",
+      "method": "POST",
+      "price": PRICE_OSS,
+      "network": NETWORK,
+      "description": "Remove or replace image background (imgly/background-removal-js AGPL-3.0)"
+    },
+    {
+      "path": "/oss2api/url/analyze",
+      "method": "POST",
+      "price": PRICE_OSS,
+      "network": NETWORK,
+      "description": "Extract structured content from a URL"
+    },
+    {
+      "path": "/oss2api/url/browse",
+      "method": "POST",
+      "price": PRICE_OSS,
+      "network": NETWORK,
+      "description": "Playwright screenshot and content extraction"
+    },
+    {
+      "path": "/oss2api/url/scan",
+      "method": "POST",
+      "price": PRICE_OSS,
+      "network": NETWORK,
+      "description": "3-phase security scan"
+    },
+    {
+      "path": "/llm/v1/chat/completions",
+      "method": "POST",
+      "price": PRICE_LLM,
+      "network": NETWORK,
+      "description": "OpenAI-compatible chat completions via Gemma 4 E4B (Ollama)"
+    }
+  ]
+};
+
+app.get("/.well-known/x402.json", (_req, res) => {
+  res.json(X402_WELL_KNOWN);
+});
+
 app.post("/oss2api/image/remove-background", (req, res) => proxyTo(`${OSS2API}/oss2api/image/remove-background`, req, res));
 app.post("/oss2api/url/analyze",             (req, res) => proxyTo(`${OSS2API}/oss2api/url/analyze`, req, res));
 app.post("/oss2api/url/browse",              (req, res) => proxyTo(`${OSS2API}/oss2api/url/browse`, req, res));

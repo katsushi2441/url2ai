@@ -28,7 +28,7 @@ class GenerateRequest(BaseModel):
     height: int = Field(1264, ge=256, le=2048)
     num_inference_steps: int = Field(8, ge=1, le=100)
     guidance_scale: float = Field(1.0, ge=0.0, le=20.0)
-    use_pe: bool = True
+    use_pe: bool = False
     seed: Optional[int] = None
     output_format: str = Field("png", pattern="^(png|jpeg)$")
 
@@ -61,7 +61,7 @@ def get_pipeline() -> ErnieImagePipeline:
                 pipe.enable_vae_tiling()
 
             if DEVICE == "cuda" and torch.cuda.is_available() and ENABLE_CPU_OFFLOAD:
-                pipe.enable_model_cpu_offload()
+                pipe.enable_sequential_cpu_offload()
             else:
                 pipe = pipe.to(DEVICE)
 

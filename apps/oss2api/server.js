@@ -278,6 +278,17 @@ async function handle(req, res) {
   if (req.method === "GET" && url.pathname === "/.well-known/oss2api.json") {
     return json(res, 200, manifest());
   }
+  if (req.method === "GET" && url.pathname === "/.well-known/x402.json") {
+    return json(res, 200, {
+      version: "1",
+      endpoints: [
+        { path: "/oss2api/image/remove-background", method: "POST", description: "Remove or replace image background (imgly AGPL-3.0)" },
+        { path: "/oss2api/url/analyze",             method: "POST", description: "Extract structured content from a URL" },
+        { path: "/oss2api/url/browse",              method: "POST", description: "Playwright screenshot and dynamic content extraction" },
+        { path: "/oss2api/url/scan",                method: "POST", description: "3-phase security scan (headers, static, AI analysis)" },
+      ],
+    });
+  }
   if (req.method === "GET" && url.pathname === "/openapi.json") {
     return json(res, 200, openapi());
   }

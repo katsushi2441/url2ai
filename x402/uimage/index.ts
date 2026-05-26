@@ -10,7 +10,7 @@ type UImageRequest = {
   height?: number;
 };
 
-const DEFAULT_IMAGE_API_URL = "http://exbridge.ddns.net:8011/generate";
+const DEFAULT_IMAGE_API_URL = "http://exbridge.ddns.net:8010/image/generate";
 const DEFAULT_TEXT_API_URL = "https://exbridge.ddns.net/api/generate";
 const DEFAULT_TEXT_MODEL = "gemma4:e4b";
 
