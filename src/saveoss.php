@@ -670,13 +670,8 @@ if ($action === 'check') {
         echo json_encode(array('error' => 'github_url required'));
         exit;
     }
-    $posts = array();
-    if (file_exists($DATA_FILE)) {
-        $posts = json_decode(file_get_contents($DATA_FILE), true);
-        if (!$posts) $posts = array();
-    }
-    foreach ($posts as $p) {
-        if ($p['github_url'] === $url) {
+    foreach (oss_load_all_posts() as $p) {
+        if (isset($p['github_url']) && $p['github_url'] === $url) {
             echo json_encode(array('exists' => true));
             exit;
         }
