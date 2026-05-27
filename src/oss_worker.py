@@ -554,16 +554,8 @@ def run_job(period='daily', top_n=3):
             registered.add(r['url'])
             success += 1
 
-            para_res = post_to_paragraph(paragraph_title, paragraph_content, status='published')
-            para_url = para_res.get('url') or ''
-            para_post_id = str(para_res.get('id') or para_res.get('postId') or '')
-            if para_url or para_post_id:
-                log.info('Paragraph投稿完了: %s', para_url or para_post_id)
-                post_id = res.get('id', '')
-                if post_id:
-                    update_paragraph_url(post_id, para_url, para_post_id)
-            else:
-                log.warning('Paragraph投稿失敗: %s', para_res)
+            # Paragraph自動投稿は無効化
+            # para_res = post_to_paragraph(paragraph_title, paragraph_content, status='published')
 
         elif status == 'duplicate':
             log.info('重複スキップ(save): %s', r['url'])
