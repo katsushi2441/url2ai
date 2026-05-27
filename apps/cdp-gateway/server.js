@@ -9,6 +9,17 @@ const LLM_URL    = process.env.LLM_URL    || "http://127.0.0.1:8019";
 const NETWORK    = process.env.NETWORK    || "base";
 const PRICE_OSS  = process.env.PRICE_OSS  || "$0.01";
 const PRICE_LLM  = process.env.PRICE_LLM  || "$0.01";
+const BACKGROUND_REMOVAL_SCHEMA = {
+  bodyType: "json",
+  properties: {
+    image_url: { type: "string", description: "Public image URL" },
+    image_base64: { type: "string", description: "Base64 encoded image" },
+    mode: { type: "string", description: "remove, replace, or blur" },
+    background_color: { type: "string", description: "Replacement color for mode=replace" },
+    background_image_url: { type: "string", description: "Replacement image URL for mode=replace" },
+    response: { type: "string", description: "json or binary" },
+  },
+};
 
 if (!PAY_TO) { console.error("PAY_TO is required"); process.exit(1); }
 
@@ -18,13 +29,22 @@ const facilitator = createFacilitatorConfig(
 );
 
 const routes = {
+  "POST /background-removal": {
+    price: PRICE_OSS,
+    network: NETWORK,
+    config: {
+      description: "Remove or replace image background (imgly AGPL-3.0)",
+      discoverable: true,
+      inputSchema: BACKGROUND_REMOVAL_SCHEMA,
+    },
+  },
   "POST /oss2api/image/remove-background": {
     price: PRICE_OSS,
     network: NETWORK,
     config: {
       description: "Remove or replace image background (imgly AGPL-3.0)",
       discoverable: true,
-      inputSchema: { bodyType: "json", properties: { url: { type: "string", description: "Image URL" } } },
+      inputSchema: BACKGROUND_REMOVAL_SCHEMA,
     },
   },
   "POST /oss2api/url/analyze": {
@@ -73,6 +93,7 @@ const routes = {
 };
 
 const app = express();
+app.set("trust proxy", true);
 app.use(express.json({ limit: "20mb" }));
 app.use(paymentMiddleware(PAY_TO, routes, facilitator));
 
@@ -99,6 +120,13 @@ const WALLET = PAY_TO;
 const X402_WELL_KNOWN = {
   "version": "1",
   "endpoints": [
+    {
+      "path": "/background-removal",
+      "method": "POST",
+      "price": PRICE_OSS,
+      "network": NETWORK,
+      "description": "Remove or replace image background (imgly/background-removal-js AGPL-3.0)"
+    },
     {
       "path": "/oss2api/image/remove-background",
       "method": "POST",
@@ -141,6 +169,7 @@ app.get("/.well-known/x402.json", (_req, res) => {
   res.json(X402_WELL_KNOWN);
 });
 
+app.post("/background-removal",               (req, res) => proxyTo(`${OSS2API}/oss2api/image/remove-background`, req, res));
 app.post("/oss2api/image/remove-background", (req, res) => proxyTo(`${OSS2API}/oss2api/image/remove-background`, req, res));
 app.post("/oss2api/url/analyze",             (req, res) => proxyTo(`${OSS2API}/oss2api/url/analyze`, req, res));
 app.post("/oss2api/url/browse",              (req, res) => proxyTo(`${OSS2API}/oss2api/url/browse`, req, res));
