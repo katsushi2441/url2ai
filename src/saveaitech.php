@@ -5,6 +5,13 @@ header('Content-Type: application/json; charset=UTF-8');
 @set_time_limit(180);
 @ignore_user_abort(true);
 
+if (!defined('OLLAMA_API')) {
+    define('OLLAMA_API', 'https://exbridge.ddns.net/api/generate');
+}
+if (!defined('OLLAMA_MODEL')) {
+    define('OLLAMA_MODEL', 'gemma4:e4b');
+}
+
 define('DATA_FILE',    __DIR__ . '/data/aitech_posts.json');
 define('AITECH_SNS_API_URL', 'https://aixec.exbridge.jp/api.php?path=posts');
 define('AITECH_BASE_URL', 'https://aiknowledgecms.exbridge.jp/aitech.php');
