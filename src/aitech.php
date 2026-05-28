@@ -344,6 +344,12 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
 }
 .copy-btn:hover { border-color: #0ea5e9; color: #0ea5e9; }
 .copy-btn.copied { border-color: #22c55e; color: #22c55e; }
+.delete-btn {
+    background: #fff1f2; border: 1px solid #fecdd3; border-radius: 6px;
+    padding: 4px 10px; font-size: 12px; color: #be123c;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.delete-btn:hover { background: #ffe4e6; border-color: #fb7185; }
 
 .post-title { font-size: 15px; font-weight: 700; color: #111; margin-bottom: 6px; }
 .post-title a { color: #111; text-decoration: none; }
@@ -427,6 +433,12 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
 }
 .detail-copy-btn:hover { background: #0284c7; }
 .detail-copy-btn.copied { background: #22c55e; }
+.detail-delete-btn {
+    background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px;
+    padding: 10px 20px; font-size: 14px; color: #be123c;
+    cursor: pointer; transition: background 0.15s;
+}
+.detail-delete-btn:hover { background: #ffe4e6; }
 .detail-x-btn {
     background: #000; border: none; border-radius: 8px;
     padding: 10px 20px; font-size: 14px; color: #fff;
@@ -515,6 +527,9 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
             <button class="detail-copy-btn" type="button" onclick="copyDetail()">📋 コピー</button>
             <a class="detail-x-btn" id="detail-x-link" href="#" target="_blank" rel="noopener">𝕏 Xに投稿</a>
             <a class="detail-link" href="<?php echo htmlspecialchars($detail_post['url']); ?>" target="_blank" rel="noopener">🌐 元のサイトを開く</a>
+            <?php if ($is_admin): ?>
+            <button class="detail-delete-btn" type="button" onclick="deletePostById('<?php echo htmlspecialchars($detail_post['id']); ?>')">削除</button>
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -621,6 +636,7 @@ if ($filter_tag) {
 var posts    = <?php echo at_safe_json(array_values($filtered_posts)); ?>;
 var BASE_URL = '<?php echo $BASE_URL; ?>';
 var THIS_FILE = '<?php echo $THIS_FILE; ?>';
+var IS_ADMIN = <?php echo $is_admin ? 'true' : 'false'; ?>;
 var PAGE_SIZE = 30;
 var currentPage = 0;
 
@@ -693,6 +709,7 @@ function renderPosts(from, to) {
             + '<div class="btn-group">'
             + '<button class="copy-btn" type="button" onclick="copyPost(' + idx + ')">コピー</button>'
             + '<a class="copy-btn" id="x-btn-' + idx + '" href="#" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;">𝕏</a>'
+            + (IS_ADMIN ? '<button class="delete-btn" type="button" onclick="deletePostById(\\'' + esc(post.id) + '\\')">削除</button>' : '')
             + '</div></div>'
             + '<div class="post-title"><a href="' + THIS_FILE + '?id=' + encodeURIComponent(post.id) + '">' + esc(post.title) + '</a></div>'
             + summaryHtml
@@ -756,6 +773,29 @@ function copyPost(idx) {
 }
 
 <?php if ($is_admin): ?>
+function deletePostById(id) {
+    if (!id) return;
+    if (!confirm('このリンクを削除しますか？')) return;
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', 'saveaitech.php', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState !== 4) return;
+        try {
+            var res = JSON.parse(xhr.responseText);
+            if (res.status === 'ok') {
+                showToast('削除しました');
+                setTimeout(function() { location.href = THIS_FILE; }, 600);
+            } else {
+                alert('削除エラー: ' + (res.error || '不明'));
+            }
+        } catch(e) {
+            alert('削除通信エラー');
+        }
+    };
+    xhr.send(JSON.stringify({ action: 'delete', id: id }));
+}
+
 function adminRegister() {
     var urlInput = document.getElementById('admin-url-input');
     var btn      = document.getElementById('admin-register-btn');

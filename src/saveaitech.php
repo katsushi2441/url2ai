@@ -218,15 +218,7 @@ $input = json_decode(file_get_contents('php://input'), true);
 if (!$input) { $input = array(); }
 $action = isset($input['action']) ? $input['action'] : '';
 $url    = isset($input['url'])    ? normalize_utf8_text(trim($input['url'])) : '';
-
-if ($action !== 'register' || $url === '') {
-    echo json_encode(array('status' => 'error', 'error' => '無効なリクエスト'));
-    exit;
-}
-if (!preg_match('/^https?:\/\/.+/', $url)) {
-    echo json_encode(array('status' => 'error', 'error' => '有効なURLを入力してください'));
-    exit;
-}
+$target_id = isset($input['id']) ? normalize_utf8_text(trim($input['id'])) : '';
 
 /* =========================================================
    既存データ読み込み
@@ -235,6 +227,41 @@ $posts = array();
 if (file_exists(DATA_FILE)) {
     $posts = json_decode(file_get_contents(DATA_FILE), true);
     if (!is_array($posts)) { $posts = array(); }
+}
+
+if ($action === 'delete') {
+    if ($target_id === '') {
+        echo json_encode(array('status' => 'error', 'error' => '削除対象がありません'));
+        exit;
+    }
+    $new_posts = array();
+    $deleted = false;
+    foreach ($posts as $p) {
+        if (isset($p['id']) && $p['id'] === $target_id) {
+            $deleted = true;
+            continue;
+        }
+        $new_posts[] = $p;
+    }
+    if (!$deleted) {
+        echo json_encode(array('status' => 'error', 'error' => '対象データが見つかりません'));
+        exit;
+    }
+    if (!write_json_atomic(DATA_FILE, $new_posts)) {
+        echo json_encode(array('status' => 'error', 'error' => '削除に失敗しました'));
+        exit;
+    }
+    echo json_encode(array('status' => 'ok', 'deleted' => $target_id), JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if ($action !== 'register' || $url === '') {
+    echo json_encode(array('status' => 'error', 'error' => '無効なリクエスト'));
+    exit;
+}
+if (!preg_match('/^https?:\/\/.+/', $url)) {
+    echo json_encode(array('status' => 'error', 'error' => '有効なURLを入力してください'));
+    exit;
 }
 
 /* 重複チェック */
