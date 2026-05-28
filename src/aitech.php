@@ -793,7 +793,8 @@ function adminRegister() {
                 status.className   = 'admin-status err';
             }
         } catch(e) {
-            status.textContent = '通信エラー';
+            var detail = xhr.responseText ? xhr.responseText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 180) : '';
+            status.textContent = '通信エラー' + (xhr.status ? ' HTTP ' + xhr.status : '') + (detail ? ': ' + detail : '');
             status.className   = 'admin-status err';
         }
     };

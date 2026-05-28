@@ -2,6 +2,8 @@
 require_once __DIR__ . '/auth_common.php';
 date_default_timezone_set('Asia/Tokyo');
 header('Content-Type: application/json; charset=UTF-8');
+@set_time_limit(180);
+@ignore_user_abort(true);
 
 define('DATA_FILE',    __DIR__ . '/data/aitech_posts.json');
 define('AITECH_SNS_API_URL', 'https://aixec.exbridge.jp/api.php?path=posts');
