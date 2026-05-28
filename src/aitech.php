@@ -709,7 +709,7 @@ function renderPosts(from, to) {
             + '<div class="btn-group">'
             + '<button class="copy-btn" type="button" onclick="copyPost(' + idx + ')">コピー</button>'
             + '<a class="copy-btn" id="x-btn-' + idx + '" href="#" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;">𝕏</a>'
-            + (IS_ADMIN ? '<button class="delete-btn" type="button" onclick="deletePostById(\\'' + esc(post.id) + '\\')">削除</button>' : '')
+            + (IS_ADMIN ? '<button class="delete-btn" type="button" data-id="' + esc(post.id) + '" onclick="deletePostById(this.getAttribute(\'data-id\'))">削除</button>' : '')
             + '</div></div>'
             + '<div class="post-title"><a href="' + THIS_FILE + '?id=' + encodeURIComponent(post.id) + '">' + esc(post.title) + '</a></div>'
             + summaryHtml
