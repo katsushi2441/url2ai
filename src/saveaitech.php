@@ -21,6 +21,7 @@ if (empty($auth['is_admin'])) {
     echo json_encode(array('status' => 'error', 'error' => '権限がありません'));
     exit;
 }
+$session_user = isset($auth['session_user']) && $auth['session_user'] !== '' ? $auth['session_user'] : AIGM_ADMIN;
 
 function normalize_utf8_text($text) {
     if (!is_string($text) || $text === '') {
