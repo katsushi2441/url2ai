@@ -1,0 +1,3 @@
+<Files "ureply.php">
+  AddHandler php8.2-script .php
+</Files>
