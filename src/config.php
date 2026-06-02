@@ -62,6 +62,10 @@ define('FINREPORT_API', isset($_aigm_config['finreport']['api_url']) ? $_aigm_co
 /* Polymarket */
 define('POLYMARKET_API', isset($_aigm_config['polymarket']['api_url']) ? $_aigm_config['polymarket']['api_url'] : 'http://exbridge.ddns.net:8014/report');
 
+/* RQDB4AI */
+define('RQDB4AI_API_BASE', isset($_aigm_config['rqdb4ai']['api_base']) ? $_aigm_config['rqdb4ai']['api_base'] : '');
+define('RQDB4AI_API_TOKEN', isset($_aigm_config['rqdb4ai']['api_token']) ? $_aigm_config['rqdb4ai']['api_token'] : '');
+
 /* Paragraph */
 define('PARAGRAPH_API_KEY', isset($_aigm_config['paragraph']['api_key']) ? $_aigm_config['paragraph']['api_key'] : '');
 define('PARAGRAPH_PUBLICATION_SLUG', isset($_aigm_config['paragraph']['publication_slug']) ? $_aigm_config['paragraph']['publication_slug'] : '');

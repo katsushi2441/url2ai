@@ -27,6 +27,10 @@ finreport:
 polymarket:
   api_url:
 
+rqdb4ai:
+  api_base:
+  api_token:
+
 uslideblog:
   renderer_api: http://exbridge.ddns.net:8022
 

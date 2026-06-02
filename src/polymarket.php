@@ -282,6 +282,85 @@ function pm_json_response($data, $status_code) {
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     exit;
 }
+function pm_rqdb_api($method, $path, $payload) {
+    if (!defined('RQDB4AI_API_BASE') || trim(RQDB4AI_API_BASE) === '' || !defined('RQDB4AI_API_TOKEN') || trim(RQDB4AI_API_TOKEN) === '') {
+        return array('ok' => false, 'error' => 'RQDB4AI is not configured');
+    }
+    $url = rtrim(RQDB4AI_API_BASE, '/') . '/' . ltrim($path, '/');
+    $body = $payload === null ? null : json_encode($payload, JSON_UNESCAPED_UNICODE);
+    $headers = array(
+        'Authorization: Bearer ' . RQDB4AI_API_TOKEN,
+        'Content-Type: application/json',
+        'Accept: application/json',
+        'User-Agent: PolymarketPHP/RQDB4AI',
+    );
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, array(
+            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTPHEADER => $headers,
+        ));
+        if ($body !== null) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+        }
+        $raw = curl_exec($ch);
+        $err = curl_error($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if (!$raw || $err) {
+            return array('ok' => false, 'error' => $err ? $err : 'rqdb4ai request failed', 'http_code' => $code);
+        }
+    } else {
+        $opts = array('http' => array(
+            'method' => $method,
+            'header' => implode("\r\n", $headers) . "\r\n",
+            'content' => $body,
+            'timeout' => 30,
+            'ignore_errors' => true,
+        ));
+        $raw = @file_get_contents($url, false, stream_context_create($opts));
+        $code = 0;
+        if (isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $m)) {
+            $code = (int) $m[1];
+        }
+        if (!$raw) {
+            return array('ok' => false, 'error' => 'rqdb4ai request failed', 'http_code' => $code);
+        }
+    }
+    $data = json_decode($raw, true);
+    if (!is_array($data)) {
+        return array('ok' => false, 'error' => 'rqdb4ai invalid json', 'http_code' => isset($code) ? $code : 0, 'raw' => substr($raw, 0, 300));
+    }
+    return $data;
+}
+function pm_enqueue_generate_job($query, $depth, $source) {
+    return pm_rqdb_api('POST', '/api/enqueue', array(
+        'queue' => 'polymarket',
+        'function' => 'polymarket_jobs.generate_report_job',
+        'args' => array(),
+        'kwargs' => array(
+            'query' => $query,
+            'depth' => $depth,
+            'source' => $source,
+            'register_remote' => true,
+            'post_paragraph' => false,
+        ),
+        'meta' => array(
+            'project' => 'url2ai',
+            'kind' => 'ollama',
+            'source' => $source,
+            'model' => 'gemma4:e4b',
+            'query' => $query,
+            'depth' => $depth,
+        ),
+        'timeout' => 900,
+        'result_ttl' => 86400,
+        'failure_ttl' => 604800,
+    ));
+}
 function pm_load_all_reports($with_report, $limit, $since_ts) {
     global $DATA_DIR, $BASE_URL;
     $files = glob($DATA_DIR . '/polymarket_*.json');
@@ -573,48 +652,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin && $action === 'generate'
         $_SESSION['pm_flash_error'] = 'クエリを入力してください';
         header('Location: ' . $x_redirect_uri); exit;
     }
-
-    $payload = json_encode(array('query' => $query, 'depth' => $depth), JSON_UNESCAPED_UNICODE);
-    if (function_exists('curl_init')) {
-        $ch = curl_init(POLYMARKET_API);
-        curl_setopt_array($ch, array(
-            CURLOPT_POST           => true,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CONNECTTIMEOUT => 10,
-            CURLOPT_TIMEOUT        => 600,
-            CURLOPT_HTTPHEADER     => array('Content-Type: application/json', 'Accept: application/json'),
-            CURLOPT_POSTFIELDS     => $payload,
-        ));
-        $raw       = curl_exec($ch);
-        $curl_err  = curl_error($ch);
-        $http_code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-    } else {
-        $opts = array('http' => array('method' => 'POST', 'header' => "Content-Type: application/json\r\n", 'content' => $payload, 'timeout' => 600, 'ignore_errors' => true));
-        $raw  = @file_get_contents(POLYMARKET_API, false, stream_context_create($opts));
-        $curl_err  = '';
-        $http_code = 200;
-    }
-    if (!$raw || $curl_err) {
-        $_SESSION['pm_flash_error'] = 'Polymarket APIに接続できませんでした: ' . $curl_err;
+    $job_res = pm_enqueue_generate_job($query, $depth, 'web_online');
+    if (empty($job_res['ok']) || empty($job_res['job']['id'])) {
+        $_SESSION['pm_flash_error'] = 'RQジョブ投入に失敗しました: ' . (isset($job_res['error']) ? $job_res['error'] : 'unknown error');
         header('Location: ' . $x_redirect_uri); exit;
     }
-    $res = json_decode($raw, true);
-    if (!is_array($res) || empty($res['report'])) {
-        $_SESSION['pm_flash_error'] = 'レポート生成に失敗しました (HTTP ' . $http_code . ')';
-        header('Location: ' . $x_redirect_uri); exit;
-    }
-    $save_data = array(
-        'query'           => $query,
-        'depth'           => $depth,
-        'report'          => $res['report'],
-        'summary'         => isset($res['summary'])         ? $res['summary']         : '',
-        'matched_markets' => isset($res['matched_markets']) ? $res['matched_markets'] : array(),
-        'sources'         => isset($res['sources'])         ? $res['sources']         : array(),
-        'created_at'      => date('Y-m-d H:i:s'),
-    );
-    pm_save($query, $save_data);
-    pm_post_sns_notice($save_data);
+    $_SESSION['pm_flash_error'] = '生成ジョブをキューに登録しました。Kurage RQ Dashboardで進行状況を確認してください: ' . $job_res['job']['id'];
     header('Location: ' . $x_redirect_uri . '?query=' . urlencode($query)); exit;
 }
 
