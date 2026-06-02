@@ -332,6 +332,20 @@ function fr_json_response($data, $status_code) {
     exit;
 }
 
+function fr_body_text($body, $key, $default = '') {
+    if (isset($body[$key])) {
+        return (string)$body[$key];
+    }
+    $b64_key = $key . '_base64';
+    if (isset($body[$b64_key])) {
+        $decoded = base64_decode((string)$body[$b64_key], true);
+        if ($decoded !== false) {
+            return $decoded;
+        }
+    }
+    return $default;
+}
+
 function fr_rqdb_api($method, $path, $payload) {
     if (!defined('RQDB4AI_API_BASE') || trim(RQDB4AI_API_BASE) === '' || !defined('RQDB4AI_API_TOKEN') || trim(RQDB4AI_API_TOKEN) === '') {
         return array('ok' => false, 'error' => 'RQDB4AI is not configured');
@@ -610,7 +624,7 @@ if (isset($_GET['api']) && $_GET['api'] !== '') {
             fr_json_response(array('ok' => false, 'error' => 'invalid json'), 400);
         }
         $ticker = isset($body['ticker']) ? trim($body['ticker']) : '';
-        $report = isset($body['report']) ? trim($body['report']) : '';
+        $report = trim(fr_body_text($body, 'report', ''));
         if ($ticker === '' || $report === '') {
             fr_json_response(array('ok' => false, 'error' => 'ticker and report are required'), 400);
         }
@@ -622,13 +636,13 @@ if (isset($_GET['api']) && $_GET['api'] !== '') {
             'company_name'    => isset($body['company_name'])    ? trim((string) $body['company_name'])    : '',
             'resolved_symbol' => isset($body['resolved_symbol']) ? trim((string) $body['resolved_symbol']) : '',
             'report'          => $report,
-            'summary'         => isset($body['summary']) ? $body['summary'] : '',
+            'summary'         => fr_body_text($body, 'summary', ''),
             'sources'         => isset($body['sources']) && is_array($body['sources']) ? $body['sources'] : array(),
             'created_at'      => $created_at,
             'news_kind'       => isset($body['news_kind']) ? $body['news_kind'] : '',
-            'news_title'      => isset($body['news_title']) ? $body['news_title'] : '',
+            'news_title'      => fr_body_text($body, 'news_title', ''),
             'news_link'       => isset($body['news_link']) ? $body['news_link'] : '',
-            'news_summary'    => isset($body['news_summary']) ? $body['news_summary'] : '',
+            'news_summary'    => fr_body_text($body, 'news_summary', ''),
             'paragraph_url'   => isset($body['paragraph_url']) ? trim((string) $body['paragraph_url']) : '',
             'paragraph_post_id' => isset($body['paragraph_post_id']) ? trim((string) $body['paragraph_post_id']) : '',
             'paragraph_posted_at' => isset($body['paragraph_posted_at']) ? trim((string) $body['paragraph_posted_at']) : '',

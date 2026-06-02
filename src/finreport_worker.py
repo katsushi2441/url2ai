@@ -306,7 +306,7 @@ def build_finreport_item(query: str, response: dict, saved_path: str) -> dict:
     }
 
 
-def register_finreport_remote(query: str, response: dict, source_item: dict) -> dict:
+def build_finreport_remote_payload(query: str, response: dict, source_item: dict, base64_fields: bool = False) -> dict:
     payload = {
         "ticker":          query,
         "company_name":    response.get("company_name", ""),
@@ -320,14 +320,45 @@ def register_finreport_remote(query: str, response: dict, source_item: dict) -> 
         "news_link":       source_item.get("link", ""),
         "news_summary":    source_item.get("summary", ""),
     }
-    return http_json(FINREPORT_SAVE_URL, payload=payload, timeout=120)
+    if base64_fields:
+        import base64
+        for key in ("report", "summary", "news_title", "news_summary"):
+            value = payload.pop(key, "")
+            payload[key + "_base64"] = base64.b64encode(str(value or "").encode("utf-8")).decode("ascii")
+    return payload
+
+
+def encode_finreport_payload_base64(payload: dict) -> dict:
+    import base64
+
+    encoded = dict(payload)
+    for key in ("report", "summary", "news_title", "news_summary"):
+        value = encoded.pop(key, "")
+        encoded[key + "_base64"] = base64.b64encode(str(value or "").encode("utf-8")).decode("ascii")
+    return encoded
+
+
+def post_finreport_remote_payload(payload: dict, label: str = "") -> dict:
+    try:
+        return http_json(FINREPORT_SAVE_URL, payload=payload, timeout=120)
+    except RuntimeError as exc:
+        if "HTTP 403" not in str(exc):
+            raise
+        note = f" for {label}" if label else ""
+        log(f"remote register got 403{note}; retry with base64 payload")
+        return http_json(FINREPORT_SAVE_URL, payload=encode_finreport_payload_base64(payload), timeout=120)
+
+
+def register_finreport_remote(query: str, response: dict, source_item: dict) -> dict:
+    payload = build_finreport_remote_payload(query, response, source_item)
+    return post_finreport_remote_payload(payload, query)
 
 
 def register_saved_finreport_remote(saved_path: str) -> dict:
     payload = load_saved_finreport(saved_path)
     if not payload:
         return {"ok": False, "error": "saved report not found"}
-    return http_json(FINREPORT_SAVE_URL, payload=payload, timeout=120)
+    return post_finreport_remote_payload(payload, payload.get("ticker", ""))
 
 
 def mark_saved_finreport_remote(saved_path: str) -> dict:
@@ -436,6 +467,7 @@ def process_candidates(dry_run: bool) -> int:
 
     created = 0
     generated_items: list[dict] = []
+    remote_failures: list[str] = []
     for item in candidates:
         query = item["query"]
         processed_news_ids.add(item["news_id"])
@@ -468,9 +500,15 @@ def process_candidates(dry_run: bool) -> int:
                     report_item = remote_item
                     report_item["_saved_path"] = path
                 else:
-                    log(f"remote register failed for {query}: {remote_res}")
+                    msg = f"remote register failed for {query}: {remote_res}"
+                    log(msg)
+                    remote_failures.append(msg)
+                    continue
             except Exception as exc:
-                log(f"remote register error for {query}: {exc}")
+                msg = f"remote register error for {query}: {exc}"
+                log(msg)
+                remote_failures.append(msg)
+                continue
         log(f"registered report: {query} -> {report_item.get('detail_url', '')}")
         generated_items.append(report_item)
         queries_today.add(query.lower())
@@ -514,6 +552,9 @@ def process_candidates(dry_run: bool) -> int:
             log(f"paragraph posts created: {posted}")
         except Exception as exc:
             log(f"paragraph posting error: {exc}")
+
+    if remote_failures:
+        raise RuntimeError("; ".join(remote_failures[:3]))
 
     return created
 
