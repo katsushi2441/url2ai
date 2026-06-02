@@ -351,6 +351,11 @@ function pm_enqueue_generate_job($query, $depth, $source) {
         'meta' => array(
             'project' => 'url2ai',
             'kind' => 'ollama',
+            'resource' => 'ollama',
+            'resource_key' => 'ollama:192.168.0.14:gemma4:e4b',
+            'ollama_host' => '192.168.0.14',
+            'ollama_endpoint' => OLLAMA_API,
+            'ollama_model' => 'gemma4:e4b',
             'source' => $source,
             'model' => 'gemma4:e4b',
             'query' => $query,
