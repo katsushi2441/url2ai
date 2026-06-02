@@ -332,6 +332,92 @@ function fr_json_response($data, $status_code) {
     exit;
 }
 
+function fr_rqdb_api($method, $path, $payload) {
+    if (!defined('RQDB4AI_API_BASE') || trim(RQDB4AI_API_BASE) === '' || !defined('RQDB4AI_API_TOKEN') || trim(RQDB4AI_API_TOKEN) === '') {
+        return array('ok' => false, 'error' => 'RQDB4AI is not configured');
+    }
+    $url = rtrim(RQDB4AI_API_BASE, '/') . '/' . ltrim($path, '/');
+    $body = $payload === null ? null : json_encode($payload, JSON_UNESCAPED_UNICODE);
+    $headers = array(
+        'Authorization: Bearer ' . RQDB4AI_API_TOKEN,
+        'Content-Type: application/json',
+        'Accept: application/json',
+        'User-Agent: FinReportPHP/RQDB4AI',
+    );
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, array(
+            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTPHEADER => $headers,
+        ));
+        if ($body !== null) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+        }
+        $raw = curl_exec($ch);
+        $err = curl_error($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if (!$raw || $err) {
+            return array('ok' => false, 'error' => $err ? $err : 'rqdb4ai request failed', 'http_code' => $code);
+        }
+    } else {
+        $opts = array('http' => array(
+            'method' => $method,
+            'header' => implode("\r\n", $headers) . "\r\n",
+            'content' => $body,
+            'timeout' => 30,
+            'ignore_errors' => true,
+        ));
+        $raw = @file_get_contents($url, false, stream_context_create($opts));
+        $code = 0;
+        if (isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $m)) {
+            $code = (int) $m[1];
+        }
+        if (!$raw) {
+            return array('ok' => false, 'error' => 'rqdb4ai request failed', 'http_code' => $code);
+        }
+    }
+    $data = json_decode($raw, true);
+    if (!is_array($data)) {
+        return array('ok' => false, 'error' => 'rqdb4ai invalid json', 'http_code' => isset($code) ? $code : 0, 'raw' => substr($raw, 0, 300));
+    }
+    return $data;
+}
+
+function fr_enqueue_generate_job($ticker, $source) {
+    return fr_rqdb_api('POST', '/api/enqueue', array(
+        'queue' => 'auto',
+        'function' => 'finreport_jobs.generate_report_job',
+        'args' => array(),
+        'kwargs' => array(
+            'ticker' => $ticker,
+            'source' => $source,
+            'register_remote' => true,
+        ),
+        'meta' => array(
+            'project' => 'url2ai',
+            'app' => 'finreport',
+            'kind' => 'ollama',
+            'resource' => 'ollama',
+            'resource_key' => 'ollama:192.168.0.14:gemma4:e4b',
+            'ollama_host' => '192.168.0.14',
+            'ollama_endpoint' => OLLAMA_API,
+            'ollama_model' => 'gemma4:e4b',
+            'source' => $source,
+            'queue_class' => 'web',
+            'priority_class' => 'interactive',
+            'model' => 'gemma4:e4b',
+            'ticker' => $ticker,
+        ),
+        'timeout' => 900,
+        'result_ttl' => 86400,
+        'failure_ttl' => 604800,
+    ));
+}
+
 function fr_read_json_file($path) {
     if (!is_file($path)) return null;
     $raw = @file_get_contents($path);
@@ -692,49 +778,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin && $action === 'generate'
         header('Location: ' . $x_redirect_uri); exit;
     }
 
-    $payload = json_encode(array('ticker' => $ticker), JSON_UNESCAPED_UNICODE);
-    if (function_exists('curl_init')) {
-        $ch = curl_init(FINREPORT_API);
-        curl_setopt_array($ch, array(
-            CURLOPT_POST           => true,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CONNECTTIMEOUT => 10,
-            CURLOPT_TIMEOUT        => 600,
-            CURLOPT_HTTPHEADER     => array('Content-Type: application/json', 'Accept: application/json'),
-            CURLOPT_POSTFIELDS     => $payload,
-        ));
-        $raw      = curl_exec($ch);
-        $curl_err = curl_error($ch);
-        $http_code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-    } else {
-        $opts = array('http' => array('method'=>'POST','header'=>"Content-Type: application/json\r\n",'content'=>$payload,'timeout'=>600,'ignore_errors'=>true));
-        $raw  = @file_get_contents(FINREPORT_API, false, stream_context_create($opts));
-        $curl_err  = '';
-        $http_code = 200;
-    }
-
-    if (!$raw || $curl_err) {
-        $_SESSION['fr_flash_error'] = 'FinReport APIに接続できませんでした: ' . $curl_err;
+    $job_res = fr_enqueue_generate_job($ticker, 'web_online');
+    if (empty($job_res['ok']) || empty($job_res['job']['id'])) {
+        $_SESSION['fr_flash_error'] = 'RQジョブ投入に失敗しました: ' . (isset($job_res['error']) ? $job_res['error'] : 'unknown error');
         header('Location: ' . $x_redirect_uri); exit;
     }
-    $res = json_decode($raw, true);
-    if (!is_array($res) || empty($res['report'])) {
-        $_SESSION['fr_flash_error'] = 'レポート生成に失敗しました (HTTP ' . $http_code . ')';
-        header('Location: ' . $x_redirect_uri); exit;
-    }
-
-    $save_data = array(
-        'ticker'          => $ticker,
-        'company_name'    => isset($res['company_name'])    ? trim($res['company_name'])    : '',
-        'resolved_symbol' => isset($res['resolved_symbol']) ? trim($res['resolved_symbol']) : '',
-        'report'          => $res['report'],
-        'summary'         => isset($res['summary'])  ? $res['summary']  : '',
-        'sources'         => isset($res['sources'])  ? $res['sources']  : array(),
-        'created_at'      => date('Y-m-d H:i:s'),
-    );
-    fr_save($ticker, $save_data);
-    fr_post_sns_notice($save_data);
+    $_SESSION['fr_flash_error'] = '生成ジョブをキューに登録しました。Kurage RQ Dashboardで進行状況を確認してください: ' . $job_res['job']['id'];
     header('Location: ' . $x_redirect_uri . '?ticker=' . urlencode($ticker)); exit;
 }
 ?><!DOCTYPE html>
