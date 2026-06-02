@@ -4,7 +4,7 @@ polymarket_worker.py
 
 Daily worker that fetches trending Polymarket markets by volume,
 generates intelligence reports, saves them in the same format as
-polymarket.php, and posts them to Paragraph.
+polymarket.php. It does not post to Paragraph.
 
 Examples:
   python3 polymarket_worker.py --once
@@ -83,10 +83,6 @@ POLYMARKET_SAVE_URL = os.environ.get(
     "POLYMARKET_SAVE_URL",
     f"{SITE_BASE_URL}/polymarket.php?api=save",
 )
-POLYMARKET_MARK_URL = os.environ.get(
-    "POLYMARKET_MARK_URL",
-    f"{SITE_BASE_URL}/polymarket.php?api=mark_paragraph",
-)
 POLYMARKET_REGISTER_REMOTE = os.environ.get("POLYMARKET_REGISTER_REMOTE", "1").lower() in {"1", "true", "yes"}
 OLLAMA_API = os.environ.get(
     "OLLAMA_API",
@@ -96,12 +92,10 @@ OLLAMA_MODEL = os.environ.get(
     "OLLAMA_MODEL",
     CONF.get("ollama", {}).get("default_model", "gemma4:e4b"),
 )
-POLYMARKET_PARAGRAPH_STATUS = os.environ.get("POLYMARKET_PARAGRAPH_STATUS", "published")
 RUN_TIMES_JST     = [(10, 0)]
 MAX_ITEMS_PER_DAY = int(os.environ.get("POLYMARKET_WORKER_MAX_ITEMS", "1"))
 MAX_CANDIDATES_PER_RUN = int(os.environ.get("POLYMARKET_WORKER_CANDIDATES", "10"))
 FETCH_POOL_SIZE   = int(os.environ.get("POLYMARKET_WORKER_POOL_SIZE", "50"))
-BANKR_DISCOVER_URL = "https://bankr.bot/discover/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3"
 
 
 # ---------------------------------------------------------------------------
@@ -220,18 +214,6 @@ def save_polymarketreport(query: str, response: dict) -> str:
     return path
 
 
-def update_saved_paragraph(saved_path: str, paragraph_url: str, paragraph_post_id: str) -> None:
-    if not saved_path or not os.path.exists(saved_path):
-        return
-    with open(saved_path, encoding="utf-8") as fh:
-        payload = json.load(fh)
-    payload["paragraph_url"]       = paragraph_url
-    payload["paragraph_post_id"]   = paragraph_post_id
-    payload["paragraph_posted_at"] = dt.datetime.now().isoformat()
-    with open(saved_path, "w", encoding="utf-8") as fh:
-        json.dump(payload, fh, ensure_ascii=False, indent=2)
-
-
 def load_saved_report(saved_path: str) -> dict:
     if not saved_path or not os.path.exists(saved_path):
         return {}
@@ -253,8 +235,6 @@ def build_pm_item(query: str, response: dict, saved_path: str) -> dict:
         "created_at":      dt.datetime.fromtimestamp(created_ts).isoformat(),
         "created_ts":      created_ts,
         "detail_url":      f"{SITE_BASE_URL}/polymarket.php?query={urllib.parse.quote(query)}",
-        "paragraph_url":      "",
-        "paragraph_post_id":  "",
         "_saved_path":        saved_path,
     }
 
@@ -283,20 +263,6 @@ def register_saved_remote(saved_path: str) -> dict:
     return http_json(POLYMARKET_SAVE_URL, payload=payload, timeout=120)
 
 
-def mark_saved_remote(saved_path: str) -> dict:
-    payload = load_saved_report(saved_path)
-    if not payload:
-        return {"ok": False, "error": "saved report not found"}
-    mark_payload = {
-        "query":             payload.get("query", ""),
-        "paragraph_url":     payload.get("paragraph_url", ""),
-        "paragraph_post_id": payload.get("paragraph_post_id", ""),
-    }
-    if not mark_payload["query"] or not (mark_payload["paragraph_url"] or mark_payload["paragraph_post_id"]):
-        return {"ok": False, "error": "query and paragraph fields are required"}
-    return http_json(POLYMARKET_MARK_URL, payload=mark_payload, timeout=120)
-
-
 # ---------------------------------------------------------------------------
 # Ollama helpers
 # ---------------------------------------------------------------------------
@@ -305,69 +271,6 @@ def call_ollama(prompt: str, timeout: int = 300) -> str:
     payload = {"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
     res = http_json(OLLAMA_API, payload=payload, timeout=timeout)
     return (res.get("response") or "").strip()
-
-
-def build_pm_bilingual_markdown(item: dict) -> tuple[str, str]:
-    query           = item.get("query", "")
-    summary         = item.get("summary", "")
-    report          = item.get("report", "")
-    sources         = item.get("sources", [])
-    matched_markets = item.get("matched_markets", [])
-    detail_url      = item.get("detail_url", "")
-
-    markets_lines = []
-    for m in (matched_markets or []):
-        odds     = m.get("odds", {})
-        odds_str = "  ".join(f"{k}: {int(float(v) * 100)}%" for k, v in odds.items()) if isinstance(odds, dict) else ""
-        markets_lines.append(f"- {m.get('title', '')} | {odds_str} | Vol: {m.get('volume', '-')}")
-    markets_str  = "\n".join(markets_lines) if markets_lines else "N/A"
-    source_lines = "\n".join(f"- {src}" for src in sources) if sources else "- No sources provided"
-
-    prompt = f"""You are preparing a bilingual Paragraph post from a Polymarket intelligence report.
-
-Write Markdown in this exact high-level structure:
-
-# 日本語
-## 概要
-## 主なポイント
-## レポート本文
-## 参考リンク
-
-# English
-## Overview
-## Key Points
-## Full Report
-## Sources
-
-Rules:
-- Keep the meaning faithful to the original data
-- Preserve market probabilities and uncertainty language
-- Do not invent sources
-- Use clear Japanese and natural English
-- Keep Markdown clean and readable
-- Include the detail URL near the end of both language sections
-
-Query: {query}
-Created at: {item.get("created_at", "")}
-Detail URL: {detail_url}
-
-Summary:
-{summary}
-
-Report:
-{report}
-
-Matched Markets:
-{markets_str}
-
-Sources:
-{source_lines}
-"""
-    content = call_ollama(prompt, timeout=300)
-    if not content or len(content) < 300:
-        raise RuntimeError("Ollama returned empty or short content for bilingual markdown")
-    title = f"{query} | Polymarket Intelligence 日本語 + English"
-    return title, content
 
 
 def generate_polymarket_report(query: str, depth: str = "medium") -> dict:
@@ -467,39 +370,6 @@ def process_candidates(dry_run: bool) -> int:
     state["processed_slugs"] = list(processed_slugs)[-500:]
     state["queries_today"]   = list(queries_today)
     save_state(state)
-
-    if created > 0 and not dry_run:
-        try:
-            import finrep2pg
-            posted = 0
-            for item in generated_items:
-                title, markdown = build_pm_bilingual_markdown(item)
-                markdown = markdown.rstrip() + (
-                    "\n\n---\n"
-                    "Bankr / URL2AI:\n"
-                    f"- Discover URL2AI on Bankr: {BANKR_DISCOVER_URL}\n"
-                )
-                res = finrep2pg.post_to_paragraph(title, markdown, POLYMARKET_PARAGRAPH_STATUS)
-                paragraph_url     = res.get("url") or res.get("canonicalUrl") or ""
-                paragraph_post_id = str(res.get("id") or res.get("postId") or "")
-                if not paragraph_url and paragraph_post_id:
-                    paragraph_url = finrep2pg.resolve_paragraph_post_url(paragraph_post_id)
-                if paragraph_url or paragraph_post_id:
-                    saved_path = item.get("_saved_path", "")
-                    update_saved_paragraph(saved_path, paragraph_url, paragraph_post_id)
-                    item["paragraph_url"]     = paragraph_url
-                    item["paragraph_post_id"] = paragraph_post_id
-                    if POLYMARKET_REGISTER_REMOTE:
-                        remote_res = register_saved_remote(saved_path)
-                        if not remote_res.get("ok"):
-                            log(f"remote save failed: {remote_res}")
-                        mark_res = mark_saved_remote(saved_path)
-                        if not mark_res.get("ok"):
-                            log(f"remote paragraph mark failed: {mark_res}")
-                posted += 1
-            log(f"paragraph posts created: {posted}")
-        except Exception as exc:
-            log(f"paragraph posting error: {exc}")
 
     return created
 
