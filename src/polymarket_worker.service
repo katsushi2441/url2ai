@@ -1,12 +1,12 @@
 [Unit]
-Description=URL2AI Ollama RQ Worker
+Description=URL2AI Polymarket RQ Worker
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 WorkingDirectory=/home/kojima/work/url2ai
-ExecStart=/home/kojima/work/url2ai/scripts/run_url2ai_ollama_rq_worker.sh
+ExecStart=/home/kojima/work/url2ai/scripts/run_polymarket_rq_worker.sh
 Restart=always
 RestartSec=20
 Environment=PYTHONUNBUFFERED=1
