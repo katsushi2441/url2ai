@@ -2,7 +2,7 @@
 RQDB4AI_API_URL="${RQDB4AI_API_URL:-http://127.0.0.1:18300}"
 : "${RQDB4AI_API_TOKEN:?RQDB4AI_API_TOKEN required}"
 OSS_PERIOD="${OSS_PERIOD:-daily}"
-OSS_TOP_N="${OSS_TOP_N:-1}"
+OSS_TOP_N="${OSS_TOP_N:-3}"
 
 curl -fsS "$RQDB4AI_API_URL/api/enqueue" \
   -H "Authorization: Bearer $RQDB4AI_API_TOKEN" \

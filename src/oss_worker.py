@@ -561,8 +561,11 @@ def run_job(period='daily', top_n=3):
 
         res    = save_to_cms(title, r['url'], analysis, post_full, tags)
         status = res.get('status', '')
-        if status == 'ok':
-            log.info('登録完了: %s', res.get('id'))
+        if status in ('ok', 'updated'):
+            if status == 'updated':
+                log.info('更新完了: %s', res.get('id'))
+            else:
+                log.info('登録完了: %s', res.get('id'))
             sns_notice = res.get('sns_notice') or {}
             if sns_notice.get('ok'):
                 log.info('AIxEC SNS投稿完了: id=%s author=oss', sns_notice.get('id'))
