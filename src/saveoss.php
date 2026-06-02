@@ -263,6 +263,22 @@ if ($action === 'delete') {
     exit;
 }
 
+// ========== 登録済み一覧（Pythonワーカー用） ==========
+if ($action === 'list') {
+    $items = array();
+    foreach (oss_load_all_posts() as $p) {
+        if (!is_array($p)) continue;
+        $items[] = array(
+            'id' => isset($p['id']) ? $p['id'] : '',
+            'title' => isset($p['title']) ? $p['title'] : '',
+            'github_url' => isset($p['github_url']) ? $p['github_url'] : '',
+            'created_at' => isset($p['created_at']) ? $p['created_at'] : '',
+        );
+    }
+    echo json_encode(array('status' => 'ok', 'items' => $items), JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 // ========== Ollama呼び出し ==========
 function call_ollama($prompt) {
     $payload = json_encode(

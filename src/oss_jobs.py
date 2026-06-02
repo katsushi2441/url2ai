@@ -84,7 +84,18 @@ def worker_auto_cycle_job(
     if top_n is None:
         top_n = oss_worker.WEEKLY_TOP_N if period == "weekly" else oss_worker.DAILY_TOP_N
     top_n = max(1, min(10, int(top_n)))
-    created = 0 if dry_run else oss_worker.run_job(period=period, top_n=top_n)
+    attempts: list[dict[str, Any]] = []
+    created = 0
+    if not dry_run:
+        periods = [period]
+        if period == "daily":
+            periods.extend(["weekly", "monthly"])
+        for attempt_period in periods:
+            created = oss_worker.run_job(period=attempt_period, top_n=top_n)
+            attempts.append({"period": attempt_period, "created": created})
+            if created > 0:
+                period = attempt_period
+                break
     return {
         "ok": True,
         **ollama_resource(),
@@ -93,5 +104,6 @@ def worker_auto_cycle_job(
         "top_n": top_n,
         "dry_run": bool(dry_run),
         "created": created,
+        "attempts": attempts,
         "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
     }

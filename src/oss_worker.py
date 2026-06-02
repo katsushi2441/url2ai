@@ -71,7 +71,7 @@ BANKR_DISCOVER_URL = 'https://bankr.bot/discover/0xDaecDda6AD112f0E1E4097fB735dD
 
 # 1日4回実行する時刻（24h）
 DAILY_HOURS  = [0, 6, 12, 18]
-DAILY_TOP_N  = 3   # 1回あたり何件登録するか
+DAILY_TOP_N  = 1   # 1回あたり何件登録するか
 
 # 週間トレンドの追加実行はデフォルト無効
 WEEKLY_ENABLED = False
@@ -478,6 +478,23 @@ def save_to_cms(title, github_url, analysis, post_text, tags):
         return {'error': result.stdout[:100]}
 
 def fetch_registered_urls():
+    payload = json.dumps({'action': 'list'}, ensure_ascii=False)
+    cmd = ['curl', '-s', '--max-time', '30', API_URL,
+           '-H', 'User-Agent: oss-worker/1.0',
+           '-H', 'Content-Type: application/json',
+           '-d', payload]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        data = json.loads(result.stdout)
+        posts = data.get('items', []) if isinstance(data, dict) and data.get('status') == 'ok' else data
+        if not isinstance(posts, list):
+            raise ValueError('list API did not return posts')
+        urls  = set(p['github_url'] for p in posts if 'github_url' in p)
+        log.info('登録済みURL取得: %d件', len(urls))
+        return urls
+    except Exception as e:
+        log.warning('fetch_registered_urls(list API)失敗: %s', e)
+
     base_url = API_URL.replace('saveoss.php', 'data/oss_posts.json')
     list_url = base_url + '?t=' + str(int(time.time()))
     cmd = ['curl', '-s', '--max-time', '30', list_url,
@@ -486,11 +503,11 @@ def fetch_registered_urls():
     result = subprocess.run(cmd, capture_output=True, text=True)
     try:
         posts = json.loads(result.stdout)
-        urls  = set(p['github_url'] for p in posts if 'github_url' in p)
-        log.info('登録済みURL取得: %d件', len(urls))
+        urls = set(p['github_url'] for p in posts if 'github_url' in p)
+        log.info('登録済みURL取得(旧JSON): %d件', len(urls))
         return urls
     except Exception as e:
-        log.warning('fetch_registered_urls失敗: %s', e)
+        log.warning('fetch_registered_urls(旧JSON)失敗: %s', e)
         return set()
 
 def _candidate_generator(period):
