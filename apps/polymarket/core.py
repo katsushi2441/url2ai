@@ -171,12 +171,13 @@ def build_context(markets: list[dict]) -> str:
     return "\n\n---\n\n".join(lines)
 
 
-async def generate_report_data(query: str, depth: str = "medium") -> dict:
+async def generate_report_data(query: str, depth: str = "medium", raw_markets: list[dict] | None = None) -> dict:
     query = query.strip()
     if not query:
         raise ValueError("query is required")
 
-    raw_markets = await fetch_markets(query)
+    if raw_markets is None:
+        raw_markets = await fetch_markets(query)
     if not raw_markets:
         raise RuntimeError(f"「{query}」に関連するアクティブな市場が見つかりませんでした")
 

@@ -336,8 +336,11 @@ def call_ollama(prompt: str, timeout: int = 300) -> str:
     return (res.get("response") or "").strip()
 
 
-def generate_polymarket_report(query: str, depth: str = "medium") -> dict:
-    return http_json(POLYMARKET_API, payload={"query": query, "depth": depth}, timeout=600)
+def generate_polymarket_report(query: str, depth: str = "medium", market: dict | None = None) -> dict:
+    payload = {"query": query, "depth": depth}
+    if market:
+        payload["markets"] = [market]
+    return http_json(POLYMARKET_API, payload=payload, timeout=600)
 
 
 # ---------------------------------------------------------------------------
@@ -376,7 +379,7 @@ def process_candidates(dry_run: bool) -> int:
         if query.lower() in queries_today or report_exists_today(query):
             log(f"skip duplicate query: {query}")
             continue
-        candidates.append({"slug": slug, "query": query})
+        candidates.append({"slug": slug, "query": query, "market": m})
 
     if not candidates:
         log("no fresh markets to report")
@@ -390,16 +393,15 @@ def process_candidates(dry_run: bool) -> int:
             break
         slug  = item["slug"]
         query = item["query"]
-        processed_slugs.add(slug)
-
         if dry_run:
             log(f"dry-run candidate: {query}  (slug={slug})")
+            processed_slugs.add(slug)
             queries_today.add(query.lower())
             created += 1
             continue
 
         try:
-            result = generate_polymarket_report(query)
+            result = generate_polymarket_report(query, market=item.get("market"))
         except Exception as exc:
             log(f"generate failed for {query}: {exc}")
             continue
@@ -430,6 +432,7 @@ def process_candidates(dry_run: bool) -> int:
                 log(f"remote register error for {query}: {exc}")
         log(f"registered report: {query} -> {report_item.get('detail_url', '')}")
         generated_items.append(report_item)
+        processed_slugs.add(slug)
         queries_today.add(query.lower())
         created += 1
 

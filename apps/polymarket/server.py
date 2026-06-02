@@ -14,6 +14,7 @@ PORT = int(os.getenv("PORT", "8015"))
 class ReportRequest(BaseModel):
     query: str
     depth: str = "medium"
+    markets: list[dict] | None = None
 
 
 app = FastAPI()
@@ -26,7 +27,7 @@ async def generate_report(req: ReportRequest):
         raise HTTPException(status_code=400, detail="query is required")
 
     try:
-        result = await generate_report_data(query, req.depth)
+        result = await generate_report_data(query, req.depth, req.markets)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
