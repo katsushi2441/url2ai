@@ -214,6 +214,69 @@ def save_polymarketreport(query: str, response: dict) -> str:
     return path
 
 
+BAD_REPORT_PATTERNS = (
+    "具体的なオッズがない",
+    "具体的なオッズデータがない",
+    "具体的なオッズデータが不足",
+    "具体的な市場データがない",
+    "具体的な市場データが確認できません",
+    "直接的な市場データは提供されておりません",
+    "市場データは提供されておりません",
+    "市場データが提供されていない",
+    "市場確率データが欠損",
+    "市場データが不足",
+    "市場データが欠落",
+    "データが不足",
+    "データが欠落",
+    "データが提供されるのを待つ",
+    "分析は不可能",
+    "現時点での分析は不可能",
+    "投資判断は困難",
+    "投資判断を保留",
+    "most likely result cannot be determined",
+    "insufficient data",
+    "no odds data",
+    "no market data",
+)
+
+
+def normalize_text(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
+
+
+def relevant_market(query: str, market: dict) -> bool:
+    q = normalize_text(query)
+    title = normalize_text(str(market.get("title") or ""))
+    if not q or not title:
+        return False
+    if q == title or q in title or title in q:
+        return True
+    q_tokens = set(q.split())
+    title_tokens = set(title.split())
+    if not q_tokens:
+        return False
+    return len(q_tokens & title_tokens) / len(q_tokens) >= 0.75
+
+
+def is_actionable_report(result: dict, query: str = "") -> tuple[bool, str]:
+    report = str(result.get("report") or "")
+    summary = str(result.get("summary") or "")
+    matched = result.get("matched_markets") or []
+    if not matched:
+        return False, "no matched markets"
+    if query:
+        relevant = [m for m in matched if relevant_market(query, m)]
+        if not relevant:
+            return False, "no relevant matched markets"
+        if any(not m.get("odds") for m in relevant):
+            return False, "relevant market has no odds"
+    text = f"{summary}\n{report}".lower()
+    for pattern in BAD_REPORT_PATTERNS:
+        if pattern.lower() in text:
+            return False, f"bad report phrase: {pattern}"
+    return True, ""
+
+
 def load_saved_report(saved_path: str) -> dict:
     if not saved_path or not os.path.exists(saved_path):
         return {}
@@ -345,6 +408,10 @@ def process_candidates(dry_run: bool) -> int:
             continue
         if not result.get("matched_markets"):
             log(f"no matched markets for {query}, skipping")
+            continue
+        ok, reason = is_actionable_report(result, query)
+        if not ok:
+            log(f"non-actionable report for {query}: {reason}, skipping")
             continue
 
         path        = save_polymarketreport(query, result)

@@ -238,6 +238,42 @@ function pm_save($query, $data) {
     if (!is_dir($DATA_DIR)) @mkdir($DATA_DIR, 0775, true);
     file_put_contents(pm_data_file($query), json_encode($data, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT));
 }
+function pm_actionable_report_error($report, $summary, $matched_markets) {
+    if (!is_array($matched_markets) || count($matched_markets) === 0) {
+        return 'no matched markets';
+    }
+    $text = mb_strtolower((string)$summary . "\n" . (string)$report, 'UTF-8');
+    $patterns = array(
+        '具体的なオッズがない',
+        '具体的なオッズデータがない',
+        '具体的なオッズデータが不足',
+        '具体的な市場データがない',
+        '具体的な市場データが確認できません',
+        '直接的な市場データは提供されておりません',
+        '市場データは提供されておりません',
+        '市場データが提供されていない',
+        '市場確率データが欠損',
+        '市場データが不足',
+        '市場データが欠落',
+        'データが不足',
+        'データが欠落',
+        'データが提供されるのを待つ',
+        '分析は不可能',
+        '現時点での分析は不可能',
+        '投資判断は困難',
+        '投資判断を保留',
+        'most likely result cannot be determined',
+        'insufficient data',
+        'no odds data',
+        'no market data',
+    );
+    foreach ($patterns as $pattern) {
+        if (mb_strpos($text, mb_strtolower($pattern, 'UTF-8')) !== false) {
+            return 'bad report phrase: ' . $pattern;
+        }
+    }
+    return '';
+}
 function pm_find_latest_file($query) {
     global $DATA_DIR;
     $slug  = pm_slug($query);
@@ -476,6 +512,12 @@ if (isset($_GET['api']) && $_GET['api'] !== '') {
         if ($query === '' || $report === '') {
             pm_json_response(array('ok' => false, 'error' => 'query and report are required'), 400);
         }
+        $summary = isset($body['summary']) ? trim((string) $body['summary']) : '';
+        $matched_markets = isset($body['matched_markets']) && is_array($body['matched_markets']) ? $body['matched_markets'] : array();
+        $quality_error = pm_actionable_report_error($report, $summary, $matched_markets);
+        if ($quality_error !== '') {
+            pm_json_response(array('ok' => false, 'error' => 'non_actionable_report', 'reason' => $quality_error), 422);
+        }
         $created_at = isset($body['created_at']) && trim($body['created_at']) !== ''
             ? trim($body['created_at'])
             : date('Y-m-d H:i:s');
@@ -483,8 +525,8 @@ if (isset($_GET['api']) && $_GET['api'] !== '') {
             'query'           => $query,
             'depth'           => isset($body['depth']) ? $body['depth'] : 'medium',
             'report'          => $report,
-            'summary'         => isset($body['summary']) ? $body['summary'] : '',
-            'matched_markets' => isset($body['matched_markets']) && is_array($body['matched_markets']) ? $body['matched_markets'] : array(),
+            'summary'         => $summary,
+            'matched_markets' => $matched_markets,
             'sources'         => isset($body['sources']) && is_array($body['sources']) ? $body['sources'] : array(),
             'created_at'      => $created_at,
             'paragraph_url'   => isset($body['paragraph_url']) ? trim((string) $body['paragraph_url']) : '',
@@ -515,113 +557,11 @@ if (isset($_GET['api']) && $_GET['api'] !== '') {
     }
 
     if ($api === 'mark_paragraph') {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            pm_json_response(array('ok' => false, 'error' => 'POST required'), 405);
-        }
-        $raw = file_get_contents('php://input');
-        $body = json_decode($raw, true);
-        if (!is_array($body)) {
-            pm_json_response(array('ok' => false, 'error' => 'invalid json'), 400);
-        }
-        $query             = isset($body['query'])             ? trim($body['query'])             : '';
-        $paragraph_url     = isset($body['paragraph_url'])     ? trim($body['paragraph_url'])     : '';
-        $paragraph_post_id = isset($body['paragraph_post_id']) ? trim((string)$body['paragraph_post_id']) : '';
-        if ($query === '' || ($paragraph_url === '' && $paragraph_post_id === '')) {
-            pm_json_response(array('ok' => false, 'error' => 'query and paragraph_url or paragraph_post_id are required'), 400);
-        }
-        $updated = pm_update_latest($query, array(
-            'paragraph_url'       => $paragraph_url,
-            'paragraph_post_id'   => $paragraph_post_id,
-            'paragraph_posted_at' => date('c'),
-        ));
-        if (!$updated) {
-            pm_json_response(array('ok' => false, 'error' => 'report not found'), 404);
-        }
-        pm_json_response(array(
-            'ok'                  => true,
-            'query'               => $updated['query'],
-            'paragraph_url'       => $updated['paragraph_url'],
-            'paragraph_post_id'   => isset($updated['paragraph_post_id']) ? $updated['paragraph_post_id'] : '',
-            'paragraph_posted_at' => isset($updated['paragraph_posted_at']) ? $updated['paragraph_posted_at'] : '',
-        ), 200);
+        pm_json_response(array('ok' => false, 'error' => 'paragraph_disabled'), 410);
     }
 
     if ($api === 'paragraph_post') {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            pm_json_response(array('ok' => false, 'error' => 'POST required'), 405);
-        }
-        $session_user = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
-        if ($session_user !== $ADMIN) {
-            pm_json_response(array('ok' => false, 'error' => 'unauthorized'), 403);
-        }
-        if (!PARAGRAPH_API_KEY) {
-            pm_json_response(array('ok' => false, 'error' => 'PARAGRAPH_API_KEY not configured'), 500);
-        }
-        $raw = file_get_contents('php://input');
-        $body = json_decode($raw, true);
-        if (!is_array($body)) {
-            pm_json_response(array('ok' => false, 'error' => 'invalid json'), 400);
-        }
-        $query = isset($body['query']) ? trim($body['query']) : '';
-        if ($query === '') {
-            pm_json_response(array('ok' => false, 'error' => 'query is required'), 400);
-        }
-        $saved = pm_load($query);
-        if (!$saved || empty($saved['report'])) {
-            pm_json_response(array('ok' => false, 'error' => 'report not found'), 404);
-        }
-        $existing_url = isset($saved['paragraph_url'])     ? trim((string) $saved['paragraph_url'])     : '';
-        $existing_id  = isset($saved['paragraph_post_id']) ? trim((string) $saved['paragraph_post_id']) : '';
-        if ($existing_url !== '' || $existing_id !== '') {
-            pm_json_response(array(
-                'ok'                => true,
-                'paragraph_url'     => $existing_url,
-                'paragraph_post_id' => $existing_id,
-            ), 200);
-        }
-        $title      = 'Polymarket Intelligence: ' . $query;
-        $summary    = isset($saved['summary']) ? trim((string) $saved['summary']) : '';
-        $detail_url = $BASE_URL . '/polymarket.php?query=' . urlencode($query);
-        $markdown   = "# " . $title . "\n\n";
-        if ($summary !== '') {
-            $markdown .= "> " . str_replace("\n", "\n> ", $summary) . "\n\n";
-        }
-        $markdown .= trim((string) $saved['report']) . "\n\n---\n";
-        $markdown .= "Source:\n- Polymarket Intelligence: " . $detail_url . "\n";
-        $markdown .= "Bankr / URL2AI:\n- https://bankr.bot/discover/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3\n";
-        $payload = json_encode(array(
-            'title'    => $title,
-            'markdown' => $markdown,
-            'status'   => 'published',
-        ), JSON_UNESCAPED_UNICODE);
-        $opts = array('http' => array(
-            'method'        => 'POST',
-            'header'        => "Authorization: Bearer " . PARAGRAPH_API_KEY . "\r\nContent-Type: application/json\r\n",
-            'content'       => $payload,
-            'timeout'       => 60,
-            'ignore_errors' => true,
-        ));
-        $res     = @file_get_contents('https://public.api.paragraph.com/api/v1/posts', false, stream_context_create($opts));
-        $res_arr = $res ? json_decode($res, true) : array();
-        $para_url     = isset($res_arr['url']) ? $res_arr['url'] : (isset($res_arr['canonicalUrl']) ? $res_arr['canonicalUrl'] : '');
-        $para_post_id = isset($res_arr['id']) ? (string)$res_arr['id'] : (isset($res_arr['postId']) ? (string)$res_arr['postId'] : '');
-        if (!$para_url && !$para_post_id) {
-            pm_json_response(array('ok' => false, 'error' => 'Paragraph API failed', 'detail' => $res_arr), 500);
-        }
-        $updated = pm_update_latest($query, array(
-            'paragraph_url'       => $para_url,
-            'paragraph_post_id'   => $para_post_id,
-            'paragraph_posted_at' => date('c'),
-        ));
-        if (!$updated) {
-            pm_json_response(array('ok' => false, 'error' => 'report update failed'), 500);
-        }
-        pm_json_response(array(
-            'ok'                  => true,
-            'paragraph_url'       => $para_url,
-            'paragraph_post_id'   => $para_post_id,
-            'paragraph_posted_at' => isset($updated['paragraph_posted_at']) ? $updated['paragraph_posted_at'] : '',
-        ), 200);
+        pm_json_response(array('ok' => false, 'error' => 'paragraph_disabled'), 410);
     }
 
     pm_json_response(array('ok' => false, 'error' => 'unknown api'), 404);

@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime
 
 import httpx
@@ -139,6 +140,25 @@ def format_market(m: dict) -> dict:
     }
 
 
+def normalize_text(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
+
+
+def relevant_market(query: str, market: dict) -> bool:
+    q = normalize_text(query)
+    title = normalize_text(str(market.get("title") or ""))
+    if not q or not title:
+        return False
+    if q == title or q in title or title in q:
+        return True
+    q_tokens = set(q.split())
+    title_tokens = set(title.split())
+    if not q_tokens:
+        return False
+    overlap = len(q_tokens & title_tokens) / len(q_tokens)
+    return overlap >= 0.75
+
+
 def build_context(markets: list[dict]) -> str:
     lines = []
     for m in markets:
@@ -160,7 +180,10 @@ async def generate_report_data(query: str, depth: str = "medium") -> dict:
     if not raw_markets:
         raise RuntimeError(f"「{query}」に関連するアクティブな市場が見つかりませんでした")
 
-    markets = [format_market(m) for m in raw_markets]
+    markets = [m for m in (format_market(m) for m in raw_markets) if relevant_market(query, m)]
+    markets = [m for m in markets if m.get("odds")]
+    if not markets:
+        raise RuntimeError(f"「{query}」に十分一致し、オッズを持つアクティブな市場が見つかりませんでした")
     sources = [f"https://polymarket.com/event/{m['slug']}" for m in markets if m["slug"]]
     context = build_context(markets)
 
