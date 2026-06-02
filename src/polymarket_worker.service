@@ -1,18 +1,17 @@
 [Unit]
-Description=Polymarket Worker - Daily news to Polymarket Intelligence + Paragraph
+Description=URL2AI Polymarket RQ Worker
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/kojima/work/url2ai/src
-ExecStart=/usr/bin/python3 /home/kojima/work/url2ai/src/polymarket_worker.py --interval 600
+WorkingDirectory=/home/kojima/work/url2ai
+ExecStart=/home/kojima/work/url2ai/scripts/run_polymarket_rq_worker.sh
 Restart=always
 RestartSec=20
 Environment=PYTHONUNBUFFERED=1
-Environment=PARAGRAPH_API_KEY=
-StandardOutput=append:/home/kojima/polymarket_worker.log
-StandardError=append:/home/kojima/polymarket_worker.log
+StandardOutput=append:/home/kojima/rqdb4ai_polymarket_worker.log
+StandardError=append:/home/kojima/rqdb4ai_polymarket_worker.log
 
 [Install]
 WantedBy=multi-user.target
