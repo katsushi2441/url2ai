@@ -338,7 +338,7 @@ function pm_rqdb_api($method, $path, $payload) {
 }
 function pm_enqueue_generate_job($query, $depth, $source) {
     return pm_rqdb_api('POST', '/api/enqueue', array(
-        'queue' => 'polymarket',
+        'queue' => 'polymarket-web',
         'function' => 'polymarket_jobs.generate_report_job',
         'args' => array(),
         'kwargs' => array(
