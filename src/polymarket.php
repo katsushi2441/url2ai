@@ -338,7 +338,7 @@ function pm_rqdb_api($method, $path, $payload) {
 }
 function pm_enqueue_generate_job($query, $depth, $source) {
     return pm_rqdb_api('POST', '/api/enqueue', array(
-        'queue' => 'polymarket-web',
+        'queue' => 'auto',
         'function' => 'polymarket_jobs.generate_report_job',
         'args' => array(),
         'kwargs' => array(
@@ -357,6 +357,8 @@ function pm_enqueue_generate_job($query, $depth, $source) {
             'ollama_endpoint' => OLLAMA_API,
             'ollama_model' => 'gemma4:e4b',
             'source' => $source,
+            'queue_class' => 'web',
+            'priority_class' => 'interactive',
             'model' => 'gemma4:e4b',
             'query' => $query,
             'depth' => $depth,
