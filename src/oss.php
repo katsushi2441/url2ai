@@ -201,6 +201,99 @@ function oss_display_title($post) {
     return $label !== '' ? $label : (isset($post['id']) ? (string)$post['id'] : 'OSS Project');
 }
 
+function oss_json_response($data, $status_code) {
+    http_response_code($status_code);
+    header('Content-Type: application/json; charset=UTF-8');
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    exit;
+}
+
+function oss_rqdb_api($method, $path, $payload) {
+    if (!defined('RQDB4AI_API_BASE') || trim(RQDB4AI_API_BASE) === '' || !defined('RQDB4AI_API_TOKEN') || trim(RQDB4AI_API_TOKEN) === '') {
+        return array('ok' => false, 'error' => 'RQDB4AI is not configured');
+    }
+    $url = rtrim(RQDB4AI_API_BASE, '/') . '/' . ltrim($path, '/');
+    $body = $payload === null ? null : json_encode($payload, JSON_UNESCAPED_UNICODE);
+    $headers = array(
+        'Authorization: Bearer ' . RQDB4AI_API_TOKEN,
+        'Content-Type: application/json',
+        'Accept: application/json',
+        'User-Agent: OSSPHP/RQDB4AI',
+    );
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, array(
+            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTPHEADER => $headers,
+        ));
+        if ($body !== null) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+        }
+        $raw = curl_exec($ch);
+        $err = curl_error($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if (!$raw || $err) {
+            return array('ok' => false, 'error' => $err ? $err : 'rqdb4ai request failed', 'http_code' => $code);
+        }
+    } else {
+        $opts = array('http' => array(
+            'method' => $method,
+            'header' => implode("\r\n", $headers) . "\r\n",
+            'content' => $body,
+            'timeout' => 30,
+            'ignore_errors' => true,
+        ));
+        $raw = @file_get_contents($url, false, stream_context_create($opts));
+        $code = 0;
+        if (isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $m)) {
+            $code = (int) $m[1];
+        }
+        if (!$raw) {
+            return array('ok' => false, 'error' => 'rqdb4ai request failed', 'http_code' => $code);
+        }
+    }
+    $data = json_decode($raw, true);
+    if (!is_array($data)) {
+        return array('ok' => false, 'error' => 'rqdb4ai invalid json', 'http_code' => isset($code) ? $code : 0, 'raw' => substr($raw, 0, 300));
+    }
+    return $data;
+}
+
+function oss_enqueue_register_job($github_url, $source) {
+    return oss_rqdb_api('POST', '/api/enqueue', array(
+        'queue' => 'auto',
+        'function' => 'oss_jobs.generate_register_job',
+        'args' => array(),
+        'kwargs' => array(
+            'github_url' => $github_url,
+            'source' => $source,
+        ),
+        'meta' => array(
+            'project' => 'url2ai',
+            'app' => 'oss',
+            'kind' => 'ollama',
+            'resource' => 'ollama',
+            'resource_key' => 'ollama:192.168.0.14:gemma4:e4b',
+            'ollama_host' => '192.168.0.14',
+            'ollama_endpoint' => OLLAMA_API,
+            'ollama_model' => 'gemma4:e4b',
+            'source' => $source,
+            'queue_class' => 'web',
+            'priority_class' => 'interactive',
+            'model' => 'gemma4:e4b',
+            'github_url' => $github_url,
+        ),
+        'timeout' => 900,
+        'result_ttl' => 86400,
+        'failure_ttl' => 604800,
+    ));
+}
+
 function oss_render_book_ranking($books, $extra_class = '', $limit = 10) {
     if (empty($books) || !is_array($books)) {
         return;
@@ -288,6 +381,37 @@ if ($detail_post) {
         'url'         => $page_url,
         'publisher'   => array('@type' => 'Organization', 'name' => $SITE_NAME)
     );
+}
+
+if (isset($_GET['api']) && $_GET['api'] === 'enqueue_register') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        oss_json_response(array('ok' => false, 'error' => 'POST required'), 405);
+    }
+    if (!$is_admin) {
+        oss_json_response(array('ok' => false, 'error' => 'unauthorized'), 403);
+    }
+    $raw = file_get_contents('php://input');
+    $body = json_decode($raw, true);
+    if (!is_array($body)) {
+        oss_json_response(array('ok' => false, 'error' => 'invalid json'), 400);
+    }
+    $github_url = isset($body['github_url']) ? trim((string)$body['github_url']) : '';
+    if ($github_url === '' || strpos($github_url, 'github.com/') === false) {
+        oss_json_response(array('ok' => false, 'error' => 'invalid github_url'), 400);
+    }
+    $job_res = oss_enqueue_register_job($github_url, 'web_online');
+    if (empty($job_res['ok']) || empty($job_res['job']['id'])) {
+        oss_json_response(array(
+            'ok' => false,
+            'error' => isset($job_res['error']) ? $job_res['error'] : 'rqdb4ai enqueue failed',
+            'detail' => $job_res,
+        ), 500);
+    }
+    oss_json_response(array(
+        'ok' => true,
+        'status' => 'queued',
+        'job' => $job_res['job'],
+    ), 202);
 }
 ?>
 <!DOCTYPE html>
@@ -1122,28 +1246,22 @@ function adminRegister() {
     }
 
     btn.disabled       = true;
-    status.textContent = 'AI考察生成中... (1〜2分かかります)';
+    status.textContent = 'RQジョブ登録中...';
     status.className   = 'admin-status loading';
 
     var xhr = new XMLHttpRequest();
-    xhr.open('POST', 'saveoss.php', true);
+    xhr.open('POST', 'oss.php?api=enqueue_register', true);
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) return;
         btn.disabled = false;
         try {
             var res = JSON.parse(xhr.responseText);
-            if (res.status === 'ok' || res.status === 'updated') {
-                var msg = res.status === 'updated' ? '更新完了: ' : '登録完了: ';
-                if (res.sns_notice && res.sns_notice.ok === false) {
-                    msg += 'AIxSNS投稿失敗: ';
-                }
-                status.textContent = msg + res.title;
-                status.className   = (res.sns_notice && res.sns_notice.ok === false)
-                    ? 'admin-status err'
-                    : 'admin-status ok';
+            if (res.ok && res.status === 'queued') {
+                status.textContent = 'キュー登録済み: ' + (res.job && res.job.id ? res.job.id : '');
+                status.className   = 'admin-status ok';
                 urlInput.value     = '';
-                setTimeout(function() { location.reload(); }, 1500);
+                setTimeout(function() { location.reload(); }, 2500);
             } else if (res.status === 'duplicate') {
                 status.textContent = '既に登録済みです';
                 status.className   = 'admin-status err';

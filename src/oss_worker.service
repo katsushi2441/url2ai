@@ -1,17 +1,18 @@
 [Unit]
-Description=OSS Worker - GitHub Trending Auto Register
-After=network.target
+Description=URL2AI OSS RQ Worker
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
 User=kojima
-WorkingDirectory=/home/kojima/work/url2ai/src
-ExecStart=/usr/bin/python3 /home/kojima/work/url2ai/src/oss_worker.py
+WorkingDirectory=/home/kojima/work/url2ai
+ExecStart=/home/kojima/work/url2ai/scripts/run_url2ai_ollama_rq_worker.sh
 Restart=always
 RestartSec=10
-Environment=PARAGRAPH_API_KEY=
-StandardOutput=append:/home/kojima/oss_worker.log
-StandardError=append:/home/kojima/oss_worker.log
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=append:/home/kojima/url2ai_ollama_rq_worker.log
+StandardError=append:/home/kojima/url2ai_ollama_rq_worker.log
 
 [Install]
 WantedBy=multi-user.target
