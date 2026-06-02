@@ -5,8 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/kojima/work/url2ai
-ExecStart=/home/kojima/work/url2ai/scripts/run_polymarket_rq_worker.sh
+WorkingDirectory=/home/kojima/exdirect/url2ai
+ExecStart=/home/kojima/exdirect/url2ai/scripts/run_polymarket_rq_worker.sh
 Restart=always
 RestartSec=20
 Environment=PYTHONUNBUFFERED=1

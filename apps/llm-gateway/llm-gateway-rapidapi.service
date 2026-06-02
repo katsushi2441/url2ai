@@ -3,7 +3,7 @@ Description=LLM Gateway (RapidAPI, no x402)
 After=network.target
 
 [Service]
-WorkingDirectory=/home/kojima/work/url2ai/apps/llm-gateway
+WorkingDirectory=/home/kojima/exdirect/url2ai/apps/llm-gateway
 ExecStart=/usr/bin/node server-rapidapi.js
 Restart=always
 RestartSec=5

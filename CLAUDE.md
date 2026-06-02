@@ -71,9 +71,9 @@ api_gateway はsystemdサービスがないため、手動で再起動する:
 
 ```bash
 kill $(pgrep -f "api_gateway:app")
-cd /home/kojima/work/url2ai/apps
-nohup /home/kojima/work/url2ai/apps/ernie-image-turbo/.venv-cu128/bin/python \
-  /home/kojima/work/url2ai/apps/ernie-image-turbo/.venv-cu128/bin/uvicorn \
+cd /home/kojima/exdirect/url2ai/apps
+nohup /home/kojima/exdirect/url2ai/apps/ernie-image-turbo/.venv-cu128/bin/python \
+  /home/kojima/exdirect/url2ai/apps/ernie-image-turbo/.venv-cu128/bin/uvicorn \
   api_gateway:app --host 0.0.0.0 --port 8010 > /tmp/api_gateway.log 2>&1 &
 ```
 

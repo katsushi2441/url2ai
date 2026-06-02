@@ -3,7 +3,7 @@ Description=CDP x402 Gateway (OSS2API + LLM2API, Bazaar Discovery, port 8021)
 After=network.target
 
 [Service]
-WorkingDirectory=/home/kojima/work/url2ai/apps/cdp-gateway
+WorkingDirectory=/home/kojima/exdirect/url2ai/apps/cdp-gateway
 ExecStart=/home/kojima/.nvm/versions/node/v20.20.2/bin/node server.js
 Restart=always
 RestartSec=5

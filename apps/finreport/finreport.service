@@ -5,9 +5,9 @@ After=network.target
 [Service]
 Type=simple
 User=kojima
-WorkingDirectory=/home/kojima/work/url2ai/apps/finreport
-EnvironmentFile=/home/kojima/work/url2ai/apps/finreport/.env
-ExecStart=/home/kojima/work/url2ai/apps/finreport/.venv/bin/uvicorn server:app --host ${HOST} --port ${PORT}
+WorkingDirectory=/home/kojima/exdirect/url2ai/apps/finreport
+EnvironmentFile=/home/kojima/exdirect/url2ai/apps/finreport/.env
+ExecStart=/home/kojima/exdirect/url2ai/apps/finreport/.venv/bin/uvicorn server:app --host ${HOST} --port ${PORT}
 Restart=always
 RestartSec=5
 
