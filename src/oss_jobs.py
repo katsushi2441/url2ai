@@ -7,6 +7,30 @@ from typing import Any
 import oss_worker
 
 
+def standard_result(
+    *,
+    ok: bool,
+    status: str,
+    items: int = 0,
+    metrics: dict[str, Any] | None = None,
+    note: str = "",
+    artifacts: list[dict[str, Any]] | None = None,
+    error: Any = None,
+    **extra: Any,
+) -> dict[str, Any]:
+    result = {
+        "ok": bool(ok),
+        "status": status,
+        "items": int(items or 0),
+        "metrics": metrics or {},
+        "note": note,
+        "artifacts": artifacts or [],
+        "error": error,
+    }
+    result.update(extra)
+    return result
+
+
 def ollama_resource() -> dict[str, str]:
     endpoint = str(getattr(oss_worker, "OLLAMA", ""))
     model = str(getattr(oss_worker, "MODEL", ""))
@@ -36,15 +60,19 @@ def generate_register_job(
     snippet = ""
 
     if dry_run:
-        return {
-            "ok": True,
+        return standard_result(
+            ok=True,
+            status="ok",
+            items=0,
+            metrics={"created": 0, "dry_run": 1},
+            note=f"dry_run OSS title={title}",
             **ollama_resource(),
-            "source": source,
-            "github_url": github_url,
-            "title": title,
-            "dry_run": True,
-            "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-        }
+            source=source,
+            github_url=github_url,
+            title=title,
+            dry_run=True,
+            created_at=dt.datetime.now(dt.timezone.utc).isoformat(),
+        )
 
     analysis = oss_worker.make_analysis(title, github_url, readme, snippet)
     post_text = oss_worker.make_post_text(title, github_url, readme, snippet)
@@ -59,17 +87,23 @@ def generate_register_job(
     if status not in {"ok", "updated", "duplicate"}:
         raise RuntimeError(f"saveoss failed: {result}")
 
-    return {
-        "ok": True,
+    created = 1 if status in {"ok", "updated"} else 0
+    return standard_result(
+        ok=True,
+        status="ok",
+        items=created,
+        metrics={"created": created, "remote_status": status},
+        note=f"OSS registered status={status} title={title}",
+        artifacts=[{"type": "url", "label": "github", "url": github_url}],
         **ollama_resource(),
-        "source": source,
-        "github_url": github_url,
-        "title": title,
-        "status": status,
-        "id": result.get("id", ""),
-        "sns_notice": result.get("sns_notice"),
-        "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-    }
+        source=source,
+        github_url=github_url,
+        title=title,
+        remote_status=status,
+        id=result.get("id", ""),
+        sns_notice=result.get("sns_notice"),
+        created_at=dt.datetime.now(dt.timezone.utc).isoformat(),
+    )
 
 
 def worker_auto_cycle_job(
@@ -96,14 +130,18 @@ def worker_auto_cycle_job(
             if created > 0:
                 period = attempt_period
                 break
-    return {
-        "ok": True,
+    return standard_result(
+        ok=True,
+        status="ok",
+        items=created,
+        metrics={"created": created, "top_n": top_n, "period": period},
+        note=f"OSS auto cycle created={created} period={period} top_n={top_n}",
         **ollama_resource(),
-        "source": "worker_auto",
-        "period": period,
-        "top_n": top_n,
-        "dry_run": bool(dry_run),
-        "created": created,
-        "attempts": attempts,
-        "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-    }
+        source="worker_auto",
+        period=period,
+        top_n=top_n,
+        dry_run=bool(dry_run),
+        created=created,
+        attempts=attempts,
+        created_at=dt.datetime.now(dt.timezone.utc).isoformat(),
+    )

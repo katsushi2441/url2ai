@@ -7,6 +7,30 @@ from typing import Any
 import finreport_worker
 
 
+def standard_result(
+    *,
+    ok: bool,
+    status: str,
+    items: int = 0,
+    metrics: dict[str, Any] | None = None,
+    note: str = "",
+    artifacts: list[dict[str, Any]] | None = None,
+    error: Any = None,
+    **extra: Any,
+) -> dict[str, Any]:
+    result = {
+        "ok": bool(ok),
+        "status": status,
+        "items": int(items or 0),
+        "metrics": metrics or {},
+        "note": note,
+        "artifacts": artifacts or [],
+        "error": error,
+    }
+    result.update(extra)
+    return result
+
+
 def ollama_resource() -> dict[str, str]:
     endpoint = str(getattr(finreport_worker, "OLLAMA_API", ""))
     model = str(getattr(finreport_worker, "OLLAMA_MODEL", ""))
@@ -31,15 +55,19 @@ def generate_report_job(
     if not ticker:
         raise ValueError("ticker is required")
     if dry_run:
-        return {
-            "ok": True,
+        return standard_result(
+            ok=True,
+            status="ok",
+            items=0,
+            metrics={"created": 0, "dry_run": 1},
+            note=f"dry_run ticker={ticker}",
             **ollama_resource(),
-            "source": source,
-            "ticker": ticker,
-            "dry_run": True,
-            "registered_remote": False,
-            "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-        }
+            source=source,
+            ticker=ticker,
+            dry_run=True,
+            registered_remote=False,
+            created_at=dt.datetime.now(dt.timezone.utc).isoformat(),
+        )
 
     result = finreport_worker.generate_finreport(ticker)
     if not result.get("report"):
@@ -57,26 +85,35 @@ def generate_report_job(
         elif isinstance(remote, dict) and not remote.get("ok"):
             raise RuntimeError(f"remote register failed: {remote}")
 
-    return {
-        "ok": True,
+    return standard_result(
+        ok=True,
+        status="ok",
+        items=1,
+        metrics={"created": 1},
+        note=f"FinReport created ticker={ticker}",
+        artifacts=[{"type": "url", "label": "detail", "url": item.get("detail_url", "")}],
         **ollama_resource(),
-        "source": source,
-        "ticker": ticker,
-        "saved_path": path,
-        "detail_url": item.get("detail_url", ""),
-        "summary": result.get("summary", ""),
-        "registered_remote": bool(register_remote),
-        "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-    }
+        source=source,
+        ticker=ticker,
+        saved_path=path,
+        detail_url=item.get("detail_url", ""),
+        summary=result.get("summary", ""),
+        registered_remote=bool(register_remote),
+        created_at=dt.datetime.now(dt.timezone.utc).isoformat(),
+    )
 
 
 def worker_auto_cycle_job(dry_run: bool = False, **_meta: Any) -> dict[str, Any]:
     created = finreport_worker.process_candidates(dry_run=bool(dry_run))
-    return {
-        "ok": True,
+    return standard_result(
+        ok=True,
+        status="ok",
+        items=created,
+        metrics={"created": created},
+        note=f"FinReport auto cycle created={created}",
         **ollama_resource(),
-        "source": "worker_auto",
-        "dry_run": bool(dry_run),
-        "created": created,
-        "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-    }
+        source="worker_auto",
+        dry_run=bool(dry_run),
+        created=created,
+        created_at=dt.datetime.now(dt.timezone.utc).isoformat(),
+    )

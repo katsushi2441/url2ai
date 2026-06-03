@@ -7,6 +7,30 @@ from typing import Any
 import polymarket_worker
 
 
+def standard_result(
+    *,
+    ok: bool,
+    status: str,
+    items: int = 0,
+    metrics: dict[str, Any] | None = None,
+    note: str = "",
+    artifacts: list[dict[str, Any]] | None = None,
+    error: Any = None,
+    **extra: Any,
+) -> dict[str, Any]:
+    result = {
+        "ok": bool(ok),
+        "status": status,
+        "items": int(items or 0),
+        "metrics": metrics or {},
+        "note": note,
+        "artifacts": artifacts or [],
+        "error": error,
+    }
+    result.update(extra)
+    return result
+
+
 def ollama_resource() -> dict[str, str]:
     endpoint = str(getattr(polymarket_worker, "OLLAMA_API", ""))
     model = str(getattr(polymarket_worker, "OLLAMA_MODEL", ""))
@@ -36,17 +60,21 @@ def generate_report_job(
     if not query:
         raise ValueError("query is required")
     if dry_run:
-        return {
-            "ok": True,
+        return standard_result(
+            ok=True,
+            status="ok",
+            items=0,
+            metrics={"created": 0, "dry_run": 1},
+            note=f"dry_run query={query}",
             **ollama_resource(),
-            "source": source,
-            "query": query,
-            "depth": depth,
-            "dry_run": True,
-            "registered_remote": False,
-            "paragraph_posted": False,
-            "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-        }
+            source=source,
+            query=query,
+            depth=depth,
+            dry_run=True,
+            registered_remote=False,
+            paragraph_posted=False,
+            created_at=dt.datetime.now(dt.timezone.utc).isoformat(),
+        )
 
     result = polymarket_worker.generate_polymarket_report(query, depth=depth)
     if not result.get("report"):
@@ -67,29 +95,38 @@ def generate_report_job(
         elif isinstance(remote, dict) and not remote.get("ok"):
             raise RuntimeError(f"remote register failed: {remote}")
 
-    return {
-        "ok": True,
+    return standard_result(
+        ok=True,
+        status="ok",
+        items=1,
+        metrics={"created": 1, "matched_market_count": len(result.get("matched_markets") or [])},
+        note=f"Polymarket report created: {query}",
+        artifacts=[{"type": "url", "label": "detail", "url": item.get("detail_url", "")}],
         **ollama_resource(),
-        "source": source,
-        "query": query,
-        "depth": depth,
-        "saved_path": path,
-        "detail_url": item.get("detail_url", ""),
-        "summary": result.get("summary", ""),
-        "matched_market_count": len(result.get("matched_markets") or []),
-        "registered_remote": bool(register_remote),
-        "paragraph_posted": False,
-        "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-    }
+        source=source,
+        query=query,
+        depth=depth,
+        saved_path=path,
+        detail_url=item.get("detail_url", ""),
+        summary=result.get("summary", ""),
+        matched_market_count=len(result.get("matched_markets") or []),
+        registered_remote=bool(register_remote),
+        paragraph_posted=False,
+        created_at=dt.datetime.now(dt.timezone.utc).isoformat(),
+    )
 
 
 def worker_auto_cycle_job(dry_run: bool = False, **_meta: Any) -> dict[str, Any]:
     created = polymarket_worker.process_candidates(dry_run=bool(dry_run))
-    return {
-        "ok": True,
+    return standard_result(
+        ok=True,
+        status="ok",
+        items=created,
+        metrics={"created": created},
+        note=f"Polymarket auto cycle created={created}",
         **ollama_resource(),
-        "source": "worker_auto",
-        "dry_run": bool(dry_run),
-        "created": created,
-        "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-    }
+        source="worker_auto",
+        dry_run=bool(dry_run),
+        created=created,
+        created_at=dt.datetime.now(dt.timezone.utc).isoformat(),
+    )
