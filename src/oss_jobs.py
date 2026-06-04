@@ -54,6 +54,35 @@ def generate_register_job(
     if "github.com/" not in github_url:
         raise ValueError("github_url must be a GitHub repository URL")
 
+    repo_id = ""
+    try:
+        parts = github_url.split("github.com/", 1)[1].strip("/").split("/")
+        if len(parts) >= 2:
+            repo_id = f"{parts[0]}_{parts[1].split('?')[0].split('#')[0]}"
+            repo_id = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in repo_id)
+    except Exception:
+        repo_id = ""
+
+    if not dry_run and oss_worker.check_exists(github_url):
+        detail_url = f"https://aiknowledgecms.exbridge.jp/oss.php?id={repo_id}" if repo_id else "https://aiknowledgecms.exbridge.jp/oss.php"
+        return standard_result(
+            ok=True,
+            status="warn",
+            items=0,
+            metrics={"created": 0, "duplicate": 1, "remote_status": "duplicate"},
+            note=f"OSS already registered: {github_url}",
+            artifacts=[
+                {"type": "url", "label": "github", "url": github_url},
+                {"type": "url", "label": "oss_detail", "url": detail_url},
+            ],
+            **ollama_resource(),
+            source=source,
+            github_url=github_url,
+            remote_status="duplicate",
+            id=repo_id,
+            created_at=dt.datetime.now(dt.timezone.utc).isoformat(),
+        )
+
     readme = oss_worker.fetch_github_readme(github_url)
     fallback = github_url.replace("https://github.com/", "").strip("/")
     title = oss_worker.extract_title_from_readme(readme, fallback) if readme else fallback
@@ -86,6 +115,24 @@ def generate_register_job(
     status = result.get("status", "")
     if status not in {"ok", "updated", "duplicate"}:
         raise RuntimeError(f"saveoss failed: {result}")
+
+    if status == "duplicate":
+        return standard_result(
+            ok=True,
+            status="warn",
+            items=0,
+            metrics={"created": 0, "duplicate": 1, "remote_status": status},
+            note=f"OSS already registered after save attempt: {github_url}",
+            artifacts=[{"type": "url", "label": "github", "url": github_url}],
+            **ollama_resource(),
+            source=source,
+            github_url=github_url,
+            title=title,
+            remote_status=status,
+            id=result.get("id", repo_id),
+            sns_notice=result.get("sns_notice"),
+            created_at=dt.datetime.now(dt.timezone.utc).isoformat(),
+        )
 
     created = 1 if status in {"ok", "updated"} else 0
     return standard_result(
