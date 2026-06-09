@@ -266,6 +266,16 @@ function oss_rqdb_api($method, $path, $payload) {
 
 function oss_enqueue_register_job($github_url, $source) {
     $ollama_endpoint = defined('OLLAMA_API') ? OLLAMA_API : 'https://exbridge.ddns.net/api/generate';
+    $ai_provider = defined('OSS_REGISTER_AI_PROVIDER') ? strtolower(trim((string)OSS_REGISTER_AI_PROVIDER)) : 'ollama';
+    if (!in_array($ai_provider, array('ollama', 'claude', 'codex'), true)) {
+        $ai_provider = 'ollama';
+    }
+    $ai_model = 'gemma4:e4b';
+    if ($ai_provider === 'claude') {
+        $ai_model = defined('OSS_REGISTER_CLAUDE_MODEL') ? OSS_REGISTER_CLAUDE_MODEL : 'sonnet';
+    } elseif ($ai_provider === 'codex') {
+        $ai_model = defined('OSS_REGISTER_CODEX_MODEL') ? OSS_REGISTER_CODEX_MODEL : 'gpt-5.5';
+    }
     $res = oss_rqdb_api('POST', '/api/enqueue', array(
         'queue' => 'auto',
         'function' => 'oss_jobs.generate_register_job',
@@ -273,20 +283,25 @@ function oss_enqueue_register_job($github_url, $source) {
         'kwargs' => array(
             'github_url' => $github_url,
             'source' => $source,
+            'ai_provider' => $ai_provider,
+            'ai_model' => $ai_model,
+            'claude_bin' => defined('OSS_REGISTER_CLAUDE_BIN') ? OSS_REGISTER_CLAUDE_BIN : '',
         ),
         'meta' => array(
             'project' => 'url2ai',
             'app' => 'oss',
-            'kind' => 'ollama',
+            'kind' => $ai_provider,
             'resource' => 'ollama',
             'resource_key' => 'ollama:192.168.0.14:gemma4:e4b',
             'ollama_host' => '192.168.0.14',
             'ollama_endpoint' => $ollama_endpoint,
             'ollama_model' => 'gemma4:e4b',
+            'ai_provider' => $ai_provider,
+            'ai_model' => $ai_model,
             'source' => $source,
             'queue_class' => 'web',
             'priority_class' => 'interactive',
-            'model' => 'gemma4:e4b',
+            'model' => $ai_model,
             'github_url' => $github_url,
         ),
         'timeout' => 900,

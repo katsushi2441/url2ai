@@ -31,25 +31,20 @@ def standard_result(
     return result
 
 
-def ollama_resource() -> dict[str, str]:
-    endpoint = str(getattr(oss_worker, "OLLAMA", ""))
-    model = str(getattr(oss_worker, "MODEL", ""))
-    host = os.environ.get("OSS_OLLAMA_HOST", "192.168.0.14").strip()
-    return {
-        "resource": "ollama",
-        "resource_key": f"ollama:{host}:{model}",
-        "ollama_host": host,
-        "ollama_endpoint": endpoint,
-        "ollama_model": model,
-    }
+def ai_resource() -> dict[str, str]:
+    return dict(oss_worker.ai_resource())
 
 
 def generate_register_job(
     github_url: str,
     source: str = "web",
     dry_run: bool = False,
+    ai_provider: str = "",
+    ai_model: str = "",
+    claude_bin: str = "",
     **_meta: Any,
 ) -> dict[str, Any]:
+    oss_worker.configure_ai_provider(ai_provider, ai_model, claude_bin)
     github_url = (github_url or "").strip()
     if "github.com/" not in github_url:
         raise ValueError("github_url must be a GitHub repository URL")
@@ -75,7 +70,7 @@ def generate_register_job(
                 {"type": "url", "label": "github", "url": github_url},
                 {"type": "url", "label": "oss_detail", "url": detail_url},
             ],
-            **ollama_resource(),
+            **ai_resource(),
             source=source,
             github_url=github_url,
             remote_status="duplicate",
@@ -95,7 +90,7 @@ def generate_register_job(
             items=0,
             metrics={"created": 0, "dry_run": 1},
             note=f"dry_run OSS title={title}",
-            **ollama_resource(),
+            **ai_resource(),
             source=source,
             github_url=github_url,
             title=title,
@@ -124,7 +119,7 @@ def generate_register_job(
             metrics={"created": 0, "duplicate": 1, "remote_status": status},
             note=f"OSS already registered after save attempt: {github_url}",
             artifacts=[{"type": "url", "label": "github", "url": github_url}],
-            **ollama_resource(),
+            **ai_resource(),
             source=source,
             github_url=github_url,
             title=title,
@@ -142,7 +137,7 @@ def generate_register_job(
         metrics={"created": created, "remote_status": status},
         note=f"OSS registered status={status} title={title}",
         artifacts=[{"type": "url", "label": "github", "url": github_url}],
-        **ollama_resource(),
+        **ai_resource(),
         source=source,
         github_url=github_url,
         title=title,
@@ -157,8 +152,12 @@ def worker_auto_cycle_job(
     period: str = "daily",
     top_n: int | None = None,
     dry_run: bool = False,
+    ai_provider: str = "",
+    ai_model: str = "",
+    claude_bin: str = "",
     **_meta: Any,
 ) -> dict[str, Any]:
+    oss_worker.configure_ai_provider(ai_provider, ai_model, claude_bin)
     period = (period or "daily").strip()
     if period not in {"daily", "weekly", "monthly"}:
         raise ValueError("period must be daily, weekly, or monthly")
@@ -183,7 +182,7 @@ def worker_auto_cycle_job(
         items=created,
         metrics={"created": created, "top_n": top_n, "period": period},
         note=f"OSS auto cycle created={created} period={period} top_n={top_n}",
-        **ollama_resource(),
+        **ai_resource(),
         source="worker_auto",
         period=period,
         top_n=top_n,

@@ -16,6 +16,7 @@ import json
 import time
 import datetime
 import logging
+import shutil
 
 # ========== 設定 ==========
 API_URL  = 'https://aiknowledgecms.exbridge.jp/saveoss.php'
@@ -63,6 +64,23 @@ MODEL = os.environ.get(
 )
 OLLAMA_TIMEOUT = int(os.environ.get('OSS_WORKER_OLLAMA_TIMEOUT', '60'))
 OLLAMA_RETRIES = int(os.environ.get('OSS_WORKER_OLLAMA_RETRIES', '2'))
+AI_PROVIDER = os.environ.get(
+    'OSS_REGISTER_AI_PROVIDER',
+    _conf.get('oss_register', {}).get('ai_provider', 'ollama')
+).strip().lower()
+CLAUDE_MODEL = os.environ.get(
+    'OSS_REGISTER_CLAUDE_MODEL',
+    _conf.get('oss_register', {}).get('claude_model', 'sonnet')
+)
+CLAUDE_BIN = os.environ.get(
+    'CLAUDE_BIN',
+    _conf.get('oss_register', {}).get('claude_bin', '')
+)
+CODEX_MODEL = os.environ.get(
+    'OSS_REGISTER_CODEX_MODEL',
+    _conf.get('oss_register', {}).get('codex_model', 'gpt-5.5')
+)
+AI_TIMEOUT = int(os.environ.get('OSS_REGISTER_AI_TIMEOUT', '180'))
 
 _pg_env = os.environ.get('PARAGRAPH_API_KEY')
 PARAGRAPH_API_KEY = _pg_env if _pg_env is not None else _conf.get('paragraph', {}).get('api_key', '')
@@ -105,6 +123,47 @@ logging.basicConfig(
     handlers=_handlers
 )
 log = logging.getLogger(__name__)
+
+
+def configure_ai_provider(provider='', model='', claude_bin=''):
+    global AI_PROVIDER, CLAUDE_MODEL, CODEX_MODEL, CLAUDE_BIN
+    provider = (provider or AI_PROVIDER or 'ollama').strip().lower()
+    if provider not in {'ollama', 'claude', 'codex'}:
+        provider = 'ollama'
+    AI_PROVIDER = provider
+    if model:
+        if provider == 'claude':
+            CLAUDE_MODEL = model
+        elif provider == 'codex':
+            CODEX_MODEL = model
+    if claude_bin:
+        CLAUDE_BIN = claude_bin
+
+
+def ai_resource():
+    if AI_PROVIDER == 'claude':
+        return {
+            'resource': 'claude',
+            'resource_key': f'claude:{CLAUDE_MODEL}',
+            'ai_provider': 'claude',
+            'ai_model': CLAUDE_MODEL,
+        }
+    if AI_PROVIDER == 'codex':
+        return {
+            'resource': 'codex',
+            'resource_key': f'codex:{CODEX_MODEL}',
+            'ai_provider': 'codex',
+            'ai_model': CODEX_MODEL,
+        }
+    return {
+        'resource': 'ollama',
+        'resource_key': f"ollama:{os.environ.get('OSS_OLLAMA_HOST', '192.168.0.14').strip()}:{MODEL}",
+        'ollama_host': os.environ.get('OSS_OLLAMA_HOST', '192.168.0.14').strip(),
+        'ollama_endpoint': OLLAMA,
+        'ollama_model': MODEL,
+        'ai_provider': 'ollama',
+        'ai_model': MODEL,
+    }
 
 
 def is_valid_github_repo(path):
@@ -336,6 +395,73 @@ def _ollama_request_once(endpoint, model, prompt):
     response_text = '\n'.join(line.strip() for line in response_text.splitlines())
     return response_text.strip()
 
+
+def ai_request(prompt):
+    if AI_PROVIDER == 'claude':
+        return claude_request(prompt)
+    if AI_PROVIDER == 'codex':
+        return codex_request(prompt)
+    return ollama_request(prompt)
+
+
+def _resolve_claude_bin():
+    candidates = []
+    if CLAUDE_BIN:
+        candidates.append(CLAUDE_BIN)
+    found = shutil.which('claude')
+    if found:
+        candidates.append(found)
+    candidates.extend([
+        '/home/kojima/.vscode-server/extensions/anthropic.claude-code-2.1.169-linux-x64/resources/native-binary/claude',
+        '/home/kojima/.vscode-server/extensions/anthropic.claude-code-2.1.168-linux-x64/resources/native-binary/claude',
+        '/home/kojima/.vscode-server/extensions/anthropic.claude-code-2.1.167-linux-x64/resources/native-binary/claude',
+    ])
+    for path in candidates:
+        if path and os.path.exists(path) and os.access(path, os.X_OK):
+            return path
+    return ''
+
+
+def claude_request(prompt):
+    claude_bin = _resolve_claude_bin()
+    if not claude_bin:
+        log.warning('Claude binary not found')
+        return ''
+    cmd = [
+        claude_bin,
+        '-p',
+        '--output-format', 'text',
+        '--permission-mode', 'dontAsk',
+        '--model', CLAUDE_MODEL,
+        prompt,
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=AI_TIMEOUT)
+    if result.returncode != 0:
+        log.warning('Claude応答エラー: returncode=%s stderr=%s', result.returncode, result.stderr.strip()[:300])
+        return ''
+    return result.stdout.strip()
+
+
+def codex_request(prompt):
+    codex_bin = shutil.which('codex') or '/home/kojima/.vscode-server/extensions/openai.chatgpt-26.513.21555-linux-x64/bin/linux-x86_64/codex'
+    if not os.path.exists(codex_bin) and not shutil.which('codex'):
+        log.warning('Codex binary not found')
+        return ''
+    cmd = [
+        codex_bin,
+        'exec',
+        '--skip-git-repo-check',
+        '--sandbox', 'read-only',
+        '--model', CODEX_MODEL,
+        '--cd', os.path.dirname(__file__),
+        prompt,
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=AI_TIMEOUT)
+    if result.returncode != 0:
+        log.warning('Codex応答エラー: returncode=%s stderr=%s', result.returncode, result.stderr.strip()[:300])
+        return ''
+    return result.stdout.strip()
+
 def make_analysis(title, url, readme, snippet):
     context = 'README抜粋:\n' + readme if readme else '概要: ' + snippet
     prompt = """以下のOSSについて、技術者向けに3点で簡潔に考察してください。
@@ -348,7 +474,7 @@ URL: {url}
 ■ 概要（1行）
 ■ 特徴・用途（2〜3行）
 ■ 結論（1行）""".format(title=title, url=url, context=context)
-    return ollama_request(prompt)
+    return ai_request(prompt)
 
 def make_post_text(title, url, readme, snippet):
     context = 'README抜粋:\n' + readme if readme else '概要: ' + snippet
@@ -366,7 +492,7 @@ def make_post_text(title, url, readme, snippet):
 {context}
 
     投稿文のみ出力してください。""".format(title=title, context=context)
-    return ollama_request(prompt)
+    return ai_request(prompt)
 
 def make_paragraph_title(title, url, readme, snippet):
     context = 'README excerpt:\n' + readme if readme else 'Summary: ' + snippet
@@ -382,7 +508,7 @@ Rules:
 OSS title: {title}
 GitHub URL: {url}
 {context}""".format(title=title, url=url, context=context)
-    return ollama_request(prompt)
+    return ai_request(prompt)
 
 def make_paragraph_content(title, url, readme, snippet):
     context = 'README excerpt:\n' + readme if readme else 'Summary: ' + snippet
@@ -406,7 +532,7 @@ Rules:
 OSS title: {title}
 GitHub URL: {url}
 {context}""".format(title=title, url=url, context=context)
-    content = ollama_request(prompt)
+    content = ai_request(prompt)
     if not content:
         return content
     return content.rstrip() + '\n\n---\nBankr / URL2AI:\n- Discover URL2AI on Bankr: ' + BANKR_DISCOVER_URL + '\n'

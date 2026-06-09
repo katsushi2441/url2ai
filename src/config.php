@@ -66,6 +66,12 @@ define('POLYMARKET_API', isset($_aigm_config['polymarket']['api_url']) ? $_aigm_
 define('RQDB4AI_API_BASE', isset($_aigm_config['rqdb4ai']['api_base']) ? $_aigm_config['rqdb4ai']['api_base'] : '');
 define('RQDB4AI_API_TOKEN', isset($_aigm_config['rqdb4ai']['api_token']) ? $_aigm_config['rqdb4ai']['api_token'] : '');
 
+/* OSS register AI provider */
+define('OSS_REGISTER_AI_PROVIDER', isset($_aigm_config['oss_register']['ai_provider']) ? $_aigm_config['oss_register']['ai_provider'] : 'ollama');
+define('OSS_REGISTER_CLAUDE_MODEL', isset($_aigm_config['oss_register']['claude_model']) ? $_aigm_config['oss_register']['claude_model'] : 'sonnet');
+define('OSS_REGISTER_CLAUDE_BIN', isset($_aigm_config['oss_register']['claude_bin']) ? $_aigm_config['oss_register']['claude_bin'] : '');
+define('OSS_REGISTER_CODEX_MODEL', isset($_aigm_config['oss_register']['codex_model']) ? $_aigm_config['oss_register']['codex_model'] : 'gpt-5.5');
+
 /* Paragraph */
 define('PARAGRAPH_API_KEY', isset($_aigm_config['paragraph']['api_key']) ? $_aigm_config['paragraph']['api_key'] : '');
 define('PARAGRAPH_PUBLICATION_SLUG', isset($_aigm_config['paragraph']['publication_slug']) ? $_aigm_config['paragraph']['publication_slug'] : '');
