@@ -397,10 +397,21 @@ def _ollama_request_once(endpoint, model, prompt):
 
 
 def ai_request(prompt):
+    global AI_PROVIDER
     if AI_PROVIDER == 'claude':
-        return claude_request(prompt)
+        response = claude_request(prompt)
+        if response:
+            return response
+        log.warning('Claude応答が空のためOllamaへフォールバックします')
+        AI_PROVIDER = 'ollama'
+        return ollama_request(prompt)
     if AI_PROVIDER == 'codex':
-        return codex_request(prompt)
+        response = codex_request(prompt)
+        if response:
+            return response
+        log.warning('Codex応答が空のためOllamaへフォールバックします')
+        AI_PROVIDER = 'ollama'
+        return ollama_request(prompt)
     return ollama_request(prompt)
 
 
@@ -437,7 +448,8 @@ def claude_request(prompt):
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=AI_TIMEOUT)
     if result.returncode != 0:
-        log.warning('Claude応答エラー: returncode=%s stderr=%s', result.returncode, result.stderr.strip()[:300])
+        detail = (result.stderr or result.stdout or '').strip()
+        log.warning('Claude応答エラー: returncode=%s detail=%s', result.returncode, detail[:300])
         return ''
     return result.stdout.strip()
 
