@@ -265,7 +265,7 @@ function oss_rqdb_api($method, $path, $payload) {
 }
 
 function oss_enqueue_register_job($github_url, $source) {
-    return oss_rqdb_api('POST', '/api/enqueue', array(
+    $res = oss_rqdb_api('POST', '/api/enqueue', array(
         'queue' => 'auto',
         'function' => 'oss_jobs.generate_register_job',
         'args' => array(),
@@ -292,6 +292,16 @@ function oss_enqueue_register_job($github_url, $source) {
         'result_ttl' => 86400,
         'failure_ttl' => 604800,
     ));
+    if (!is_array($res)) {
+        return array('ok' => false, 'error' => 'rqdb4ai invalid response');
+    }
+    if (!empty($res['ok']) && !empty($res['job']) && is_array($res['job']) && !empty($res['job']['id'])) {
+        if (empty($res['status'])) {
+            $res['status'] = isset($res['job']['status']) ? $res['job']['status'] : 'queued';
+        }
+        return $res;
+    }
+    return $res;
 }
 
 function oss_render_book_ranking($books, $extra_class = '', $limit = 10) {
@@ -400,7 +410,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'enqueue_register') {
         oss_json_response(array('ok' => false, 'error' => 'invalid github_url'), 400);
     }
     $job_res = oss_enqueue_register_job($github_url, 'web_online');
-    if (empty($job_res['ok']) || empty($job_res['job']['id'])) {
+    if (empty($job_res['ok']) || empty($job_res['job']) || !is_array($job_res['job']) || empty($job_res['job']['id'])) {
         oss_json_response(array(
             'ok' => false,
             'error' => isset($job_res['error']) ? $job_res['error'] : 'rqdb4ai enqueue failed',
@@ -1270,7 +1280,9 @@ function adminRegister() {
                 status.className   = 'admin-status err';
             }
         } catch(e) {
-            status.textContent = '通信エラー';
+            var detail = (xhr.responseText || '').replace(/\s+/g, ' ').trim();
+            if (detail.length > 220) detail = detail.substring(0, 220) + '...';
+            status.textContent = '通信エラー HTTP ' + xhr.status + (detail ? ': ' + detail : '');
             status.className   = 'admin-status err';
         }
     };
