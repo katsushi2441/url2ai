@@ -265,6 +265,7 @@ function oss_rqdb_api($method, $path, $payload) {
 }
 
 function oss_enqueue_register_job($github_url, $source) {
+    $ollama_endpoint = defined('OLLAMA_API') ? OLLAMA_API : 'https://exbridge.ddns.net/api/generate';
     $res = oss_rqdb_api('POST', '/api/enqueue', array(
         'queue' => 'auto',
         'function' => 'oss_jobs.generate_register_job',
@@ -280,7 +281,7 @@ function oss_enqueue_register_job($github_url, $source) {
             'resource' => 'ollama',
             'resource_key' => 'ollama:192.168.0.14:gemma4:e4b',
             'ollama_host' => '192.168.0.14',
-            'ollama_endpoint' => OLLAMA_API,
+            'ollama_endpoint' => $ollama_endpoint,
             'ollama_model' => 'gemma4:e4b',
             'source' => $source,
             'queue_class' => 'web',
