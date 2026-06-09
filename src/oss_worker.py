@@ -70,7 +70,7 @@ AI_PROVIDER = os.environ.get(
 ).strip().lower()
 CLAUDE_MODEL = os.environ.get(
     'OSS_REGISTER_CLAUDE_MODEL',
-    _conf.get('oss_register', {}).get('claude_model', 'sonnet')
+    _conf.get('oss_register', {}).get('claude_model', 'haiku')
 )
 CLAUDE_BIN = os.environ.get(
     'CLAUDE_BIN',
@@ -402,7 +402,12 @@ def ai_request(prompt):
         response = claude_request(prompt)
         if response:
             return response
-        log.warning('Claude応答が空のためOllamaへフォールバックします')
+        log.warning('Claude応答が空のためCodexへフォールバックします')
+        AI_PROVIDER = 'codex'
+        response = codex_request(prompt)
+        if response:
+            return response
+        log.warning('Codex応答も空のためOllamaへフォールバックします')
         AI_PROVIDER = 'ollama'
         return ollama_request(prompt)
     if AI_PROVIDER == 'codex':

@@ -68,7 +68,7 @@ define('RQDB4AI_API_TOKEN', isset($_aigm_config['rqdb4ai']['api_token']) ? $_aig
 
 /* OSS register AI provider */
 define('OSS_REGISTER_AI_PROVIDER', isset($_aigm_config['oss_register']['ai_provider']) ? $_aigm_config['oss_register']['ai_provider'] : 'ollama');
-define('OSS_REGISTER_CLAUDE_MODEL', isset($_aigm_config['oss_register']['claude_model']) ? $_aigm_config['oss_register']['claude_model'] : 'sonnet');
+define('OSS_REGISTER_CLAUDE_MODEL', isset($_aigm_config['oss_register']['claude_model']) ? $_aigm_config['oss_register']['claude_model'] : 'haiku');
 define('OSS_REGISTER_CLAUDE_BIN', isset($_aigm_config['oss_register']['claude_bin']) ? $_aigm_config['oss_register']['claude_bin'] : '');
 define('OSS_REGISTER_CODEX_MODEL', isset($_aigm_config['oss_register']['codex_model']) ? $_aigm_config['oss_register']['codex_model'] : 'gpt-5.5');
 

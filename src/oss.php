@@ -272,7 +272,7 @@ function oss_enqueue_register_job($github_url, $source) {
     }
     $ai_model = 'gemma4:e4b';
     if ($ai_provider === 'claude') {
-        $ai_model = defined('OSS_REGISTER_CLAUDE_MODEL') ? OSS_REGISTER_CLAUDE_MODEL : 'sonnet';
+        $ai_model = defined('OSS_REGISTER_CLAUDE_MODEL') ? OSS_REGISTER_CLAUDE_MODEL : 'haiku';
     } elseif ($ai_provider === 'codex') {
         $ai_model = defined('OSS_REGISTER_CODEX_MODEL') ? OSS_REGISTER_CODEX_MODEL : 'gpt-5.5';
     }
