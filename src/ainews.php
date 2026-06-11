@@ -27,6 +27,81 @@ if (file_exists($DATA_FILE)) {
     if (!is_array($posts)) { $posts = array(); }
 }
 
+function ainews_json_response($data, $status_code) {
+    http_response_code($status_code);
+    header('Content-Type: application/json; charset=UTF-8');
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+function ainews_rqdb_api($method, $path, $payload) {
+    if (!defined('RQDB4AI_API_BASE') || trim(RQDB4AI_API_BASE) === '' || !defined('RQDB4AI_API_TOKEN') || trim(RQDB4AI_API_TOKEN) === '') {
+        return array('ok' => false, 'error' => 'RQDB4AI is not configured');
+    }
+    $url = rtrim(RQDB4AI_API_BASE, '/') . '/' . ltrim($path, '/');
+    $body = $payload === null ? null : json_encode($payload, JSON_UNESCAPED_UNICODE);
+    $headers = array(
+        'Authorization: Bearer ' . RQDB4AI_API_TOKEN,
+        'Content-Type: application/json',
+        'Accept: application/json',
+        'User-Agent: AINewsPHP/RQDB4AI',
+    );
+    $opts = array('http' => array(
+        'method' => $method,
+        'header' => implode("\r\n", $headers) . "\r\n",
+        'content' => $body,
+        'timeout' => 30,
+        'ignore_errors' => true,
+    ));
+    $raw = @file_get_contents($url, false, stream_context_create($opts));
+    if (!$raw) {
+        return array('ok' => false, 'error' => 'rqdb4ai request failed');
+    }
+    $data = json_decode($raw, true);
+    return is_array($data) ? $data : array('ok' => false, 'error' => 'rqdb4ai invalid json', 'raw' => substr($raw, 0, 300));
+}
+
+function ainews_worker_signature($action, $resource, $issued_at) {
+    return hash_hmac('sha256', $action . "\n" . $resource . "\n" . (string)$issued_at, RQDB4AI_API_TOKEN);
+}
+
+function ainews_enqueue_register_job($tweet_url) {
+    $issued_at = time();
+    $sig = ainews_worker_signature('register', $tweet_url, $issued_at);
+    return ainews_rqdb_api('POST', '/api/enqueue', array(
+        'queue' => 'auto',
+        'function' => 'content_register_jobs.ainews_register_job',
+        'args' => array(),
+        'kwargs' => array(
+            'tweet_url' => $tweet_url,
+            'worker_issued_at' => $issued_at,
+            'worker_sig' => $sig,
+        ),
+        'meta' => array(
+            'project' => 'url2ai',
+            'app' => 'ainews',
+            'kind' => 'web',
+            'resource' => 'web',
+            'resource_key' => 'ainews:register',
+            'tweet_url' => $tweet_url,
+            'queue_class' => 'web',
+            'priority_class' => 'interactive',
+        ),
+        'timeout' => 300,
+        'result_ttl' => 86400,
+        'failure_ttl' => 604800,
+    ));
+}
+
+function ainews_job_status($job_id) {
+    $job_id = trim((string)$job_id);
+    if (!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9\-_]{7,80}$/', $job_id)) {
+        return array('ok' => false, 'error' => 'invalid job_id');
+    }
+    return ainews_rqdb_api('GET', '/api/jobs/' . rawurlencode($job_id), null);
+}
+
 /* =========================================================
    RSS フィード出力 (?feed)
 ========================================================= */
@@ -119,6 +194,54 @@ $jsonld = $detail_post ? array(
     'name' => $page_title, 'description' => $page_description, 'url' => $page_url,
     'publisher' => array('@type' => 'Organization', 'name' => $SITE_NAME),
 );
+
+if (isset($_GET['api']) && $_GET['api'] === 'enqueue_register') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        ainews_json_response(array('ok' => false, 'error' => 'POST required'), 405);
+    }
+    if (!$is_admin) {
+        ainews_json_response(array('ok' => false, 'error' => 'unauthorized'), 403);
+    }
+    $body = json_decode(file_get_contents('php://input'), true);
+    if (!is_array($body)) {
+        ainews_json_response(array('ok' => false, 'error' => 'invalid json'), 400);
+    }
+    $tweet_url = isset($body['tweet_url']) ? trim((string)$body['tweet_url']) : '';
+    if ($tweet_url === '' || strpos($tweet_url, 'x.com') === false) {
+        ainews_json_response(array('ok' => false, 'error' => 'invalid tweet_url'), 400);
+    }
+    $job_res = ainews_enqueue_register_job($tweet_url);
+    if (empty($job_res['ok']) || empty($job_res['job']) || !is_array($job_res['job']) || empty($job_res['job']['id'])) {
+        ainews_json_response(array('ok' => false, 'error' => isset($job_res['error']) ? $job_res['error'] : 'rqdb4ai enqueue failed', 'detail' => $job_res), 500);
+    }
+    ainews_json_response(array('ok' => true, 'status' => 'queued', 'job' => $job_res['job']), 202);
+}
+
+if (isset($_GET['api']) && $_GET['api'] === 'job_status') {
+    if (!$is_admin) {
+        ainews_json_response(array('ok' => false, 'error' => 'unauthorized'), 403);
+    }
+    $res = ainews_job_status(isset($_GET['job_id']) ? $_GET['job_id'] : '');
+    if (empty($res['ok']) || empty($res['job']) || !is_array($res['job'])) {
+        ainews_json_response(array('ok' => false, 'error' => isset($res['error']) ? $res['error'] : 'job status failed', 'detail' => $res), 200);
+    }
+    $job = $res['job'];
+    $result = isset($job['result']) && is_array($job['result']) ? $job['result'] : array();
+    $lifecycle = isset($job['lifecycle']) && is_array($job['lifecycle']) ? $job['lifecycle'] : array();
+    $rq_status = isset($job['status']) ? (string)$job['status'] : '';
+    $done = $rq_status === 'finished' && (empty($result) || !isset($result['ok']) || !empty($result['ok']));
+    $failed = in_array($rq_status, array('failed', 'stopped', 'canceled'), true) || (!empty($result) && isset($result['ok']) && empty($result['ok']));
+    ainews_json_response(array(
+        'ok' => true,
+        'job_id' => isset($job['id']) ? $job['id'] : '',
+        'status' => $rq_status,
+        'label' => isset($job['status_label']) ? $job['status_label'] : $rq_status,
+        'done' => $done,
+        'failed' => $failed,
+        'note' => isset($lifecycle['note']) ? $lifecycle['note'] : (isset($result['note']) ? $result['note'] : ''),
+        'reload_url' => 'ainews.php',
+    ), 200);
+}
 ?><!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -686,6 +809,56 @@ function copyPost(idx) {
 }
 
 <?php if ($is_admin): ?>
+function pollAdminJob(apiBase, jobId, status, btn, urlInput) {
+    var attempts = 0;
+    var maxAttempts = 180;
+    function poll() {
+        attempts += 1;
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', apiBase + '?api=job_status&job_id=' + encodeURIComponent(jobId), true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState !== 4) return;
+            try {
+                var res = JSON.parse(xhr.responseText);
+                if (!res.ok) {
+                    status.textContent = '状態確認エラー: ' + (res.error || '不明');
+                    status.className = 'admin-status err';
+                    if (attempts < maxAttempts) setTimeout(poll, 4000);
+                    return;
+                }
+                status.textContent = '処理中: ' + (res.label || res.status || '確認中') + (res.note ? ' / ' + res.note : '');
+                status.className = 'admin-status loading';
+                if (res.done) {
+                    status.textContent = '登録完了。画面を更新します...';
+                    status.className = 'admin-status ok';
+                    if (urlInput) urlInput.value = '';
+                    setTimeout(function() { location.href = res.reload_url || apiBase; }, 900);
+                    return;
+                }
+                if (res.failed) {
+                    btn.disabled = false;
+                    status.textContent = 'ジョブ失敗: ' + (res.note || res.status || '不明');
+                    status.className = 'admin-status err';
+                    return;
+                }
+                if (attempts < maxAttempts) {
+                    setTimeout(poll, 3000);
+                } else {
+                    btn.disabled = false;
+                    status.textContent = 'タイムアウトしました。KDeck/RQDB4AIで確認してください: ' + jobId;
+                    status.className = 'admin-status err';
+                }
+            } catch(e) {
+                status.textContent = '状態確認通信エラー';
+                status.className = 'admin-status err';
+                if (attempts < maxAttempts) setTimeout(poll, 5000);
+            }
+        };
+        xhr.send();
+    }
+    poll();
+}
+
 function adminRegister() {
     var urlInput = document.getElementById('admin-url-input');
     var btn      = document.getElementById('admin-register-btn');
@@ -701,33 +874,39 @@ function adminRegister() {
     }
 
     btn.disabled       = true;
-    status.textContent = 'AI考察生成中... (1〜2分かかります)';
+    status.textContent = 'RQDB4AIにジョブ登録中...';
     status.className   = 'admin-status loading';
     wrap.style.display = 'block';
 
     var xhr = new XMLHttpRequest();
-    xhr.open('POST', 'saveainews.php', true);
+    xhr.open('POST', 'ainews.php?api=enqueue_register', true);
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) return;
-        btn.disabled = false;
         try {
             var res = JSON.parse(xhr.responseText);
-            if (res.status === 'ok') {
-                status.textContent = '登録完了: ' + res.title;
+            if (res.ok && res.status === 'queued') {
+                var jobId = res.job && res.job.id ? res.job.id : '';
+                status.textContent = 'キュー登録済み: ' + jobId + ' / 完了待ち...';
                 status.className   = 'admin-status ok';
-                urlInput.value     = '';
-                setTimeout(function() { location.reload(); }, 1500);
+                if (jobId) {
+                    pollAdminJob('ainews.php', jobId, status, btn, urlInput);
+                } else {
+                    btn.disabled = false;
+                }
             } else if (res.status === 'duplicate') {
+                btn.disabled = false;
                 status.textContent = '既に登録済みです';
                 status.className   = 'admin-status err';
             } else {
+                btn.disabled = false;
                 status.textContent = 'エラー: ' + (res.error || '不明');
                 status.className   = 'admin-status err';
             }
         } catch(e) {
-            alert('通信エラー\nHTTP: ' + xhr.status + '\n' + xhr.responseText.substring(0, 500));
-            status.textContent = '通信エラー';
+            btn.disabled = false;
+            var detail = xhr.responseText ? xhr.responseText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 180) : '';
+            status.textContent = '通信エラー' + (xhr.status ? ' HTTP ' + xhr.status : '') + (detail ? ': ' + detail : '');
             status.className   = 'admin-status err';
         }
     };

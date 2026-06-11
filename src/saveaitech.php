@@ -17,10 +17,6 @@ define('AITECH_SNS_API_URL', 'https://aixec.exbridge.jp/api.php?path=posts');
 define('AITECH_BASE_URL', 'https://aiknowledgecms.exbridge.jp/aitech.php');
 
 $auth = url2ai_auth_bootstrap();
-if (empty($auth['is_admin'])) {
-    echo json_encode(array('status' => 'error', 'error' => '権限がありません'));
-    exit;
-}
 $session_user = isset($auth['session_user']) && $auth['session_user'] !== '' ? $auth['session_user'] : AIGM_ADMIN;
 
 function normalize_utf8_text($text) {
@@ -211,6 +207,26 @@ function aitech_post_sns_notice($post) {
     return array('ok' => true, 'id' => isset($data['item']['id']) ? $data['item']['id'] : null);
 }
 
+function aitech_worker_signature($action, $resource, $issued_at) {
+    if (!defined('RQDB4AI_API_TOKEN') || trim((string)RQDB4AI_API_TOKEN) === '') {
+        return '';
+    }
+    return hash_hmac('sha256', $action . "\n" . $resource . "\n" . (string)$issued_at, RQDB4AI_API_TOKEN);
+}
+
+function aitech_is_worker_request($input, $action, $resource) {
+    $issued_at = isset($input['worker_issued_at']) ? (int)$input['worker_issued_at'] : 0;
+    $sig = isset($input['worker_sig']) ? trim((string)$input['worker_sig']) : '';
+    if ($issued_at <= 0 || $sig === '') {
+        return false;
+    }
+    if (abs(time() - $issued_at) > 3600) {
+        return false;
+    }
+    $expected = aitech_worker_signature($action, $resource, $issued_at);
+    return $expected !== '' && function_exists('hash_equals') ? hash_equals($expected, $sig) : $expected === $sig;
+}
+
 /* =========================================================
    入力取得
 ========================================================= */
@@ -219,6 +235,11 @@ if (!$input) { $input = array(); }
 $action = isset($input['action']) ? $input['action'] : '';
 $url    = isset($input['url'])    ? normalize_utf8_text(trim($input['url'])) : '';
 $target_id = isset($input['id']) ? normalize_utf8_text(trim($input['id'])) : '';
+
+if (empty($auth['is_admin']) && !aitech_is_worker_request($input, $action, $url)) {
+    echo json_encode(array('status' => 'error', 'error' => '権限がありません'));
+    exit;
+}
 
 /* =========================================================
    既存データ読み込み

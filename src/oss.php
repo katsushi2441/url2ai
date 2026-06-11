@@ -320,6 +320,14 @@ function oss_enqueue_register_job($github_url, $source) {
     return $res;
 }
 
+function oss_job_status($job_id) {
+    $job_id = trim((string)$job_id);
+    if (!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9\-_]{7,80}$/', $job_id)) {
+        return array('ok' => false, 'error' => 'invalid job_id');
+    }
+    return oss_rqdb_api('GET', '/api/jobs/' . rawurlencode($job_id), null);
+}
+
 function oss_render_book_ranking($books, $extra_class = '', $limit = 10) {
     if (empty($books) || !is_array($books)) {
         return;
@@ -438,6 +446,37 @@ if (isset($_GET['api']) && $_GET['api'] === 'enqueue_register') {
         'status' => 'queued',
         'job' => $job_res['job'],
     ), 202);
+}
+
+if (isset($_GET['api']) && $_GET['api'] === 'job_status') {
+    if (!$is_admin) {
+        oss_json_response(array('ok' => false, 'error' => 'unauthorized'), 403);
+    }
+    $job_id = isset($_GET['job_id']) ? trim($_GET['job_id']) : '';
+    $res = oss_job_status($job_id);
+    if (empty($res['ok']) || empty($res['job']) || !is_array($res['job'])) {
+        oss_json_response(array(
+            'ok' => false,
+            'error' => isset($res['error']) ? $res['error'] : 'job status failed',
+            'detail' => $res,
+        ), 200);
+    }
+    $job = $res['job'];
+    $result = isset($job['result']) && is_array($job['result']) ? $job['result'] : array();
+    $lifecycle = isset($job['lifecycle']) && is_array($job['lifecycle']) ? $job['lifecycle'] : array();
+    $rq_status = isset($job['status']) ? (string)$job['status'] : '';
+    $done = $rq_status === 'finished' && (empty($result) || !isset($result['ok']) || !empty($result['ok']));
+    $failed = in_array($rq_status, array('failed', 'stopped', 'canceled'), true) || (!empty($result) && isset($result['ok']) && empty($result['ok']));
+    oss_json_response(array(
+        'ok' => true,
+        'job_id' => isset($job['id']) ? $job['id'] : $job_id,
+        'status' => $rq_status,
+        'label' => isset($job['status_label']) ? $job['status_label'] : $rq_status,
+        'done' => $done,
+        'failed' => $failed,
+        'note' => isset($lifecycle['note']) ? $lifecycle['note'] : (isset($result['note']) ? $result['note'] : ''),
+        'reload_url' => 'oss.php',
+    ), 200);
 }
 ?>
 <!DOCTYPE html>
@@ -1259,6 +1298,56 @@ function copyPost(idx) {
 }
 
 <?php if ($is_admin): ?>
+function pollAdminJob(apiBase, jobId, status, btn, urlInput) {
+    var attempts = 0;
+    var maxAttempts = 180;
+    function poll() {
+        attempts += 1;
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', apiBase + '?api=job_status&job_id=' + encodeURIComponent(jobId), true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState !== 4) return;
+            try {
+                var res = JSON.parse(xhr.responseText);
+                if (!res.ok) {
+                    status.textContent = '状態確認エラー: ' + (res.error || '不明');
+                    status.className = 'admin-status err';
+                    if (attempts < maxAttempts) setTimeout(poll, 4000);
+                    return;
+                }
+                status.textContent = '処理中: ' + (res.label || res.status || '確認中') + (res.note ? ' / ' + res.note : '');
+                status.className = 'admin-status loading';
+                if (res.done) {
+                    status.textContent = '登録完了。画面を更新します...';
+                    status.className = 'admin-status ok';
+                    if (urlInput) urlInput.value = '';
+                    setTimeout(function() { location.href = res.reload_url || apiBase; }, 900);
+                    return;
+                }
+                if (res.failed) {
+                    btn.disabled = false;
+                    status.textContent = 'ジョブ失敗: ' + (res.note || res.status || '不明');
+                    status.className = 'admin-status err';
+                    return;
+                }
+                if (attempts < maxAttempts) {
+                    setTimeout(poll, 3000);
+                } else {
+                    btn.disabled = false;
+                    status.textContent = 'タイムアウトしました。KDeck/RQDB4AIで確認してください: ' + jobId;
+                    status.className = 'admin-status err';
+                }
+            } catch(e) {
+                status.textContent = '状態確認通信エラー';
+                status.className = 'admin-status err';
+                if (attempts < maxAttempts) setTimeout(poll, 5000);
+            }
+        };
+        xhr.send();
+    }
+    poll();
+}
+
 function adminRegister() {
     var urlInput = document.getElementById('admin-url-input');
     var btn      = document.getElementById('admin-register-btn');
@@ -1280,22 +1369,28 @@ function adminRegister() {
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) return;
-        btn.disabled = false;
         try {
             var res = JSON.parse(xhr.responseText);
             if (res.ok && res.status === 'queued') {
-                status.textContent = 'キュー登録済み: ' + (res.job && res.job.id ? res.job.id : '');
+                var jobId = res.job && res.job.id ? res.job.id : '';
+                status.textContent = 'キュー登録済み: ' + jobId + ' / 完了待ち...';
                 status.className   = 'admin-status ok';
-                urlInput.value     = '';
-                setTimeout(function() { location.reload(); }, 2500);
+                if (jobId) {
+                    pollAdminJob('oss.php', jobId, status, btn, urlInput);
+                } else {
+                    btn.disabled = false;
+                }
             } else if (res.status === 'duplicate') {
+                btn.disabled = false;
                 status.textContent = '既に登録済みです';
                 status.className   = 'admin-status err';
             } else {
+                btn.disabled = false;
                 status.textContent = 'エラー: ' + (res.error || '不明');
                 status.className   = 'admin-status err';
             }
         } catch(e) {
+            btn.disabled = false;
             var detail = (xhr.responseText || '').replace(/\s+/g, ' ').trim();
             if (detail.length > 220) detail = detail.substring(0, 220) + '...';
             status.textContent = '通信エラー HTTP ' + xhr.status + (detail ? ': ' + detail : '');

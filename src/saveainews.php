@@ -156,15 +156,35 @@ function ainews_is_failed_analysis($summary, $tags) {
     return false;
 }
 
-$auth = url2ai_auth_bootstrap();
-if (empty($auth['is_admin'])) {
-    ainews_json_response(array('status' => 'error', 'error' => '権限がありません'));
+function ainews_worker_signature($action, $resource, $issued_at) {
+    if (!defined('RQDB4AI_API_TOKEN') || trim((string)RQDB4AI_API_TOKEN) === '') {
+        return '';
+    }
+    return hash_hmac('sha256', $action . "\n" . $resource . "\n" . (string)$issued_at, RQDB4AI_API_TOKEN);
 }
 
+function ainews_is_worker_request($input, $action, $resource) {
+    $issued_at = isset($input['worker_issued_at']) ? (int)$input['worker_issued_at'] : 0;
+    $sig = isset($input['worker_sig']) ? trim((string)$input['worker_sig']) : '';
+    if ($issued_at <= 0 || $sig === '') {
+        return false;
+    }
+    if (abs(time() - $issued_at) > 3600) {
+        return false;
+    }
+    $expected = ainews_worker_signature($action, $resource, $issued_at);
+    return $expected !== '' && function_exists('hash_equals') ? hash_equals($expected, $sig) : $expected === $sig;
+}
+
+$auth = url2ai_auth_bootstrap();
 $input     = json_decode(file_get_contents('php://input'), true);
 if (!$input) { $input = array(); }
 $action    = isset($input['action'])    ? $input['action']          : '';
 $tweet_url = isset($input['tweet_url']) ? trim($input['tweet_url']) : '';
+
+if (empty($auth['is_admin']) && !ainews_is_worker_request($input, $action, $tweet_url)) {
+    ainews_json_response(array('status' => 'error', 'error' => '権限がありません'));
+}
 
 if ($action !== 'register' || $tweet_url === '') {
     ainews_json_response(array('status' => 'error', 'error' => '無効なリクエスト'));
