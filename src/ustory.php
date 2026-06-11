@@ -40,6 +40,123 @@ function run_cmd($cmd) {
     return array(implode("\n", $out), $ret);
 }
 
+function ustory_ollama_request($prompt, $timeout) {
+    $opts = array('http' => array(
+        'method'        => 'POST',
+        'header'        => "Content-Type: application/json\r\n",
+        'content'       => json_encode(array(
+            'model'   => OLLAMA_MODEL,
+            'prompt'  => $prompt,
+            'stream'  => false,
+            'options' => array(
+                'temperature' => 0.7,
+                'num_predict' => 4096,
+            ),
+        ), JSON_UNESCAPED_UNICODE),
+        'timeout'       => $timeout,
+        'ignore_errors' => true,
+    ));
+    $res = @file_get_contents(OLLAMA_API, false, stream_context_create($opts));
+    if (!$res) {
+        return array('', 'Ollamaに接続できませんでした');
+    }
+    $data = json_decode($res, true);
+    if (!is_array($data)) {
+        return array('', 'Ollama応答をJSONとして解釈できませんでした');
+    }
+    $text = isset($data['response']) ? trim((string)$data['response']) : '';
+    return $text !== '' ? array($text, '') : array('', 'API応答が空でした');
+}
+
+function ustory_resolve_executable($configured, $name, $fallbacks) {
+    $candidates = array();
+    if ($configured !== '') { $candidates[] = $configured; }
+    list($which, $ret) = run_cmd('command -v ' . escapeshellarg($name));
+    if ($ret === 0 && trim($which) !== '') { $candidates[] = trim($which); }
+    foreach ($fallbacks as $path) { $candidates[] = $path; }
+    foreach ($candidates as $path) {
+        if ($path !== '' && file_exists($path) && is_executable($path)) {
+            return $path;
+        }
+    }
+    return '';
+}
+
+function ustory_cli_request($cmd_parts, $timeout) {
+    $cmd = 'timeout ' . (int)$timeout . 's';
+    foreach ($cmd_parts as $part) {
+        $cmd .= ' ' . escapeshellarg($part);
+    }
+    list($out, $ret) = run_cmd($cmd);
+    $out = trim($out);
+    if ($ret !== 0) {
+        return array('', 'CLI生成に失敗しました: ' . mb_substr($out, 0, 240));
+    }
+    return $out !== '' ? array($out, '') : array('', 'CLI応答が空でした');
+}
+
+function ustory_openclaw_request($prompt, $timeout) {
+    $openclaw = ustory_resolve_executable(USTORY_OPENCLAW_BIN, 'openclaw', array(
+        '/home/kojima/.nvm/versions/node/v24.16.0/bin/openclaw',
+        '/home/kojima/.nvm/versions/node/v22.22.2/lib/node_modules/@swarmclawai/swarmclaw/node_modules/.bin/openclaw',
+    ));
+    if ($openclaw === '') {
+        return array('', 'openclaw が見つかりませんでした');
+    }
+    $cmd = 'PATH=' . escapeshellarg('/home/kojima/.nvm/versions/node/v24.16.0/bin:/home/kojima/.nvm/versions/node/v22.22.3/bin') . ':$PATH '
+        . 'timeout ' . (int)$timeout . 's '
+        . escapeshellarg($openclaw)
+        . ' capability model run'
+        . ' --model ' . escapeshellarg(USTORY_OPENCLAW_MODEL)
+        . ' --prompt ' . escapeshellarg($prompt)
+        . ' --local --json';
+    list($out, $ret) = run_cmd($cmd);
+    $out = trim($out);
+    if ($ret !== 0) {
+        return array('', 'openclaw生成に失敗しました: ' . mb_substr($out, 0, 240));
+    }
+    $data = json_decode($out, true);
+    if (!is_array($data)) {
+        return array('', 'openclaw応答をJSONとして解釈できませんでした: ' . mb_substr($out, 0, 160));
+    }
+    $outputs = isset($data['outputs']) && is_array($data['outputs']) ? $data['outputs'] : array();
+    $text = '';
+    if (!empty($outputs[0]) && is_array($outputs[0]) && isset($outputs[0]['text'])) {
+        $text = trim((string)$outputs[0]['text']);
+    } elseif (isset($data['response'])) {
+        $text = trim((string)$data['response']);
+    } elseif (isset($data['text'])) {
+        $text = trim((string)$data['text']);
+    }
+    return $text !== '' ? array($text, '') : array('', 'openclaw応答が空でした');
+}
+
+function ustory_generate_with_ai($prompt) {
+    $provider = strtolower(trim((string)USTORY_AI_PROVIDER));
+    $timeout = USTORY_AI_TIMEOUT > 0 ? USTORY_AI_TIMEOUT : 180;
+    if ($provider === 'oauth_claude' || $provider === 'aouth_claude' || $provider === 'claude_oauth' || $provider === 'openclaw') {
+        return ustory_openclaw_request($prompt, $timeout);
+    }
+    if ($provider === 'codex' || $provider === 'codex_cli') {
+        $codex = ustory_resolve_executable(USTORY_CODEX_BIN, 'codex', array(
+            '/home/kojima/.vscode-server/extensions/openai.chatgpt-26.513.21555-linux-x64/bin/linux-x86_64/codex',
+        ));
+        if ($codex === '') {
+            return array('', 'Codex CLIが見つかりませんでした');
+        }
+        return ustory_cli_request(array(
+            $codex,
+            'exec',
+            '--skip-git-repo-check',
+            '--sandbox', 'read-only',
+            '--model', USTORY_CODEX_MODEL,
+            '--cd', __DIR__,
+            $prompt,
+        ), $timeout);
+    }
+    return ustory_ollama_request($prompt, $timeout);
+}
+
 function extract_tweet_id($input) {
     $input = html_entity_decode((string) $input, ENT_QUOTES, 'UTF-8');
     $input = preg_replace('/[\x{00A0}\x{3000}\s]+/u', ' ', $input);
@@ -260,24 +377,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin) {
     /* 生成（fetch後の自動実行 or analyzeボタン） */
     if (($action === 'fetch' || $action === 'analyze') && $thread_text !== '') {
         $prompt = str_replace(array('{thread}', '{source_url}'), array($thread_text, $tweet_url), $prompt_tmpl);
-        $payload = json_encode(array(
-            'prompt'      => $prompt,
-            'temperature' => 0.7,
-            'max_tokens'  => 2048,
-        ));
-        $opts = array('http' => array(
-            'method'        => 'POST',
-            'header'        => "Content-Type: application/json\r\n",
-            'content'       => $payload,
-            'timeout'       => 120,
-            'ignore_errors' => true,
-        ));
-        $res = @file_get_contents('https://aixec.exbridge.jp/api.php?path=claude/generate', false, stream_context_create($opts));
-        if ($res) {
-            $data  = json_decode($res, true);
-            $story = isset($data['response']) ? trim($data['response']) : '応答が取得できませんでした';
+        list($generated_text, $ai_error) = ustory_generate_with_ai($prompt);
+        if ($generated_text !== '') {
+            $story = $generated_text;
         } else {
-            $story = 'Claude APIに接続できませんでした';
+            $_SESSION['ss_flash_error'] = 'AI生成に失敗しました: ' . $ai_error;
         }
 
         /* JSON保存 */
@@ -295,6 +399,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin) {
                 $save_data['tweet_url']   = $tweet_url;
                 $save_data['username']    = $username;
                 $save_data['thread_text'] = $thread_text;
+                $save_data['ustory_ai_provider'] = USTORY_AI_PROVIDER;
                 if (empty($save_data['outputs']) || !is_array($save_data['outputs'])) {
                     $save_data['outputs'] = array();
                 }

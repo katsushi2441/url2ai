@@ -34,6 +34,15 @@ rqdb4ai:
 uslideblog:
   renderer_api: http://exbridge.ddns.net:8022
 
+ustory:
+  # ollama / oauth_claude / codex_cli
+  ai_provider: oauth_claude
+  openclaw_bin: /home/kojima/.nvm/versions/node/v24.16.0/bin/openclaw
+  openclaw_model: claude-cli/claude-sonnet-4-6
+  codex_model: gpt-5.5
+  codex_bin:
+  ai_timeout: 180
+
 paragraph:
   api_key: 
   publication_slug: 
