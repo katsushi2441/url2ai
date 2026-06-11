@@ -1,126 +1,66 @@
 <?php
+require_once __DIR__ . '/auth_common.php';
 date_default_timezone_set("Asia/Tokyo");
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 $DATA_DIR  = __DIR__ . '/data';
-$BASE_URL  = 'https://aiknowledgecms.exbridge.jp';
+$BASE_URL  = AIGM_BASE_URL;
 $THIS_FILE = 'ustoryv.php';
 $SITE_NAME = 'UStoryV';
-$ADMIN     = 'xb_bittensor';
-
-/* =========================================================
-   X API キー読み込み
-========================================================= */
-$x_keys_file = __DIR__ . '/x_api_keys.sh';
-$x_keys = array();
-if (file_exists($x_keys_file)) {
-    $lines = file($x_keys_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        if (preg_match('/(?:export\s+)?(\w+)=["\']?([^"\'#\r\n]*)["\']?/', $line, $m)) {
-            $x_keys[trim($m[1])] = trim($m[2]);
-        }
-    }
-}
-$x_client_id     = isset($x_keys['X_API_KEY'])    ? $x_keys['X_API_KEY']    : '';
-$x_client_secret = isset($x_keys['X_API_SECRET']) ? $x_keys['X_API_SECRET'] : '';
-$x_redirect_uri  = $BASE_URL . '/' . $THIS_FILE;
-
-/* =========================================================
-   OAuth2 PKCE
-========================================================= */
-function uv_base64url($data) {
-    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
-}
-function uv_gen_verifier() {
-    $bytes = '';
-    for ($i = 0; $i < 32; $i++) { $bytes .= chr(mt_rand(0, 255)); }
-    return uv_base64url($bytes);
-}
-function uv_gen_challenge($verifier) {
-    return uv_base64url(hash('sha256', $verifier, true));
-}
-function uv_x_post($url, $post_data, $headers) {
-    $opts = array('http' => array(
-        'method'        => 'POST',
-        'header'        => implode("\r\n", $headers) . "\r\n",
-        'content'       => $post_data,
-        'timeout'       => 12,
-        'ignore_errors' => true,
-    ));
-    $res = @file_get_contents($url, false, stream_context_create($opts));
-    if (!$res) { $res = '{}'; }
-    return json_decode($res, true);
-}
-function uv_x_get($url, $token) {
-    $opts = array('http' => array(
-        'method'        => 'GET',
-        'header'        => "Authorization: Bearer $token\r\nUser-Agent: UStoryV/1.0\r\n",
-        'timeout'       => 12,
-        'ignore_errors' => true,
-    ));
-    $res = @file_get_contents($url, false, stream_context_create($opts));
-    if (!$res) { $res = '{}'; }
-    return json_decode($res, true);
-}
 
 if (isset($_GET['uv_logout'])) {
-    session_destroy();
-    header('Location: ' . $x_redirect_uri);
+    header('Location: ' . url2ai_auth_logout_url('/' . $THIS_FILE));
     exit;
 }
 if (isset($_GET['uv_login'])) {
-    $verifier  = uv_gen_verifier();
-    $challenge = uv_gen_challenge($verifier);
-    $state     = md5(uniqid('', true));
-    $_SESSION['uv_code_verifier'] = $verifier;
-    $_SESSION['uv_oauth_state']   = $state;
-    $params = array(
-        'response_type'         => 'code',
-        'client_id'             => $x_client_id,
-        'redirect_uri'          => $x_redirect_uri,
-        'scope'                 => 'tweet.read users.read',
-        'state'                 => $state,
-        'code_challenge'        => $challenge,
-        'code_challenge_method' => 'S256',
-    );
-    header('Location: https://twitter.com/i/oauth2/authorize?' . http_build_query($params));
-    exit;
-}
-if (isset($_GET['code']) && isset($_GET['state']) && isset($_SESSION['uv_oauth_state'])) {
-    if ($_GET['state'] === $_SESSION['uv_oauth_state']) {
-        $post = http_build_query(array(
-            'grant_type'    => 'authorization_code',
-            'code'          => $_GET['code'],
-            'redirect_uri'  => $x_redirect_uri,
-            'code_verifier' => $_SESSION['uv_code_verifier'],
-            'client_id'     => $x_client_id,
-        ));
-        $cred = base64_encode($x_client_id . ':' . $x_client_secret);
-        $data = uv_x_post('https://api.twitter.com/2/oauth2/token', $post, array(
-            'Content-Type: application/x-www-form-urlencoded',
-            'Authorization: Basic ' . $cred,
-        ));
-        if (isset($data['access_token'])) {
-            $_SESSION['session_access_token'] = $data['access_token'];
-            unset($_SESSION['uv_oauth_state'], $_SESSION['uv_code_verifier']);
-            $me = uv_x_get('https://api.twitter.com/2/users/me', $data['access_token']);
-            if (isset($me['data']['username'])) {
-                $_SESSION['session_username'] = $me['data']['username'];
-            }
-        }
-    }
-    header('Location: ' . $x_redirect_uri);
+    header('Location: ' . url2ai_auth_login_url('/' . $THIS_FILE));
     exit;
 }
 
-$logged_in    = isset($_SESSION['session_access_token']) && $_SESSION['session_access_token'] !== '';
-$session_user = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
-$is_admin     = ($session_user === $ADMIN);
+$auth = url2ai_auth_bootstrap();
+$logged_in = $auth['logged_in'];
+$session_user = $auth['session_user'];
+$is_admin = $auth['is_admin'];
 
 function h($s) { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
 
+function uv_normalize_mode($mode) {
+    return $mode === 'analysis' ? 'analysis' : 'story';
+}
+
+function uv_mode_label($mode) {
+    return $mode === 'analysis' ? '考察ブログ' : '短編小説';
+}
+
+function uv_post_output($post, $mode = '') {
+    if (!is_array($post)) { return ''; }
+    $mode = $mode !== '' ? uv_normalize_mode($mode) : uv_primary_mode($post);
+    if ($mode === 'analysis') {
+        if (!empty($post['story_analysis'])) { return $post['story_analysis']; }
+        if (!empty($post['outputs']) && is_array($post['outputs']) && !empty($post['outputs']['analysis'])) {
+            return $post['outputs']['analysis'];
+        }
+        if (isset($post['generation_mode']) && $post['generation_mode'] === 'analysis' && !empty($post['story'])) {
+            return $post['story'];
+        }
+        return '';
+    }
+    if (!empty($post['story'])) { return $post['story']; }
+    if (!empty($post['outputs']) && is_array($post['outputs']) && !empty($post['outputs']['story'])) {
+        return $post['outputs']['story'];
+    }
+    return '';
+}
+
+function uv_primary_mode($post) {
+    $mode = isset($post['generation_mode']) ? uv_normalize_mode($post['generation_mode']) : 'story';
+    if ($mode === 'analysis' && uv_post_output($post, 'analysis') !== '') { return 'analysis'; }
+    if (uv_post_output($post, 'story') !== '') { return 'story'; }
+    if (uv_post_output($post, 'analysis') !== '') { return 'analysis'; }
+    return 'story';
+}
+
 /* =========================================================
-   データ読み込み（story フィールドが存在するものだけ）
+   データ読み込み（短編小説または考察ブログが存在するものだけ）
 ========================================================= */
 $posts = array();
 if (file_exists($DATA_DIR)) {
@@ -129,7 +69,12 @@ if (file_exists($DATA_DIR)) {
         foreach ($files as $f) {
             $d = json_decode(file_get_contents($f), true);
             if (!is_array($d)) { continue; }
-            if (empty($d['story'])) { continue; } /* storyなしはスキップ */
+            $primary_mode = uv_primary_mode($d);
+            $primary_body = uv_post_output($d, $primary_mode);
+            if ($primary_body === '') { continue; }
+            $d['display_mode'] = $primary_mode;
+            $d['display_label'] = uv_mode_label($primary_mode);
+            $d['display_body'] = $primary_body;
             $posts[] = $d;
         }
         usort($posts, function($a, $b) {
@@ -150,19 +95,21 @@ if (isset($_GET['feed'])) {
     echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
     echo '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">' . "\n";
     echo '<channel>' . "\n";
-    echo '<title>AI短編小説タイムライン | UStoryV</title>' . "\n";
+    echo '<title>AI短編小説・考察ブログタイムライン | UStoryV</title>' . "\n";
     echo '<link>' . $BASE_URL . '/ustoryv.php</link>' . "\n";
-    echo '<description>X投稿からAIが生成した短編小説のタイムライン。毎日更新。</description>' . "\n";
+    echo '<description>X投稿からAIが生成した短編小説と考察ブログのタイムライン。毎日更新。</description>' . "\n";
     echo '<language>ja</language>' . "\n";
     echo '<atom:link href="' . $BASE_URL . '/ustoryv.php?feed" rel="self" type="application/rss+xml"/>' . "\n";
     foreach ($rss_items as $p) {
-        $story    = isset($p['story'])     ? $p['story']     : '';
+        $mode     = isset($p['display_mode']) ? $p['display_mode'] : uv_primary_mode($p);
+        $story    = uv_post_output($p, $mode);
+        $label    = uv_mode_label($mode);
         $tweet_id = isset($p['tweet_id'])  ? $p['tweet_id']  : '';
         $uname    = isset($p['username'])  ? $p['username']  : '';
         $date_raw = isset($p['saved_at'])  ? $p['saved_at']  : '';
-        $title    = mb_substr(str_replace("\n", ' ', $story), 0, 50) . '...';
+        $title    = $label . '：' . mb_substr(str_replace("\n", ' ', $story), 0, 50) . '...';
         $desc     = mb_substr(str_replace("\n", ' ', $story), 0, 200);
-        $link     = $BASE_URL . '/ustoryv.php?id=' . urlencode($tweet_id);
+        $link     = $BASE_URL . '/ustoryv.php?id=' . urlencode($tweet_id) . '&mode=' . urlencode($mode);
         $pub_date = $date_raw ? date('r', strtotime($date_raw)) : date('r');
         echo '<item>' . "\n";
         echo '<title><![CDATA[' . $title . ']]></title>' . "\n";
@@ -181,6 +128,7 @@ if (isset($_GET['feed'])) {
    詳細表示
 ========================================================= */
 $detail_id   = isset($_GET['id']) ? trim($_GET['id']) : '';
+$detail_mode = uv_normalize_mode(isset($_GET['mode']) ? $_GET['mode'] : '');
 $detail_post = null;
 if ($detail_id) {
     foreach ($posts as $p) {
@@ -190,18 +138,28 @@ if ($detail_id) {
         }
     }
 }
+if ($detail_post) {
+    if (uv_post_output($detail_post, $detail_mode) === '') {
+        $detail_mode = isset($detail_post['display_mode']) ? $detail_post['display_mode'] : uv_primary_mode($detail_post);
+    }
+    $detail_body = uv_post_output($detail_post, $detail_mode);
+    $detail_label = uv_mode_label($detail_mode);
+} else {
+    $detail_body = '';
+    $detail_label = '';
+}
 
 /* SEO */
 if ($detail_post) {
-    $story_raw        = isset($detail_post['story']) ? $detail_post['story'] : '';
-    $page_title       = mb_substr($story_raw, 0, 50) . '... | ' . $SITE_NAME;
+    $story_raw        = $detail_body;
+    $page_title       = $detail_label . '：' . mb_substr($story_raw, 0, 50) . '... | ' . $SITE_NAME;
     $page_description = mb_substr(str_replace("\n", ' ', $story_raw), 0, 160);
-    $page_url         = $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($detail_post['tweet_id']);
+    $page_url         = $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($detail_post['tweet_id']) . '&mode=' . urlencode($detail_mode);
     $page_type        = 'article';
     $published_time   = isset($detail_post['saved_at']) ? $detail_post['saved_at'] : '';
     $jsonld = array(
         '@context'      => 'https://schema.org',
-        '@type'         => 'ShortStory',
+        '@type'         => $detail_mode === 'analysis' ? 'BlogPosting' : 'ShortStory',
         'headline'      => mb_substr($story_raw, 0, 50),
         'description'   => $page_description,
         'url'           => $page_url,
@@ -210,8 +168,8 @@ if ($detail_post) {
         'publisher'     => array('@type' => 'Organization', 'name' => $SITE_NAME),
     );
 } else {
-    $page_title       = $SITE_NAME . ' — AI短編小説タイムライン';
-    $page_description = 'XのスレッドをAIが短編小説に変換したタイムライン。';
+    $page_title       = $SITE_NAME . ' — AI短編小説・考察ブログタイムライン';
+    $page_description = 'XのスレッドをAIが短編小説または考察ブログに変換したタイムライン。';
     $page_url         = $BASE_URL . '/' . $THIS_FILE;
     $page_type        = 'website';
     $published_time   = '';
@@ -373,8 +331,8 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
     </div>
     <div class="detail-body">
 
-        <div class="detail-section-title">📖 AI短編小説</div>
-        <div class="detail-story"><?php echo h(isset($detail_post['story']) ? $detail_post['story'] : ''); ?></div>
+        <div class="detail-section-title"><?php echo $detail_mode === 'analysis' ? '📝 AI考察ブログ' : '📖 AI短編小説'; ?></div>
+        <div class="detail-story"><?php echo h($detail_body); ?></div>
 
         <?php if (!empty($detail_post['thread_text'])): ?>
         <div class="detail-section-title">元のスレッド</div>
@@ -385,10 +343,13 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
         <?php
             $has_insight = !empty($detail_post['insight']);
             $has_story   = !empty($detail_post['story']);
+            $has_analysis = uv_post_output($detail_post, 'analysis') !== '';
             $istyle = $has_insight ? 'color:#2563eb;border-color:#bfdbfe;background:#eff6ff;' : 'color:#94a3b8;border-color:#e2e8f0;background:#f8fafc;';
             $ilabel = $has_insight ? '💬 XInsight' : '💬 XInsight ＋';
             $sstyle = $has_story   ? 'color:#7c3aed;border-color:#ddd6fe;background:#f5f3ff;' : 'color:#94a3b8;border-color:#e2e8f0;background:#f8fafc;';
             $slabel = $has_story   ? '📖 UStory'   : '📖 UStory ＋';
+            $astyle = $has_analysis ? 'color:#0f766e;border-color:#99f6e4;background:#f0fdfa;' : 'color:#94a3b8;border-color:#e2e8f0;background:#f8fafc;';
+            $alabel = $has_analysis ? '📝 考察ブログ' : '📝 考察ブログ ＋';
         ?>
         <div style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <button id="copy-btn" onclick="copyDetail()" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;">📋 コピー</button>
@@ -397,14 +358,18 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
                 元の投稿を開く
             </a>
             <a href="xinsight.php?tweet_url=<?php echo urlencode($detail_post['tweet_url']); ?>" class="x-link" style="<?php echo $istyle; ?>"><?php echo $ilabel; ?></a>
-            <a href="ustory.php?tweet_url=<?php echo urlencode($detail_post['tweet_url']); ?>" class="x-link" style="<?php echo $sstyle; ?>"><?php echo $slabel; ?></a>
+            <a href="ustory.php?tweet_url=<?php echo urlencode($detail_post['tweet_url']); ?>&mode=story" class="x-link" style="<?php echo $sstyle; ?>"><?php echo $slabel; ?></a>
+            <a href="ustory.php?tweet_url=<?php echo urlencode($detail_post['tweet_url']); ?>&mode=analysis" class="x-link" style="<?php echo $astyle; ?>"><?php echo $alabel; ?></a>
         </div>
         <script>
         var _dp = <?php echo json_encode($detail_post, JSON_UNESCAPED_UNICODE); ?>;
-        var _dpUrl = '<?php echo $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($detail_post['tweet_id']); ?>';
+        var _dpMode = <?php echo json_encode($detail_mode); ?>;
+        var _dpBody = <?php echo json_encode($detail_body, JSON_UNESCAPED_UNICODE); ?>;
+        var _dpLabel = <?php echo json_encode($detail_label, JSON_UNESCAPED_UNICODE); ?>;
+        var _dpUrl = '<?php echo $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($detail_post['tweet_id']) . '&mode=' . urlencode($detail_mode); ?>';
         function copyDetail() {
             var lines = [];
-            if (_dp.story) { lines.push(<?php echo json_encode('#URL2AI 短編小説'); ?>); lines.push(_dp.story); }
+            if (_dpBody) { lines.push('#URL2AI ' + _dpLabel); lines.push(_dpBody); }
             lines.push('');
             if (_dp.tweet_url) lines.push(_dp.tweet_url);
             lines.push(_dpUrl);
@@ -425,7 +390,7 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
 
 <div class="container">
     <div class="count-bar">
-        <?php echo count($posts); ?> 件の短編小説
+        <?php echo count($posts); ?> 件の短編小説・考察ブログ
         <?php if ($logged_in): ?> — @<?php echo h($session_user); ?><?php endif; ?>
     </div>
 
@@ -453,6 +418,9 @@ function renderUvPosts(from, to) {
         var turl    = p.tweet_url   || '';
         var thread  = p.thread_text || '';
         var story   = p.story       || '';
+        var mode    = p.display_mode || p.generation_mode || 'story';
+        var label   = p.display_label || (mode === 'analysis' ? '考察ブログ' : '短編小説');
+        var body    = p.display_body || story || p.story_analysis || '';
         var insight = p.insight     || '';
         var saved   = p.saved_at    || '';
         var uname   = p.username    || '';
@@ -465,11 +433,12 @@ function renderUvPosts(from, to) {
         var istyle  = insight ? 'color:#2563eb;border-color:#bfdbfe;background:#eff6ff;' : 'color:#94a3b8;border-color:#e2e8f0;background:#f8fafc;';
         var ilabel  = insight ? '💬 XInsight' : '💬 XInsight ＋';
 
-        /* 短編小説ブロック（折りたたみ） */
+        /* 生成本文ブロック（折りたたみ） */
         var storyHtml = '';
-        if (story) {
+        if (body) {
             storyHtml = '<div class="story-block" id="story-' + uvEsc(tid) + '" onclick="toggleStory(\'' + uvEsc(tid) + '\')">'
-                + uvEsc(story)
+                + '<div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px;">' + uvEsc(label) + '</div>'
+                + uvEsc(body)
                 + '</div>'
                 + '<button type="button" class="expand-btn" id="expbtn-' + uvEsc(tid) + '" onclick="toggleStory(\'' + uvEsc(tid) + '\')">続きを見る ▼</button>';
         }
@@ -480,7 +449,7 @@ function renderUvPosts(from, to) {
             threadHtml = '<div class="thread-block">' + uvEsc(thread) + '</div>';
         }
 
-        var detailUrl = 'ustoryv.php?id=' + encodeURIComponent(tid);
+        var detailUrl = 'ustoryv.php?id=' + encodeURIComponent(tid) + '&mode=' + encodeURIComponent(mode);
         var html = '<div class="post-card">'
             + '<div class="post-meta">'
             + '<div class="avatar">' + uvEsc(avatar) + '</div>'
@@ -493,7 +462,7 @@ function renderUvPosts(from, to) {
             + '<div class="card-links">'
             + xlink
             + '<a href="' + detailUrl + '" class="x-link" style="color:#7c3aed;border-color:#ddd6fe;background:#f5f3ff;">📖 詳細</a>'
-            + '<a href="ustory.php?tweet_url=' + encodeURIComponent(turl) + '" class="x-link" style="color:#7c3aed;border-color:#ddd6fe;background:#f5f3ff;">✏️ 再生成</a>'
+            + '<a href="ustory.php?tweet_url=' + encodeURIComponent(turl) + '&mode=' + encodeURIComponent(mode) + '" class="x-link" style="color:#7c3aed;border-color:#ddd6fe;background:#f5f3ff;">✏️ 再生成</a>'
             + '<a href="xinsight.php?tweet_url=' + encodeURIComponent(turl) + '" class="x-link" style="' + istyle + '">' + ilabel + '</a>'
             + '</div></div>';
         list.insertAdjacentHTML('beforeend', html);
@@ -528,7 +497,7 @@ if (sentinel) {
 
 if (uvPosts.length === 0) {
     var pl = document.getElementById('post-list');
-    if (pl) { pl.innerHTML = '<div class="empty">まだ短編小説がありません。<br><br><a href="ustory.php">UStoryで小説を生成する →</a></div>'; }
+    if (pl) { pl.innerHTML = '<div class="empty">まだ短編小説・考察ブログがありません。<br><br><a href="ustory.php">UStoryで生成する →</a></div>'; }
 } else {
     loadMoreUv();
 }

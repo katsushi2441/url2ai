@@ -1,171 +1,24 @@
 <?php
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth_common.php';
 date_default_timezone_set("Asia/Tokyo");
 
-/* =========================================================
-   セッション長期維持設定（30日）
-========================================================= */
-if (session_status() === PHP_SESSION_NONE) {
-    $session_lifetime = 60 * 60 * 24 * 30;
-    ini_set('session.gc_maxlifetime', $session_lifetime);
-    ini_set('session.cookie_lifetime', $session_lifetime);
-    ini_set('session.cookie_path',     '/');
-    ini_set('session.cookie_domain',   'aiknowledgecms.exbridge.jp');
-    ini_set('session.cookie_secure',   '1');
-    ini_set('session.cookie_httponly',  '1');
-    session_cache_expire(60 * 24 * 30);
-    session_start();
-    if (isset($_COOKIE[session_name()])) {
-        setcookie(session_name(), session_id(),
-            time() + $session_lifetime, '/',
-            'aiknowledgecms.exbridge.jp', true, true);
-    }
-}
-
-/* =========================================================
-   X API キー読み込み
-========================================================= */
-$x_keys_file = __DIR__ . '/x_api_keys.sh';
-$x_keys = array();
-if (file_exists($x_keys_file)) {
-    $lines = file($x_keys_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        if (preg_match('/(?:export\s+)?(\w+)=["\']?([^"\'#\r\n]*)["\']?/', $line, $m)) {
-            $x_keys[trim($m[1])] = trim($m[2]);
-        }
-    }
-}
-$x_client_id     = isset($x_keys['X_API_KEY'])    ? $x_keys['X_API_KEY']    : '';
-$x_client_secret = isset($x_keys['X_API_SECRET']) ? $x_keys['X_API_SECRET'] : '';
-$x_redirect_uri  = 'https://aiknowledgecms.exbridge.jp/ustory.php';
-
-
-/* =========================================================
-   OAuth2 PKCE
-========================================================= */
-function ep_base64url($data) {
-    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
-}
-function ep_gen_verifier() {
-    $bytes = '';
-    for ($i = 0; $i < 32; $i++) { $bytes .= chr(mt_rand(0, 255)); }
-    return ep_base64url($bytes);
-}
-function ep_gen_challenge($verifier) {
-    return ep_base64url(hash('sha256', $verifier, true));
-}
-function ep_x_post($url, $post_data, $headers) {
-    $opts = array('http' => array(
-        'method'        => 'POST',
-        'header'        => implode("\r\n", $headers) . "\r\n",
-        'content'       => $post_data,
-        'timeout'       => 12,
-        'ignore_errors' => true,
-    ));
-    $res = @file_get_contents($url, false, stream_context_create($opts));
-    if (!$res) { $res = '{}'; }
-    return json_decode($res, true);
-}
-function ep_x_get($url, $token) {
-    $opts = array('http' => array(
-        'method'        => 'GET',
-        'header'        => "Authorization: Bearer $token\r\nUser-Agent: XInsight/1.0\r\n",
-        'timeout'       => 12,
-        'ignore_errors' => true,
-    ));
-    $res = @file_get_contents($url, false, stream_context_create($opts));
-    if (!$res) { $res = '{}'; }
-    return json_decode($res, true);
-}
+$BASE_URL       = AIGM_BASE_URL;
+$THIS_FILE      = 'ustory.php';
+$x_redirect_uri = $BASE_URL . '/' . $THIS_FILE;
 
 if (isset($_GET['ss_logout'])) {
-    session_destroy();
-    setcookie(session_name(), '', time() - 3600, '/',
-        'aiknowledgecms.exbridge.jp', true, true);
-    header('Location: ' . $x_redirect_uri);
+    header('Location: ' . url2ai_auth_logout_url('/' . $THIS_FILE));
     exit;
 }
 if (isset($_GET['ss_login'])) {
-    $verifier  = ep_gen_verifier();
-    $challenge = ep_gen_challenge($verifier);
-    $state     = md5(uniqid('', true));
-    $_SESSION['ss_code_verifier'] = $verifier;
-    $_SESSION['ss_oauth_state']   = $state;
-    $params = array(
-        'response_type'         => 'code',
-        'client_id'             => $x_client_id,
-        'redirect_uri'          => $x_redirect_uri,
-        'scope'                 => 'tweet.read users.read offline.access',
-        'state'                 => $state,
-        'code_challenge'        => $challenge,
-        'code_challenge_method' => 'S256',
-    );
-    header('Location: https://twitter.com/i/oauth2/authorize?' . http_build_query($params));
-    exit;
-}
-if (isset($_GET['code']) && isset($_GET['state']) && isset($_SESSION['ss_oauth_state'])) {
-    if ($_GET['state'] === $_SESSION['ss_oauth_state']) {
-        $post = http_build_query(array(
-            'grant_type'    => 'authorization_code',
-            'code'          => $_GET['code'],
-            'redirect_uri'  => $x_redirect_uri,
-            'code_verifier' => $_SESSION['ss_code_verifier'],
-            'client_id'     => $x_client_id,
-        ));
-        $cred = base64_encode($x_client_id . ':' . $x_client_secret);
-        $data = ep_x_post('https://api.twitter.com/2/oauth2/token', $post, array(
-            'Content-Type: application/x-www-form-urlencoded',
-            'Authorization: Basic ' . $cred,
-        ));
-        if (isset($data['access_token'])) {
-            $_SESSION['session_access_token']  = $data['access_token'];
-            $_SESSION['session_token_expires']  = time() + (isset($data['expires_in']) ? (int)$data['expires_in'] : 7200);
-            if (!empty($data['refresh_token'])) {
-                $_SESSION['session_refresh_token'] = $data['refresh_token'];
-            }
-            unset($_SESSION['ss_oauth_state'], $_SESSION['ss_code_verifier']);
-            $me = ep_x_get('https://api.twitter.com/2/users/me', $data['access_token']);
-            if (isset($me['data']['username'])) {
-                $_SESSION['session_username'] = $me['data']['username'];
-            }
-        }
-    }
-    header('Location: ' . $x_redirect_uri);
+    header('Location: ' . url2ai_auth_login_url('/' . $THIS_FILE));
     exit;
 }
 
-/* =========================================================
-   アクセストークン自動リフレッシュ
-========================================================= */
-if (
-    !empty($_SESSION['session_refresh_token']) &&
-    !empty($_SESSION['session_token_expires']) &&
-    time() > $_SESSION['session_token_expires'] - 300
-) {
-    $cred_r = base64_encode($x_client_id . ':' . $x_client_secret);
-    $post_r = http_build_query(array(
-        'grant_type'    => 'refresh_token',
-        'refresh_token' => $_SESSION['session_refresh_token'],
-        'client_id'     => $x_client_id,
-    ));
-    $ref = ep_x_post('https://api.twitter.com/2/oauth2/token', $post_r, array(
-        'Content-Type: application/x-www-form-urlencoded',
-        'Authorization: Basic ' . $cred_r,
-    ));
-    if (!empty($ref['access_token'])) {
-        $_SESSION['session_access_token']  = $ref['access_token'];
-        $_SESSION['session_token_expires'] = time() + (isset($ref['expires_in']) ? (int)$ref['expires_in'] : 7200);
-        if (!empty($ref['refresh_token'])) {
-            $_SESSION['session_refresh_token'] = $ref['refresh_token'];
-        }
-    } else {
-        unset($_SESSION['session_access_token'], $_SESSION['session_refresh_token'], $_SESSION['session_token_expires'], $_SESSION['session_username']);
-    }
-}
-
-$logged_in = isset($_SESSION['session_access_token']) && $_SESSION['session_access_token'] !== '';
-$username  = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
-$is_admin  = ($username === 'xb_bittensor');
+$auth = url2ai_auth_bootstrap();
+$logged_in = $auth['logged_in'];
+$username  = $auth['session_user'];
+$is_admin  = $auth['is_admin'];
 
 /* =========================================================
    ヘルパー
@@ -251,10 +104,37 @@ function thread_to_text($thread) {
     return implode("\n\n", $lines);
 }
 
+function ustory_normalize_mode($mode) {
+    return $mode === 'analysis' ? 'analysis' : 'story';
+}
+
+function ustory_mode_label($mode) {
+    return $mode === 'analysis' ? '考察ブログ' : '短編小説';
+}
+
+function ustory_saved_output($saved, $mode) {
+    if (!is_array($saved)) { return ''; }
+    if ($mode === 'analysis') {
+        if (!empty($saved['story_analysis'])) { return $saved['story_analysis']; }
+        if (!empty($saved['outputs']) && is_array($saved['outputs']) && !empty($saved['outputs']['analysis'])) {
+            return $saved['outputs']['analysis'];
+        }
+        if (isset($saved['generation_mode']) && $saved['generation_mode'] === 'analysis' && !empty($saved['story'])) {
+            return $saved['story'];
+        }
+        return '';
+    }
+    if (!empty($saved['story'])) { return $saved['story']; }
+    if (!empty($saved['outputs']) && is_array($saved['outputs']) && !empty($saved['outputs']['story'])) {
+        return $saved['outputs']['story'];
+    }
+    return '';
+}
+
 /* =========================================================
    デフォルトプロンプト
 ========================================================= */
-$default_prompt = "以下はXの投稿内容です。この内容を元にした短編小説を日本語で生成してください。
+$story_prompt = "以下はXの投稿内容です。この内容を元にした短編小説を日本語で生成してください。
 
 条件：
 - 280字から420字程度
@@ -270,13 +150,38 @@ $default_prompt = "以下はXの投稿内容です。この内容を元にした
 
 短編小説のみを出力してください。タイトルや前置きは不要です。";
 
+$analysis_prompt = "以下は永久保存したいX投稿またはスレッドの内容です。
+この内容を引用しながら、技術・経営・AI活用・組織運用の観点で日本語の考察ブログを書いてください。
+
+条件：
+- 冒頭に短いタイトルを1行で付ける
+- 元投稿の重要な言葉を「引用」として2〜4箇所抜き出す
+- 引用の直後に、その意味や示唆を自分の言葉で考察する
+- 技術、経営、AI活用、組織運用のうち関連する観点を必ず含める
+- 1200〜1800字程度
+- 入力URLを出典として明示する
+- 誇張や断定を避け、公開ブログとして読める落ち着いた文体にする
+- 最後に「この投稿から残したい教訓」を3点でまとめる
+
+入力URL：
+{source_url}
+
+投稿内容：
+---
+{thread}
+---
+
+考察ブログ本文のみを出力してください。";
+
 /* =========================================================
    POST処理
 ========================================================= */
 $action       = isset($_POST['action']) ? $_POST['action'] : '';
 $tweet_url    = isset($_POST['tweet_url'])   ? trim($_POST['tweet_url'])   : '';
 $thread_text  = isset($_POST['thread_text']) ? trim($_POST['thread_text']) : '';
-$prompt_tmpl  = $default_prompt;
+$generation_mode = ustory_normalize_mode(isset($_POST['generation_mode']) ? $_POST['generation_mode'] : (isset($_GET['mode']) ? $_GET['mode'] : 'story'));
+$prompt_tmpl  = $generation_mode === 'analysis' ? $analysis_prompt : $story_prompt;
+$mode_label   = ustory_mode_label($generation_mode);
 $story        = '';
 $fetch_error  = isset($_SESSION['ss_flash_error']) ? $_SESSION['ss_flash_error'] : '';
 if (isset($_SESSION['ss_flash_error'])) { unset($_SESSION['ss_flash_error']); }
@@ -291,7 +196,7 @@ if ($tweet_url === '' && isset($_GET['tweet_url']) && $_GET['tweet_url'] !== '')
             $saved_get = json_decode(file_get_contents($save_file_get), true);
             if (is_array($saved_get)) {
                 $thread_text = isset($saved_get['thread_text']) ? $saved_get['thread_text'] : '';
-                $story       = isset($saved_get['story'])       ? $saved_get['story']       : '';
+                $story       = ustory_saved_output($saved_get, $generation_mode);
                 $tweet_url   = isset($saved_get['tweet_url'])   ? $saved_get['tweet_url']   : $tweet_url;
             }
         }
@@ -307,7 +212,7 @@ if ($story === '' && isset($_GET['id']) && $_GET['id'] !== '') {
             $saved_get = json_decode(file_get_contents($save_file_get), true);
             if (is_array($saved_get)) {
                 $thread_text = isset($saved_get['thread_text']) ? $saved_get['thread_text'] : '';
-                $story       = isset($saved_get['story'])       ? $saved_get['story']       : '';
+                $story       = ustory_saved_output($saved_get, $generation_mode);
                 $tweet_url   = isset($saved_get['tweet_url'])   ? $saved_get['tweet_url']   : $tweet_url;
             }
         }
@@ -328,14 +233,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin) {
             $save_file = __DIR__ . '/data/xinsight_' . $tweet_id . '.json';
             if ($action === 'fetch' && file_exists($save_file)) {
                 $saved = json_decode(file_get_contents($save_file), true);
-                if (is_array($saved) && !empty($saved['story'])) {
+                $saved_output = ustory_saved_output($saved, $generation_mode);
+                if (is_array($saved) && $saved_output !== '') {
                     $thread_text = isset($saved['thread_text']) ? $saved['thread_text'] : '';
-                    $story       = $saved['story'];
+                    $story       = $saved_output;
                     $tweet_url   = isset($saved['tweet_url']) ? $saved['tweet_url'] : $tweet_url;
                     $action      = 'loaded'; /* 生成処理をスキップ */
+                } elseif (is_array($saved) && !empty($saved['thread_text'])) {
+                    $thread_text = $saved['thread_text'];
+                    $tweet_url   = isset($saved['tweet_url']) ? $saved['tweet_url'] : $tweet_url;
                 }
             }
-            if ($action !== 'loaded') {
+            if ($action !== 'loaded' && $thread_text === '') {
                 $thread = fetch_thread($tweet_id, 0);
                 if (empty($thread)) {
                     $_SESSION['ss_flash_error'] = 'ツイートを取得できませんでした';
@@ -348,9 +257,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin) {
         }
     }
 
-    /* 小説生成（fetch後の自動実行 or analyzeボタン） */
+    /* 生成（fetch後の自動実行 or analyzeボタン） */
     if (($action === 'fetch' || $action === 'analyze') && $thread_text !== '') {
-        $prompt = str_replace('{thread}', $thread_text, $prompt_tmpl);
+        $prompt = str_replace(array('{thread}', '{source_url}'), array($thread_text, $tweet_url), $prompt_tmpl);
         $payload = json_encode(array(
             'prompt'      => $prompt,
             'temperature' => 0.7,
@@ -386,7 +295,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin) {
                 $save_data['tweet_url']   = $tweet_url;
                 $save_data['username']    = $username;
                 $save_data['thread_text'] = $thread_text;
-                $save_data['story']       = $story;
+                if (empty($save_data['outputs']) || !is_array($save_data['outputs'])) {
+                    $save_data['outputs'] = array();
+                }
+                $save_data['outputs'][$generation_mode] = $story;
+                $save_data['generation_mode'] = $generation_mode;
+                if ($generation_mode === 'analysis') {
+                    $save_data['story_analysis'] = $story;
+                } else {
+                    $save_data['story'] = $story;
+                }
                 $save_data['saved_at']    = date('Y-m-d H:i:s');
                 file_put_contents($save_file, json_encode($save_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
             }
@@ -395,7 +313,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin) {
 
     /* 全処理完了後にPRGリダイレクト（fetch/analyze/loaded すべて） */
     if ($tweet_url !== '') {
-        header('Location: ' . $x_redirect_uri . '?tweet_url=' . urlencode($tweet_url));
+        header('Location: ' . $x_redirect_uri . '?tweet_url=' . urlencode($tweet_url) . '&mode=' . urlencode($generation_mode));
         exit;
     }
 }
@@ -455,6 +373,10 @@ input[type=text]:focus{border-color:var(--accent)}
 textarea.code-area{width:100%;border:1px solid var(--border2);border-radius:6px;padding:.75rem;font-family:var(--mono);font-size:.8rem;line-height:1.7;outline:none;resize:vertical;color:var(--text);transition:border .15s;min-height:120px}
 textarea.code-area:focus{border-color:var(--accent)}
 textarea.story-area{background:#f8fafc;min-height:200px}
+.mode-select{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem}
+.mode-option{display:flex;align-items:center;gap:.4rem;border:1px solid var(--border2);border-radius:999px;padding:.45rem .8rem;background:#fff;color:var(--muted);cursor:pointer;font-size:.82rem;font-weight:600}
+.mode-option input{accent-color:var(--accent)}
+.mode-option:has(input:checked){border-color:var(--accent);background:#eff6ff;color:var(--accent)}
 
 /* buttons */
 .btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1.2rem;border-radius:6px;font-size:.82rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;font-family:var(--sans)}
@@ -513,7 +435,16 @@ textarea.story-area{background:#f8fafc;min-height:200px}
         <div class="section-body">
             <form method="POST" id="form-fetch">
                 <input type="hidden" name="action" value="fetch">
-                
+                <div class="mode-select">
+                    <label class="mode-option">
+                        <input type="radio" name="generation_mode" value="story"<?php if ($generation_mode === 'story'): ?> checked<?php endif; ?> onchange="syncMode()">
+                        <span>短編小説</span>
+                    </label>
+                    <label class="mode-option">
+                        <input type="radio" name="generation_mode" value="analysis"<?php if ($generation_mode === 'analysis'): ?> checked<?php endif; ?> onchange="syncMode()">
+                        <span>考察ブログ</span>
+                    </label>
+                </div>
                 <div class="row">
                     <input type="text" name="tweet_url" id="tweet_url_input" placeholder="https://x.com/user/status/..." value="<?php echo h($tweet_url); ?>">
                     <button type="button" class="btn btn-primary" id="btn-fetch"<?php if (!$is_admin): ?> disabled title="ログインが必要です"<?php endif; ?> onclick="submitFetch()">
@@ -550,16 +481,17 @@ textarea.story-area{background:#f8fafc;min-height:200px}
 
     <!-- 生成中メッセージ -->
     <div id="generating-msg" style="display:none;text-align:center;padding:12px 16px;font-size:.82rem;color:#92400e;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;margin-bottom:1rem;font-weight:600;">
-        ⏳ 小説生成中です。1〜2分かかります。ページを閉じないでください...
+        ⏳ <?php echo h($mode_label); ?>生成中です。1〜2分かかります。ページを閉じないでください...
     </div>
 
     <!-- STEP 3: 生成実行 -->
     <form method="POST" id="form-analyze">
         <input type="hidden" name="action" value="analyze">
         <input type="hidden" name="tweet_url" value="<?php echo h($tweet_url); ?>">
+        <input type="hidden" name="generation_mode" id="generation_mode_analyze" value="<?php echo h($generation_mode); ?>">
         <div style="display:flex;justify-content:center;margin-bottom:1rem">
             <button type="button" class="btn btn-green" id="btn-analyze"<?php if (!$is_admin): ?> disabled title="ログインが必要です"<?php endif; ?> style="padding:.65rem 2.5rem;font-size:.9rem" onclick="submitAnalyze()">
-                <span class="btn-label">✦ 短編小説を生成</span>
+                <span class="btn-label" id="analyze-label">✦ <?php echo h($mode_label); ?>を生成</span>
                 <span class="spinner"></span>
             </button>
         </div>
@@ -569,7 +501,7 @@ textarea.story-area{background:#f8fafc;min-height:200px}
     <?php if ($story !== ''): ?>
     <div class="section">
         <div class="section-header">
-            <div class="section-title"><span class="step" style="background:var(--green)">✓</span> 生成された短編小説</div>
+            <div class="section-title"><span class="step" style="background:var(--green)">✓</span> 生成された<?php echo h($mode_label); ?></div>
             <button type="button" class="btn btn-secondary" style="font-size:.75rem;padding:.3rem .7rem" onclick="copyText('story_area')">コピー</button>
         </div>
         <div class="section-body">
@@ -581,6 +513,20 @@ textarea.story-area{background:#f8fafc;min-height:200px}
 </div>
 
 <script>
+var modeLabels = { story: '短編小説', analysis: '考察ブログ' };
+function selectedMode() {
+    var checked = document.querySelector('input[name="generation_mode"]:checked');
+    return checked ? checked.value : 'story';
+}
+function syncMode() {
+    var mode = selectedMode();
+    var hidden = document.getElementById('generation_mode_analyze');
+    var label = document.getElementById('analyze-label');
+    if (hidden) { hidden.value = mode; }
+    if (label) { label.textContent = '✦ ' + (modeLabels[mode] || modeLabels.story) + 'を生成'; }
+}
+syncMode();
+
 /* 元の投稿ボタン */
 function openTweetUrl() {
     var url = document.getElementById('tweet_url_input').value.trim();
@@ -620,8 +566,10 @@ function copyText(id) {
         var storyViewUrl = '';
         var tidM = tweetUrl.match(/(\d{15,20})/);
         if (tidM) { storyViewUrl = 'https://aiknowledgecms.exbridge.jp/ustoryv.php?id=' + tidM[1]; }
-        text = '#URL2AI 短編小説\n' + text
-            + (storyViewUrl ? '\n\nXのポストURLから短編小説\n' + storyViewUrl + '\n' : '')
+        var mode = selectedMode();
+        var label = modeLabels[mode] || modeLabels.story;
+        text = '#URL2AI ' + label + '\n' + text
+            + (storyViewUrl ? '\n\nXのポストURLから' + label + '\n' + storyViewUrl + (mode === 'analysis' ? '&mode=analysis' : '') + '\n' : '')
             + (tweetUrl     ? '\n元の投稿\n' + tweetUrl     : '')
             + (author       ? '\n' + author       : '');
     }    if (navigator.clipboard) {
