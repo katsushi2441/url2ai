@@ -1,20 +1,36 @@
 <?php
 require_once __DIR__ . '/config.php';
 
+if (!defined('URL2AI_AUTH_SESSION_LIFETIME')) {
+    define('URL2AI_AUTH_SESSION_LIFETIME', 60 * 60 * 24 * 365);
+}
+
 function url2ai_auth_start_session() {
     if (session_status() !== PHP_SESSION_NONE) { return; }
-    $session_lifetime = 60 * 60 * 24 * 30;
+    $session_lifetime = URL2AI_AUTH_SESSION_LIFETIME;
     ini_set('session.gc_maxlifetime', $session_lifetime);
     ini_set('session.cookie_lifetime', $session_lifetime);
     ini_set('session.cookie_path', '/');
     ini_set('session.cookie_domain', AIGM_COOKIE_DOMAIN);
     ini_set('session.cookie_secure', '1');
     ini_set('session.cookie_httponly', '1');
-    session_cache_expire(60 * 24 * 30);
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.use_only_cookies', '1');
+    session_cache_expire((int)($session_lifetime / 60));
     session_start();
-    if (isset($_COOKIE[session_name()])) {
-        setcookie(session_name(), session_id(), time() + $session_lifetime, '/', AIGM_COOKIE_DOMAIN, true, true);
-    }
+    url2ai_auth_extend_session_cookie();
+}
+
+function url2ai_auth_extend_session_cookie() {
+    if (session_status() !== PHP_SESSION_ACTIVE) { return; }
+    $session_lifetime = URL2AI_AUTH_SESSION_LIFETIME;
+    setcookie(session_name(), session_id(), time() + $session_lifetime, '/', AIGM_COOKIE_DOMAIN, true, true);
+}
+
+function url2ai_auth_mark_logged_in($username = '') {
+    $_SESSION['session_logged_in_until'] = time() + URL2AI_AUTH_SESSION_LIFETIME;
+    if ($username !== '') { $_SESSION['session_username'] = $username; }
+    url2ai_auth_extend_session_cookie();
 }
 
 function url2ai_auth_current_path() {
@@ -127,6 +143,7 @@ function url2ai_auth_handle_login_flow($return_default = '/aiknowledgesns.php') 
                 if (!empty($data['refresh_token'])) { $_SESSION['session_refresh_token'] = $data['refresh_token']; }
                 $me = url2ai_auth_get_json('https://api.twitter.com/2/users/me', $data['access_token']);
                 if (isset($me['data']['username'])) { $_SESSION['session_username'] = $me['data']['username']; }
+                url2ai_auth_mark_logged_in(isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '');
             }
             unset($_SESSION['aks_oauth_state'], $_SESSION['aks_code_verifier']);
         }
@@ -183,8 +200,9 @@ function url2ai_auth_refresh_if_needed() {
         $_SESSION['session_access_token'] = $ref['access_token'];
         $_SESSION['session_token_expires'] = time() + (isset($ref['expires_in']) ? (int)$ref['expires_in'] : 7200);
         if (!empty($ref['refresh_token'])) { $_SESSION['session_refresh_token'] = $ref['refresh_token']; }
+        url2ai_auth_mark_logged_in(isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '');
     } else {
-        unset($_SESSION['session_access_token'], $_SESSION['session_refresh_token'], $_SESSION['session_token_expires'], $_SESSION['session_username']);
+        unset($_SESSION['session_access_token'], $_SESSION['session_token_expires']);
     }
 }
 
@@ -192,7 +210,9 @@ function url2ai_auth_bootstrap() {
     url2ai_auth_start_session();
     url2ai_auth_refresh_if_needed();
     $session_user = isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '';
-    $logged_in = !empty($_SESSION['session_access_token']) && $session_user !== '';
+    $logged_in_until = isset($_SESSION['session_logged_in_until']) ? (int)$_SESSION['session_logged_in_until'] : 0;
+    $logged_in = $session_user !== '' && (!empty($_SESSION['session_access_token']) || $logged_in_until > time());
+    if ($logged_in) { url2ai_auth_mark_logged_in($session_user); }
     return array(
         'logged_in' => $logged_in,
         'session_user' => $session_user,
