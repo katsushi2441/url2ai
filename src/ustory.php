@@ -95,13 +95,43 @@ function ustory_cli_request($cmd_parts, $timeout) {
     return $out !== '' ? array($out, '') : array('', 'CLI応答が空でした');
 }
 
+function ustory_oauth_claude_gateway_request($prompt, $timeout) {
+    if (!defined('USTORY_OAUTH_CLAUDE_GATEWAY') || USTORY_OAUTH_CLAUDE_GATEWAY === '') {
+        return array('', 'OAuth Claude gateway が設定されていません');
+    }
+    $opts = array('http' => array(
+        'method'        => 'POST',
+        'header'        => "Content-Type: application/json\r\n",
+        'content'       => json_encode(array(
+            'prompt' => $prompt,
+            'model'  => USTORY_OPENCLAW_MODEL,
+        ), JSON_UNESCAPED_UNICODE),
+        'timeout'       => $timeout,
+        'ignore_errors' => true,
+    ));
+    $res = @file_get_contents(USTORY_OAUTH_CLAUDE_GATEWAY, false, stream_context_create($opts));
+    if (!$res) {
+        return array('', 'OAuth Claude gateway に接続できませんでした');
+    }
+    $data = json_decode($res, true);
+    if (!is_array($data)) {
+        return array('', 'OAuth Claude gateway 応答をJSONとして解釈できませんでした');
+    }
+    if (isset($data['ok']) && !$data['ok']) {
+        $error = isset($data['error']) ? (string)$data['error'] : 'gateway error';
+        return array('', 'OAuth Claude gateway エラー: ' . mb_substr($error, 0, 240));
+    }
+    $text = isset($data['response']) ? trim((string)$data['response']) : '';
+    return $text !== '' ? array($text, '') : array('', 'OAuth Claude gateway 応答が空でした');
+}
+
 function ustory_openclaw_request($prompt, $timeout) {
     $openclaw = ustory_resolve_executable(USTORY_OPENCLAW_BIN, 'openclaw', array(
         '/home/kojima/.nvm/versions/node/v24.16.0/bin/openclaw',
         '/home/kojima/.nvm/versions/node/v22.22.2/lib/node_modules/@swarmclawai/swarmclaw/node_modules/.bin/openclaw',
     ));
     if ($openclaw === '') {
-        return array('', 'openclaw が見つかりませんでした');
+        return ustory_oauth_claude_gateway_request($prompt, $timeout);
     }
     $cmd = 'PATH=' . escapeshellarg('/home/kojima/.nvm/versions/node/v24.16.0/bin:/home/kojima/.nvm/versions/node/v22.22.3/bin') . ':$PATH '
         . 'timeout ' . (int)$timeout . 's '
@@ -113,7 +143,9 @@ function ustory_openclaw_request($prompt, $timeout) {
     list($out, $ret) = run_cmd($cmd);
     $out = trim($out);
     if ($ret !== 0) {
-        return array('', 'openclaw生成に失敗しました: ' . mb_substr($out, 0, 240));
+        $fallback = ustory_oauth_claude_gateway_request($prompt, $timeout);
+        if ($fallback[0] !== '') { return $fallback; }
+        return array('', 'openclaw生成に失敗しました: ' . mb_substr($out, 0, 180) . ' / ' . $fallback[1]);
     }
     $data = json_decode($out, true);
     if (!is_array($data)) {

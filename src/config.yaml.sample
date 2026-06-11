@@ -39,6 +39,7 @@ ustory:
   ai_provider: oauth_claude
   openclaw_bin: /home/kojima/.nvm/versions/node/v24.16.0/bin/openclaw
   openclaw_model: claude-cli/claude-sonnet-4-6
+  oauth_claude_gateway: https://aixec.exbridge.jp/api.php?path=claude/generate
   codex_model: gpt-5.5
   codex_bin:
   ai_timeout: 180
