@@ -40,153 +40,126 @@ function run_cmd($cmd) {
     return array(implode("\n", $out), $ret);
 }
 
-function ustory_ollama_request($prompt, $timeout) {
-    $opts = array('http' => array(
-        'method'        => 'POST',
-        'header'        => "Content-Type: application/json\r\n",
-        'content'       => json_encode(array(
-            'model'   => OLLAMA_MODEL,
-            'prompt'  => $prompt,
-            'stream'  => false,
-            'options' => array(
-                'temperature' => 0.7,
-                'num_predict' => 4096,
-            ),
-        ), JSON_UNESCAPED_UNICODE),
-        'timeout'       => $timeout,
-        'ignore_errors' => true,
-    ));
-    $res = @file_get_contents(OLLAMA_API, false, stream_context_create($opts));
-    if (!$res) {
-        return array('', 'Ollamaに接続できませんでした');
+function ustory_rqdb_api($method, $path, $payload) {
+    if (!defined('RQDB4AI_API_BASE') || trim(RQDB4AI_API_BASE) === '' || !defined('RQDB4AI_API_TOKEN') || trim(RQDB4AI_API_TOKEN) === '') {
+        return array('ok' => false, 'error' => 'RQDB4AI is not configured');
     }
-    $data = json_decode($res, true);
-    if (!is_array($data)) {
-        return array('', 'Ollama応答をJSONとして解釈できませんでした');
-    }
-    $text = isset($data['response']) ? trim((string)$data['response']) : '';
-    return $text !== '' ? array($text, '') : array('', 'API応答が空でした');
-}
-
-function ustory_resolve_executable($configured, $name, $fallbacks) {
-    $candidates = array();
-    if ($configured !== '') { $candidates[] = $configured; }
-    list($which, $ret) = run_cmd('command -v ' . escapeshellarg($name));
-    if ($ret === 0 && trim($which) !== '') { $candidates[] = trim($which); }
-    foreach ($fallbacks as $path) { $candidates[] = $path; }
-    foreach ($candidates as $path) {
-        if ($path !== '' && file_exists($path) && is_executable($path)) {
-            return $path;
-        }
-    }
-    return '';
-}
-
-function ustory_cli_request($cmd_parts, $timeout) {
-    $cmd = 'timeout ' . (int)$timeout . 's';
-    foreach ($cmd_parts as $part) {
-        $cmd .= ' ' . escapeshellarg($part);
-    }
-    list($out, $ret) = run_cmd($cmd);
-    $out = trim($out);
-    if ($ret !== 0) {
-        return array('', 'CLI生成に失敗しました: ' . mb_substr($out, 0, 240));
-    }
-    return $out !== '' ? array($out, '') : array('', 'CLI応答が空でした');
-}
-
-function ustory_oauth_claude_gateway_request($prompt, $timeout) {
-    if (!defined('USTORY_OAUTH_CLAUDE_GATEWAY') || USTORY_OAUTH_CLAUDE_GATEWAY === '') {
-        return array('', 'OAuth Claude gateway が設定されていません');
-    }
-    $opts = array('http' => array(
-        'method'        => 'POST',
-        'header'        => "Content-Type: application/json\r\n",
-        'content'       => json_encode(array(
-            'prompt' => $prompt,
-            'model'  => USTORY_OPENCLAW_MODEL,
-        ), JSON_UNESCAPED_UNICODE),
-        'timeout'       => $timeout,
-        'ignore_errors' => true,
-    ));
-    $res = @file_get_contents(USTORY_OAUTH_CLAUDE_GATEWAY, false, stream_context_create($opts));
-    if (!$res) {
-        return array('', 'OAuth Claude gateway に接続できませんでした');
-    }
-    $data = json_decode($res, true);
-    if (!is_array($data)) {
-        return array('', 'OAuth Claude gateway 応答をJSONとして解釈できませんでした');
-    }
-    if (isset($data['ok']) && !$data['ok']) {
-        $error = isset($data['error']) ? (string)$data['error'] : 'gateway error';
-        return array('', 'OAuth Claude gateway エラー: ' . mb_substr($error, 0, 240));
-    }
-    $text = isset($data['response']) ? trim((string)$data['response']) : '';
-    return $text !== '' ? array($text, '') : array('', 'OAuth Claude gateway 応答が空でした');
-}
-
-function ustory_openclaw_request($prompt, $timeout) {
-    $openclaw = ustory_resolve_executable(USTORY_OPENCLAW_BIN, 'openclaw', array(
-        '/home/kojima/.nvm/versions/node/v24.16.0/bin/openclaw',
-        '/home/kojima/.nvm/versions/node/v22.22.2/lib/node_modules/@swarmclawai/swarmclaw/node_modules/.bin/openclaw',
-    ));
-    if ($openclaw === '') {
-        return ustory_oauth_claude_gateway_request($prompt, $timeout);
-    }
-    $cmd = 'PATH=' . escapeshellarg('/home/kojima/.nvm/versions/node/v24.16.0/bin:/home/kojima/.nvm/versions/node/v22.22.3/bin') . ':$PATH '
-        . 'timeout ' . (int)$timeout . 's '
-        . escapeshellarg($openclaw)
-        . ' capability model run'
-        . ' --model ' . escapeshellarg(USTORY_OPENCLAW_MODEL)
-        . ' --prompt ' . escapeshellarg($prompt)
-        . ' --local --json';
-    list($out, $ret) = run_cmd($cmd);
-    $out = trim($out);
-    if ($ret !== 0) {
-        $fallback = ustory_oauth_claude_gateway_request($prompt, $timeout);
-        if ($fallback[0] !== '') { return $fallback; }
-        return array('', 'openclaw生成に失敗しました: ' . mb_substr($out, 0, 180) . ' / ' . $fallback[1]);
-    }
-    $data = json_decode($out, true);
-    if (!is_array($data)) {
-        return array('', 'openclaw応答をJSONとして解釈できませんでした: ' . mb_substr($out, 0, 160));
-    }
-    $outputs = isset($data['outputs']) && is_array($data['outputs']) ? $data['outputs'] : array();
-    $text = '';
-    if (!empty($outputs[0]) && is_array($outputs[0]) && isset($outputs[0]['text'])) {
-        $text = trim((string)$outputs[0]['text']);
-    } elseif (isset($data['response'])) {
-        $text = trim((string)$data['response']);
-    } elseif (isset($data['text'])) {
-        $text = trim((string)$data['text']);
-    }
-    return $text !== '' ? array($text, '') : array('', 'openclaw応答が空でした');
-}
-
-function ustory_generate_with_ai($prompt) {
-    $provider = strtolower(trim((string)USTORY_AI_PROVIDER));
-    $timeout = USTORY_AI_TIMEOUT > 0 ? USTORY_AI_TIMEOUT : 180;
-    if ($provider === 'oauth_claude' || $provider === 'aouth_claude' || $provider === 'claude_oauth' || $provider === 'openclaw') {
-        return ustory_openclaw_request($prompt, $timeout);
-    }
-    if ($provider === 'codex' || $provider === 'codex_cli') {
-        $codex = ustory_resolve_executable(USTORY_CODEX_BIN, 'codex', array(
-            '/home/kojima/.vscode-server/extensions/openai.chatgpt-26.513.21555-linux-x64/bin/linux-x86_64/codex',
+    $url = rtrim(RQDB4AI_API_BASE, '/') . '/' . ltrim($path, '/');
+    $body = $payload === null ? null : json_encode($payload, JSON_UNESCAPED_UNICODE);
+    $headers = array(
+        'Authorization: Bearer ' . RQDB4AI_API_TOKEN,
+        'Content-Type: application/json',
+        'Accept: application/json',
+        'User-Agent: UStoryPHP/RQDB4AI',
+    );
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, array(
+            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTPHEADER => $headers,
         ));
-        if ($codex === '') {
-            return array('', 'Codex CLIが見つかりませんでした');
+        if ($body !== null) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
         }
-        return ustory_cli_request(array(
-            $codex,
-            'exec',
-            '--skip-git-repo-check',
-            '--sandbox', 'read-only',
-            '--model', USTORY_CODEX_MODEL,
-            '--cd', __DIR__,
-            $prompt,
-        ), $timeout);
+        $raw = curl_exec($ch);
+        $err = curl_error($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if (!$raw || $err) {
+            return array('ok' => false, 'error' => $err ? $err : 'rqdb4ai request failed', 'http_code' => $code);
+        }
+    } else {
+        $opts = array('http' => array(
+            'method' => $method,
+            'header' => implode("\r\n", $headers) . "\r\n",
+            'content' => $body,
+            'timeout' => 30,
+            'ignore_errors' => true,
+        ));
+        $raw = @file_get_contents($url, false, stream_context_create($opts));
+        $code = 0;
+        if (isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $m)) {
+            $code = (int) $m[1];
+        }
+        if (!$raw) {
+            return array('ok' => false, 'error' => 'rqdb4ai request failed', 'http_code' => $code);
+        }
     }
-    return ustory_ollama_request($prompt, $timeout);
+    $data = json_decode($raw, true);
+    if (!is_array($data)) {
+        return array('ok' => false, 'error' => 'rqdb4ai invalid json', 'http_code' => isset($code) ? $code : 0, 'raw' => substr($raw, 0, 300));
+    }
+    return $data;
+}
+
+function ustory_normalize_ai_provider_for_worker($provider) {
+    $provider = strtolower(trim((string)$provider));
+    if ($provider === 'oauth_claude' || $provider === 'aouth_claude' || $provider === 'claude_oauth' || $provider === 'claude_cli') {
+        return 'claude';
+    }
+    if ($provider === 'codex_cli') {
+        return 'codex';
+    }
+    if ($provider !== 'claude' && $provider !== 'codex' && $provider !== 'ollama') {
+        return 'ollama';
+    }
+    return $provider;
+}
+
+function ustory_enqueue_generate_job($tweet_id, $tweet_url, $thread_text, $generation_mode, $username) {
+    $ai_provider = ustory_normalize_ai_provider_for_worker(defined('USTORY_AI_PROVIDER') ? USTORY_AI_PROVIDER : 'ollama');
+    $ai_model = defined('OLLAMA_MODEL') ? OLLAMA_MODEL : 'gemma4:e4b';
+    if ($ai_provider === 'claude') {
+        $ai_model = defined('USTORY_CLAUDE_MODEL') ? USTORY_CLAUDE_MODEL : 'sonnet';
+    } elseif ($ai_provider === 'codex') {
+        $ai_model = defined('USTORY_CODEX_MODEL') ? USTORY_CODEX_MODEL : 'gpt-5.5';
+    }
+    $res = ustory_rqdb_api('POST', '/api/enqueue', array(
+        'queue' => 'auto',
+        'function' => 'ustory_jobs.generate_ustory_job',
+        'args' => array(),
+        'kwargs' => array(
+            'tweet_id' => $tweet_id,
+            'tweet_url' => $tweet_url,
+            'thread_text' => $thread_text,
+            'generation_mode' => $generation_mode,
+            'username' => $username,
+            'ai_provider' => $ai_provider,
+            'ai_model' => $ai_model,
+            'claude_bin' => defined('USTORY_CLAUDE_BIN') ? USTORY_CLAUDE_BIN : '',
+        ),
+        'meta' => array(
+            'project' => 'url2ai',
+            'app' => 'ustory',
+            'kind' => $ai_provider,
+            'resource' => $ai_provider,
+            'resource_key' => $ai_provider . ':' . $ai_model,
+            'ai_provider' => $ai_provider,
+            'ai_model' => $ai_model,
+            'generation_mode' => $generation_mode,
+            'tweet_id' => $tweet_id,
+            'tweet_url' => $tweet_url,
+            'queue_class' => 'web',
+            'priority_class' => 'interactive',
+            'model' => $ai_model,
+        ),
+        'timeout' => 900,
+        'result_ttl' => 86400,
+        'failure_ttl' => 604800,
+    ));
+    if (!is_array($res)) {
+        return array('ok' => false, 'error' => 'rqdb4ai invalid response');
+    }
+    if (!empty($res['ok']) && !empty($res['job']) && is_array($res['job']) && !empty($res['job']['id'])) {
+        if (empty($res['status'])) {
+            $res['status'] = isset($res['job']['status']) ? $res['job']['status'] : 'queued';
+        }
+        return $res;
+    }
+    return $res;
 }
 
 function extract_tweet_id($input) {
@@ -281,59 +254,18 @@ function ustory_saved_output($saved, $mode) {
 }
 
 /* =========================================================
-   デフォルトプロンプト
-========================================================= */
-$story_prompt = "以下はXの投稿内容です。この内容を元にした短編小説を日本語で生成してください。
-
-条件：
-- 280字から420字程度
-- 「ある日、」などの語り口で始める
-- 登場人物に名前をつけて物語として展開する
-- 元の投稿の言葉をそのまま使わず、独自の表現で語る
-- 読み手が引き込まれる構成（導入、展開、結末）
-- 最後に一言の余韻を残す
-
----
-{thread}
----
-
-短編小説のみを出力してください。タイトルや前置きは不要です。";
-
-$analysis_prompt = "以下は永久保存したいX投稿またはスレッドの内容です。
-この内容を引用しながら、技術・経営・AI活用・組織運用の観点で日本語の考察ブログを書いてください。
-
-条件：
-- 冒頭に短いタイトルを1行で付ける
-- 元投稿の重要な言葉を「引用」として2〜4箇所抜き出す
-- 引用の直後に、その意味や示唆を自分の言葉で考察する
-- 技術、経営、AI活用、組織運用のうち関連する観点を必ず含める
-- 1200〜1800字程度
-- 入力URLを出典として明示する
-- 誇張や断定を避け、公開ブログとして読める落ち着いた文体にする
-- 最後に「この投稿から残したい教訓」を3点でまとめる
-
-入力URL：
-{source_url}
-
-投稿内容：
----
-{thread}
----
-
-考察ブログ本文のみを出力してください。";
-
-/* =========================================================
    POST処理
 ========================================================= */
 $action       = isset($_POST['action']) ? $_POST['action'] : '';
 $tweet_url    = isset($_POST['tweet_url'])   ? trim($_POST['tweet_url'])   : '';
 $thread_text  = isset($_POST['thread_text']) ? trim($_POST['thread_text']) : '';
 $generation_mode = ustory_normalize_mode(isset($_POST['generation_mode']) ? $_POST['generation_mode'] : (isset($_GET['mode']) ? $_GET['mode'] : 'story'));
-$prompt_tmpl  = $generation_mode === 'analysis' ? $analysis_prompt : $story_prompt;
 $mode_label   = ustory_mode_label($generation_mode);
 $story        = '';
 $fetch_error  = isset($_SESSION['ss_flash_error']) ? $_SESSION['ss_flash_error'] : '';
 if (isset($_SESSION['ss_flash_error'])) { unset($_SESSION['ss_flash_error']); }
+$fetch_ok  = isset($_SESSION['ss_flash_ok']) ? $_SESSION['ss_flash_ok'] : '';
+if (isset($_SESSION['ss_flash_ok'])) { unset($_SESSION['ss_flash_ok']); }
 
 /* GETでtweet_urlが渡された場合、保存済みデータを読み込む */
 if ($tweet_url === '' && isset($_GET['tweet_url']) && $_GET['tweet_url'] !== '') {
@@ -406,44 +338,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin) {
         }
     }
 
-    /* 生成（fetch後の自動実行 or analyzeボタン） */
+    /* RQDB4AIへ生成ジョブ登録（fetch後の自動実行 or analyzeボタン） */
     if (($action === 'fetch' || $action === 'analyze') && $thread_text !== '') {
-        $prompt = str_replace(array('{thread}', '{source_url}'), array($thread_text, $tweet_url), $prompt_tmpl);
-        list($generated_text, $ai_error) = ustory_generate_with_ai($prompt);
-        if ($generated_text !== '') {
-            $story = $generated_text;
+        $tweet_id_job = extract_tweet_id($tweet_url);
+        if ($tweet_id_job === '') {
+            $_SESSION['ss_flash_error'] = 'URLからツイートIDを取得できませんでした';
         } else {
-            $_SESSION['ss_flash_error'] = 'AI生成に失敗しました: ' . $ai_error;
-        }
-
-        /* JSON保存 */
-        if ($story !== '' && $tweet_url !== '') {
-            $tweet_id_save = extract_tweet_id($tweet_url);
-            if ($tweet_id_save !== '') {
-                $save_file = __DIR__ . '/data/xinsight_' . $tweet_id_save . '.json';
-                if (file_exists($save_file)) {
-                    $save_data = json_decode(file_get_contents($save_file), true);
-                    if (!is_array($save_data)) { $save_data = array(); }
-                } else {
-                    $save_data = array();
-                }
-                $save_data['tweet_id']    = $tweet_id_save;
-                $save_data['tweet_url']   = $tweet_url;
-                $save_data['username']    = $username;
-                $save_data['thread_text'] = $thread_text;
-                $save_data['ustory_ai_provider'] = USTORY_AI_PROVIDER;
-                if (empty($save_data['outputs']) || !is_array($save_data['outputs'])) {
-                    $save_data['outputs'] = array();
-                }
-                $save_data['outputs'][$generation_mode] = $story;
-                $save_data['generation_mode'] = $generation_mode;
-                if ($generation_mode === 'analysis') {
-                    $save_data['story_analysis'] = $story;
-                } else {
-                    $save_data['story'] = $story;
-                }
-                $save_data['saved_at']    = date('Y-m-d H:i:s');
-                file_put_contents($save_file, json_encode($save_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+            $job_res = ustory_enqueue_generate_job($tweet_id_job, $tweet_url, $thread_text, $generation_mode, $username);
+            if (!empty($job_res['ok']) && !empty($job_res['job']) && is_array($job_res['job']) && !empty($job_res['job']['id'])) {
+                $_SESSION['ss_flash_ok'] = ustory_mode_label($generation_mode) . '生成ジョブを登録しました: ' . $job_res['job']['id'];
+            } else {
+                $_SESSION['ss_flash_error'] = 'RQDB4AIジョブ登録に失敗しました: ' . (isset($job_res['error']) ? $job_res['error'] : 'unknown error');
             }
         }
     }
@@ -597,6 +502,9 @@ textarea.story-area{background:#f8fafc;min-height:200px}
                 <?php if ($fetch_error): ?>
                 <div class="msg-error"><?php echo h($fetch_error); ?></div>
                 <?php endif; ?>
+                <?php if ($fetch_ok): ?>
+                <div class="msg-ok"><?php echo h($fetch_ok); ?></div>
+                <?php endif; ?>
             </form>
         </div>
     </div>
@@ -618,7 +526,7 @@ textarea.story-area{background:#f8fafc;min-height:200px}
 
     <!-- 生成中メッセージ -->
     <div id="generating-msg" style="display:none;text-align:center;padding:12px 16px;font-size:.82rem;color:#92400e;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;margin-bottom:1rem;font-weight:600;">
-        ⏳ <?php echo h($mode_label); ?>生成中です。1〜2分かかります。ページを閉じないでください...
+        ⏳ RQDB4AIに<?php echo h($mode_label); ?>生成ジョブを登録しています。登録後はKDeck/RQDB4AIで状態を確認できます。
     </div>
 
     <!-- STEP 3: 生成実行 -->

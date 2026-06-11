@@ -74,9 +74,8 @@ define('OSS_REGISTER_CODEX_MODEL', isset($_aigm_config['oss_register']['codex_mo
 
 /* UStory AI provider */
 define('USTORY_AI_PROVIDER', getenv('USTORY_AI_PROVIDER') ? getenv('USTORY_AI_PROVIDER') : (isset($_aigm_config['ustory']['ai_provider']) ? $_aigm_config['ustory']['ai_provider'] : 'oauth_claude'));
-define('USTORY_OPENCLAW_BIN', getenv('OPENCLAW_BIN') ? getenv('OPENCLAW_BIN') : (isset($_aigm_config['ustory']['openclaw_bin']) ? $_aigm_config['ustory']['openclaw_bin'] : '/home/kojima/.nvm/versions/node/v24.16.0/bin/openclaw'));
-define('USTORY_OPENCLAW_MODEL', getenv('USTORY_OPENCLAW_MODEL') ? getenv('USTORY_OPENCLAW_MODEL') : (isset($_aigm_config['ustory']['openclaw_model']) ? $_aigm_config['ustory']['openclaw_model'] : 'claude-cli/claude-sonnet-4-6'));
-define('USTORY_OAUTH_CLAUDE_GATEWAY', getenv('USTORY_OAUTH_CLAUDE_GATEWAY') ? getenv('USTORY_OAUTH_CLAUDE_GATEWAY') : (isset($_aigm_config['ustory']['oauth_claude_gateway']) ? $_aigm_config['ustory']['oauth_claude_gateway'] : 'https://aixec.exbridge.jp/api.php?path=claude/generate'));
+define('USTORY_CLAUDE_MODEL', getenv('USTORY_CLAUDE_MODEL') ? getenv('USTORY_CLAUDE_MODEL') : (isset($_aigm_config['ustory']['claude_model']) ? $_aigm_config['ustory']['claude_model'] : 'sonnet'));
+define('USTORY_CLAUDE_BIN', getenv('CLAUDE_BIN') ? getenv('CLAUDE_BIN') : (isset($_aigm_config['ustory']['claude_bin']) ? $_aigm_config['ustory']['claude_bin'] : ''));
 define('USTORY_CODEX_MODEL', getenv('USTORY_CODEX_MODEL') ? getenv('USTORY_CODEX_MODEL') : (isset($_aigm_config['ustory']['codex_model']) ? $_aigm_config['ustory']['codex_model'] : 'gpt-5.5'));
 define('USTORY_CODEX_BIN', getenv('USTORY_CODEX_BIN') ? getenv('USTORY_CODEX_BIN') : (isset($_aigm_config['ustory']['codex_bin']) ? $_aigm_config['ustory']['codex_bin'] : ''));
 define('USTORY_AI_TIMEOUT', getenv('USTORY_AI_TIMEOUT') ? (int)getenv('USTORY_AI_TIMEOUT') : (isset($_aigm_config['ustory']['ai_timeout']) ? (int)$_aigm_config['ustory']['ai_timeout'] : 180));

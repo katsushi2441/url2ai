@@ -36,10 +36,10 @@ uslideblog:
 
 ustory:
   # ollama / oauth_claude / codex_cli
+  # oauth_claude is executed by the RQDB4AI worker as OAuth-authenticated Claude CLI.
   ai_provider: oauth_claude
-  openclaw_bin: /home/kojima/.nvm/versions/node/v24.16.0/bin/openclaw
-  openclaw_model: claude-cli/claude-sonnet-4-6
-  oauth_claude_gateway: https://aixec.exbridge.jp/api.php?path=claude/generate
+  claude_model: sonnet
+  claude_bin:
   codex_model: gpt-5.5
   codex_bin:
   ai_timeout: 180
