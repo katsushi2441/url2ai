@@ -19,6 +19,7 @@ ENABLE_CPU_OFFLOAD = os.getenv("ENABLE_CPU_OFFLOAD", "1") == "1"
 
 _pipeline = None
 _pipeline_lock = Lock()
+_generate_lock = Lock()
 
 
 class GenerateRequest(BaseModel):
@@ -104,16 +105,19 @@ def generate(req: GenerateRequest) -> dict:
         if used_seed is not None:
             generator = torch.Generator(device=DEVICE).manual_seed(used_seed)
 
-        result = pipe(
-            prompt=req.prompt,
-            negative_prompt=req.negative_prompt,
-            width=req.width,
-            height=req.height,
-            num_inference_steps=req.num_inference_steps,
-            guidance_scale=req.guidance_scale,
-            use_pe=req.use_pe,
-            generator=generator,
-        )
+        # Diffusers pipelines are not thread-safe. FastAPI runs sync handlers
+        # in a thread pool, so concurrent requests must be serialized here.
+        with _generate_lock:
+            result = pipe(
+                prompt=req.prompt,
+                negative_prompt=req.negative_prompt,
+                width=req.width,
+                height=req.height,
+                num_inference_steps=req.num_inference_steps,
+                guidance_scale=req.guidance_scale,
+                use_pe=req.use_pe,
+                generator=generator,
+            )
         image = result.images[0]
         return {
             "ok": True,
