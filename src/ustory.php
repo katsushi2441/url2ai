@@ -162,6 +162,14 @@ function ustory_enqueue_generate_job($tweet_id, $tweet_url, $thread_text, $gener
     return $res;
 }
 
+function ustory_job_status($job_id) {
+    $job_id = trim((string)$job_id);
+    if (!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9\-_]{7,80}$/', $job_id)) {
+        return array('ok' => false, 'error' => 'invalid job_id');
+    }
+    return ustory_rqdb_api('GET', '/api/jobs/' . rawurlencode($job_id), null);
+}
+
 function extract_tweet_id($input) {
     $input = html_entity_decode((string) $input, ENT_QUOTES, 'UTF-8');
     $input = preg_replace('/[\x{00A0}\x{3000}\s]+/u', ' ', $input);
@@ -253,6 +261,57 @@ function ustory_saved_output($saved, $mode) {
     return '';
 }
 
+if (isset($_GET['api']) && $_GET['api'] === 'job_status') {
+    header('Content-Type: application/json; charset=UTF-8');
+    if (!$is_admin) {
+        http_response_code(403);
+        echo json_encode(array('ok' => false, 'error' => 'unauthorized'), JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    $job_id = isset($_GET['job_id']) ? trim($_GET['job_id']) : '';
+    $res = ustory_job_status($job_id);
+    if (empty($res['ok']) || empty($res['job']) || !is_array($res['job'])) {
+        echo json_encode(array(
+            'ok' => false,
+            'error' => isset($res['error']) ? $res['error'] : 'job status failed',
+            'detail' => $res,
+        ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+    $job = $res['job'];
+    $result = isset($job['result']) && is_array($job['result']) ? $job['result'] : array();
+    $kwargs = isset($job['kwargs']) && is_array($job['kwargs']) ? $job['kwargs'] : array();
+    $lifecycle = isset($job['lifecycle']) && is_array($job['lifecycle']) ? $job['lifecycle'] : array();
+    $rq_status = isset($job['status']) ? (string)$job['status'] : '';
+    $state = isset($lifecycle['state']) ? (string)$lifecycle['state'] : $rq_status;
+    $label = isset($job['status_label']) ? (string)$job['status_label'] : $state;
+    $terminal = !empty($lifecycle['terminal']) || in_array($rq_status, array('finished', 'failed', 'stopped', 'canceled'), true);
+    $done = $rq_status === 'finished' && (empty($result) || !isset($result['ok']) || !empty($result['ok']));
+    $failed = in_array($rq_status, array('failed', 'stopped', 'canceled'), true) || (!empty($result) && isset($result['ok']) && empty($result['ok']));
+    $reload_tweet_url = isset($kwargs['tweet_url']) ? trim((string)$kwargs['tweet_url']) : '';
+    $reload_mode = ustory_normalize_mode(isset($kwargs['generation_mode']) ? $kwargs['generation_mode'] : (isset($result['generation_mode']) ? $result['generation_mode'] : 'story'));
+    $reload_url = '';
+    if ($reload_tweet_url !== '') {
+        $reload_url = $x_redirect_uri . '?tweet_url=' . rawurlencode($reload_tweet_url) . '&mode=' . rawurlencode($reload_mode);
+    } elseif (!empty($result['tweet_id'])) {
+        $reload_url = $x_redirect_uri . '?id=' . rawurlencode((string)$result['tweet_id']) . '&mode=' . rawurlencode($reload_mode);
+    }
+    echo json_encode(array(
+        'ok' => true,
+        'job_id' => isset($job['id']) ? $job['id'] : $job_id,
+        'status' => $rq_status,
+        'state' => $state,
+        'label' => $label,
+        'terminal' => $terminal,
+        'done' => $done,
+        'failed' => $failed,
+        'note' => isset($lifecycle['note']) ? $lifecycle['note'] : (isset($result['note']) ? $result['note'] : ''),
+        'reload_url' => $reload_url,
+        'error' => isset($job['error']) ? $job['error'] : null,
+    ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
 /* =========================================================
    POST処理
 ========================================================= */
@@ -266,6 +325,8 @@ $fetch_error  = isset($_SESSION['ss_flash_error']) ? $_SESSION['ss_flash_error']
 if (isset($_SESSION['ss_flash_error'])) { unset($_SESSION['ss_flash_error']); }
 $fetch_ok  = isset($_SESSION['ss_flash_ok']) ? $_SESSION['ss_flash_ok'] : '';
 if (isset($_SESSION['ss_flash_ok'])) { unset($_SESSION['ss_flash_ok']); }
+$poll_job_id = isset($_GET['job_id']) && preg_match('/^[a-zA-Z0-9][a-zA-Z0-9\-_]{7,80}$/', $_GET['job_id']) ? $_GET['job_id'] : '';
+$redirect_job_id = '';
 
 /* GETでtweet_urlが渡された場合、保存済みデータを読み込む */
 if ($tweet_url === '' && isset($_GET['tweet_url']) && $_GET['tweet_url'] !== '') {
@@ -346,7 +407,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin) {
         } else {
             $job_res = ustory_enqueue_generate_job($tweet_id_job, $tweet_url, $thread_text, $generation_mode, $username);
             if (!empty($job_res['ok']) && !empty($job_res['job']) && is_array($job_res['job']) && !empty($job_res['job']['id'])) {
-                $_SESSION['ss_flash_ok'] = ustory_mode_label($generation_mode) . '生成ジョブを登録しました: ' . $job_res['job']['id'];
+                $redirect_job_id = (string)$job_res['job']['id'];
+                $_SESSION['ss_flash_ok'] = ustory_mode_label($generation_mode) . '生成ジョブを登録しました: ' . $redirect_job_id;
             } else {
                 $_SESSION['ss_flash_error'] = 'RQDB4AIジョブ登録に失敗しました: ' . (isset($job_res['error']) ? $job_res['error'] : 'unknown error');
             }
@@ -355,7 +417,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin) {
 
     /* 全処理完了後にPRGリダイレクト（fetch/analyze/loaded すべて） */
     if ($tweet_url !== '') {
-        header('Location: ' . $x_redirect_uri . '?tweet_url=' . urlencode($tweet_url) . '&mode=' . urlencode($generation_mode));
+        $next_url = $x_redirect_uri . '?tweet_url=' . urlencode($tweet_url) . '&mode=' . urlencode($generation_mode);
+        if ($redirect_job_id !== '') {
+            $next_url .= '&job_id=' . urlencode($redirect_job_id);
+        }
+        header('Location: ' . $next_url);
         exit;
     }
 }
@@ -529,6 +595,14 @@ textarea.story-area{background:#f8fafc;min-height:200px}
         ⏳ RQDB4AIに<?php echo h($mode_label); ?>生成ジョブを登録しています。登録後はKDeck/RQDB4AIで状態を確認できます。
     </div>
 
+    <?php if ($poll_job_id !== '' && $story === ''): ?>
+    <div id="job-poll-box" data-job-id="<?php echo h($poll_job_id); ?>" data-mode="<?php echo h($generation_mode); ?>" style="text-align:center;padding:14px 16px;font-size:.84rem;color:#1e40af;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;margin-bottom:1rem;font-weight:600;">
+        <div id="job-poll-title">RQDB4AIで<?php echo h($mode_label); ?>を生成中です</div>
+        <div id="job-poll-status" style="margin-top:6px;font-family:var(--mono);font-size:.76rem;color:#475569;">job: <?php echo h($poll_job_id); ?> / 状態確認中...</div>
+        <div style="margin-top:8px;font-size:.76rem;color:#64748b;">完了したら自動でリフレッシュして、登録された内容を表示します。</div>
+    </div>
+    <?php endif; ?>
+
     <!-- STEP 3: 生成実行 -->
     <form method="POST" id="form-analyze">
         <input type="hidden" name="action" value="analyze">
@@ -658,6 +732,59 @@ function submitAnalyze() {
     if (btn) { btn.classList.add('loading'); }
     form.submit();
 }
+
+(function startJobPolling() {
+    var box = document.getElementById('job-poll-box');
+    if (!box) { return; }
+    var jobId = box.getAttribute('data-job-id') || '';
+    var statusEl = document.getElementById('job-poll-status');
+    var titleEl = document.getElementById('job-poll-title');
+    if (!jobId || !statusEl) { return; }
+
+    var attempts = 0;
+    var maxAttempts = 180;
+    function setStatus(text, color) {
+        statusEl.textContent = text;
+        if (color) { statusEl.style.color = color; }
+    }
+    function poll() {
+        attempts += 1;
+        fetch('?api=job_status&job_id=' + encodeURIComponent(jobId), {cache: 'no-store', credentials: 'same-origin'})
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (!data || !data.ok) {
+                    setStatus('状態確認に失敗: ' + ((data && data.error) ? data.error : 'unknown'), '#dc2626');
+                    if (attempts < maxAttempts) { setTimeout(poll, 4000); }
+                    return;
+                }
+                var note = data.note ? ' / ' + data.note : '';
+                setStatus('job: ' + jobId + ' / ' + (data.label || data.status || data.state || '確認中') + note, '#475569');
+                if (data.done) {
+                    if (titleEl) { titleEl.textContent = '生成が完了しました。登録内容を読み込みます...'; }
+                    setStatus('完了。ページを更新しています...', '#059669');
+                    setTimeout(function() {
+                        window.location.href = data.reload_url || window.location.href.replace(/[?&]job_id=[^&]+/, '');
+                    }, 900);
+                    return;
+                }
+                if (data.failed) {
+                    if (titleEl) { titleEl.textContent = '生成ジョブが失敗しました'; }
+                    setStatus('失敗: ' + (data.note || data.status || 'RQDB4AI job failed'), '#dc2626');
+                    return;
+                }
+                if (attempts < maxAttempts) {
+                    setTimeout(poll, 3000);
+                } else {
+                    setStatus('タイムアウトしました。KDeck/RQDB4AIで状態を確認してください: ' + jobId, '#d97706');
+                }
+            })
+            .catch(function(err) {
+                setStatus('状態確認エラー: ' + err.message, '#dc2626');
+                if (attempts < maxAttempts) { setTimeout(poll, 5000); }
+            });
+    }
+    poll();
+})();
 </script>
 </body>
 </html>
