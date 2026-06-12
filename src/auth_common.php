@@ -5,13 +5,30 @@ if (!defined('URL2AI_AUTH_SESSION_LIFETIME')) {
     define('URL2AI_AUTH_SESSION_LIFETIME', 60 * 60 * 24 * 365);
 }
 
+function url2ai_auth_cookie_domain() {
+    if (defined('AIGM_COOKIE_DOMAIN')) { return AIGM_COOKIE_DOMAIN; }
+    $host = parse_url(url2ai_auth_site_base_url(), PHP_URL_HOST);
+    return preg_match('/(^|\.)exbridge\.jp$/', (string)$host) ? '.exbridge.jp' : '';
+}
+
+function url2ai_auth_admin_user() {
+    return defined('AIGM_ADMIN') ? AIGM_ADMIN : '';
+}
+
+function url2ai_auth_site_base_url() {
+    if (defined('AIGM_BASE_URL')) { return AIGM_BASE_URL; }
+    $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'aiknowledgecms.exbridge.jp';
+    return 'https://' . preg_replace('/[^A-Za-z0-9.-]/', '', $host);
+}
+
 function url2ai_auth_start_session() {
     if (session_status() !== PHP_SESSION_NONE) { return; }
     $session_lifetime = URL2AI_AUTH_SESSION_LIFETIME;
     ini_set('session.gc_maxlifetime', $session_lifetime);
     ini_set('session.cookie_lifetime', $session_lifetime);
     ini_set('session.cookie_path', '/');
-    ini_set('session.cookie_domain', AIGM_COOKIE_DOMAIN);
+    $cookie_domain = url2ai_auth_cookie_domain();
+    if ($cookie_domain !== '') { ini_set('session.cookie_domain', $cookie_domain); }
     ini_set('session.cookie_secure', '1');
     ini_set('session.cookie_httponly', '1');
     ini_set('session.use_strict_mode', '1');
@@ -24,7 +41,7 @@ function url2ai_auth_start_session() {
 function url2ai_auth_extend_session_cookie() {
     if (session_status() !== PHP_SESSION_ACTIVE) { return; }
     $session_lifetime = URL2AI_AUTH_SESSION_LIFETIME;
-    setcookie(session_name(), session_id(), time() + $session_lifetime, '/', AIGM_COOKIE_DOMAIN, true, true);
+    setcookie(session_name(), session_id(), time() + $session_lifetime, '/', url2ai_auth_cookie_domain(), true, true);
 }
 
 function url2ai_auth_mark_logged_in($username = '') {
@@ -43,7 +60,7 @@ function url2ai_auth_safe_return($return) {
     if ($return === '') { return '/aiknowledgesns.php'; }
     if (preg_match('#^https?://#i', $return)) {
         $host = parse_url($return, PHP_URL_HOST);
-        $base_host = parse_url(AIGM_BASE_URL, PHP_URL_HOST);
+        $base_host = parse_url(url2ai_auth_site_base_url(), PHP_URL_HOST);
         $auth_host = parse_url(url2ai_auth_base_url(), PHP_URL_HOST);
         if ($host === $base_host || $host === $auth_host || preg_match('/(^|\.)exbridge\.jp$/', (string)$host)) {
             $path = parse_url($return, PHP_URL_PATH);
@@ -58,19 +75,19 @@ function url2ai_auth_safe_return($return) {
 }
 
 function url2ai_auth_base_url() {
-    return defined('AIGM_AUTH_BASE_URL') ? AIGM_AUTH_BASE_URL : AIGM_BASE_URL;
+    return defined('AIGM_AUTH_BASE_URL') ? AIGM_AUTH_BASE_URL : url2ai_auth_site_base_url();
 }
 
 function url2ai_auth_redirect_url($return) {
     $return = url2ai_auth_safe_return($return);
     if (preg_match('#^https?://#i', $return)) { return $return; }
-    return AIGM_BASE_URL . $return;
+    return url2ai_auth_site_base_url() . $return;
 }
 
 function url2ai_auth_return_for_login($return) {
     $return = url2ai_auth_safe_return($return);
-    if (!preg_match('#^https?://#i', $return) && parse_url(url2ai_auth_base_url(), PHP_URL_HOST) !== parse_url(AIGM_BASE_URL, PHP_URL_HOST)) {
-        return AIGM_BASE_URL . $return;
+    if (!preg_match('#^https?://#i', $return) && parse_url(url2ai_auth_base_url(), PHP_URL_HOST) !== parse_url(url2ai_auth_site_base_url(), PHP_URL_HOST)) {
+        return url2ai_auth_site_base_url() . $return;
     }
     return $return;
 }
@@ -115,7 +132,7 @@ function url2ai_auth_handle_login_flow($return_default = '/aiknowledgesns.php') 
     if (isset($_GET['aks_logout'])) {
         $return_to = isset($_GET['return']) ? url2ai_auth_safe_return($_GET['return']) : $return_default;
         session_destroy();
-        setcookie(session_name(), '', time() - 3600, '/', AIGM_COOKIE_DOMAIN, true, true);
+        setcookie(session_name(), '', time() - 3600, '/', url2ai_auth_cookie_domain(), true, true);
         header('Location: ' . url2ai_auth_redirect_url($return_to));
         exit;
     }
@@ -236,7 +253,7 @@ function url2ai_auth_bootstrap() {
     return array(
         'logged_in' => $logged_in,
         'session_user' => $session_user,
-        'is_admin' => ($session_user === AIGM_ADMIN),
+        'is_admin' => ($session_user !== '' && $session_user === url2ai_auth_admin_user()),
         'login_url' => url2ai_auth_login_url(),
         'logout_url' => url2ai_auth_logout_url(),
     );
