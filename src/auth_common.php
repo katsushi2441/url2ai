@@ -219,6 +219,7 @@ function url2ai_auth_refresh_if_needed() {
     if (empty($_SESSION['session_refresh_token']) || empty($_SESSION['session_token_expires']) || time() <= $_SESSION['session_token_expires'] - 300) {
         return;
     }
+    $logged_in_until = isset($_SESSION['session_logged_in_until']) ? (int)$_SESSION['session_logged_in_until'] : 0;
     $keys = url2ai_auth_load_x_keys();
     $client_id = isset($keys['X_API_KEY']) ? $keys['X_API_KEY'] : '';
     $client_secret = isset($keys['X_API_SECRET']) ? $keys['X_API_SECRET'] : '';
@@ -238,8 +239,11 @@ function url2ai_auth_refresh_if_needed() {
         $_SESSION['session_token_expires'] = time() + (isset($ref['expires_in']) ? (int)$ref['expires_in'] : 7200);
         if (!empty($ref['refresh_token'])) { $_SESSION['session_refresh_token'] = $ref['refresh_token']; }
         url2ai_auth_mark_logged_in(isset($_SESSION['session_username']) ? $_SESSION['session_username'] : '');
+    } elseif ($logged_in_until <= time()) {
+        unset($_SESSION['session_access_token'], $_SESSION['session_token_expires']);
     } else {
         unset($_SESSION['session_access_token'], $_SESSION['session_token_expires']);
+        url2ai_auth_extend_session_cookie();
     }
 }
 
