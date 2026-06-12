@@ -12,7 +12,7 @@ function url2ai_auth_cookie_domain() {
 }
 
 function url2ai_auth_admin_user() {
-    return defined('AIGM_ADMIN') ? AIGM_ADMIN : '';
+    return defined('AIGM_ADMIN') ? AIGM_ADMIN : 'xb_bittensor';
 }
 
 function url2ai_auth_site_base_url() {
