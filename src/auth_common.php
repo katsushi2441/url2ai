@@ -75,7 +75,10 @@ function url2ai_auth_safe_return($return) {
 }
 
 function url2ai_auth_base_url() {
-    return defined('AIGM_AUTH_BASE_URL') ? AIGM_AUTH_BASE_URL : url2ai_auth_site_base_url();
+    if (defined('AIGM_AUTH_BASE_URL')) { return AIGM_AUTH_BASE_URL; }
+    $site_host = parse_url(url2ai_auth_site_base_url(), PHP_URL_HOST);
+    if ($site_host !== 'aiknowledgecms.exbridge.jp') { return 'https://aiknowledgecms.exbridge.jp'; }
+    return url2ai_auth_site_base_url();
 }
 
 function url2ai_auth_redirect_url($return) {
