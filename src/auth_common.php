@@ -44,10 +44,12 @@ function url2ai_auth_safe_return($return) {
     if (preg_match('#^https?://#i', $return)) {
         $host = parse_url($return, PHP_URL_HOST);
         $base_host = parse_url(AIGM_BASE_URL, PHP_URL_HOST);
-        if ($host === $base_host) {
+        $auth_host = parse_url(url2ai_auth_base_url(), PHP_URL_HOST);
+        if ($host === $base_host || $host === $auth_host || preg_match('/(^|\.)exbridge\.jp$/', (string)$host)) {
             $path = parse_url($return, PHP_URL_PATH);
             $query = parse_url($return, PHP_URL_QUERY);
-            return ($path ? $path : '/') . ($query ? '?' . $query : '');
+            $scheme = parse_url($return, PHP_URL_SCHEME) ?: 'https';
+            return $scheme . '://' . $host . ($path ? $path : '/') . ($query ? '?' . $query : '');
         }
         return '/aiknowledgesns.php';
     }
@@ -55,14 +57,32 @@ function url2ai_auth_safe_return($return) {
     return '/aiknowledgesns.php';
 }
 
+function url2ai_auth_base_url() {
+    return defined('AIGM_AUTH_BASE_URL') ? AIGM_AUTH_BASE_URL : AIGM_BASE_URL;
+}
+
+function url2ai_auth_redirect_url($return) {
+    $return = url2ai_auth_safe_return($return);
+    if (preg_match('#^https?://#i', $return)) { return $return; }
+    return AIGM_BASE_URL . $return;
+}
+
+function url2ai_auth_return_for_login($return) {
+    $return = url2ai_auth_safe_return($return);
+    if (!preg_match('#^https?://#i', $return) && parse_url(url2ai_auth_base_url(), PHP_URL_HOST) !== parse_url(AIGM_BASE_URL, PHP_URL_HOST)) {
+        return AIGM_BASE_URL . $return;
+    }
+    return $return;
+}
+
 function url2ai_auth_login_url($return = '') {
     $return = $return !== '' ? $return : url2ai_auth_current_path();
-    return AIGM_BASE_URL . '/aiknowledgesns.php?aks_login=1&return=' . urlencode(url2ai_auth_safe_return($return));
+    return url2ai_auth_base_url() . '/aiknowledgesns.php?aks_login=1&return=' . urlencode(url2ai_auth_return_for_login($return));
 }
 
 function url2ai_auth_logout_url($return = '') {
     $return = $return !== '' ? $return : url2ai_auth_current_path();
-    return AIGM_BASE_URL . '/aiknowledgesns.php?aks_logout=1&return=' . urlencode(url2ai_auth_safe_return($return));
+    return url2ai_auth_base_url() . '/aiknowledgesns.php?aks_logout=1&return=' . urlencode(url2ai_auth_return_for_login($return));
 }
 
 function url2ai_auth_base64url($data) {
@@ -96,7 +116,7 @@ function url2ai_auth_handle_login_flow($return_default = '/aiknowledgesns.php') 
         $return_to = isset($_GET['return']) ? url2ai_auth_safe_return($_GET['return']) : $return_default;
         session_destroy();
         setcookie(session_name(), '', time() - 3600, '/', AIGM_COOKIE_DOMAIN, true, true);
-        header('Location: ' . AIGM_BASE_URL . $return_to);
+        header('Location: ' . url2ai_auth_redirect_url($return_to));
         exit;
     }
     if (isset($_GET['aks_login'])) {
@@ -111,7 +131,7 @@ function url2ai_auth_handle_login_flow($return_default = '/aiknowledgesns.php') 
         $params = array(
             'response_type' => 'code',
             'client_id' => $client_id,
-            'redirect_uri' => AIGM_BASE_URL . '/aiknowledgesns.php',
+            'redirect_uri' => url2ai_auth_base_url() . '/aiknowledgesns.php',
             'scope' => 'tweet.read users.read offline.access',
             'state' => $state,
             'code_challenge' => $challenge,
@@ -128,7 +148,7 @@ function url2ai_auth_handle_login_flow($return_default = '/aiknowledgesns.php') 
             $post = http_build_query(array(
                 'grant_type' => 'authorization_code',
                 'code' => $_GET['code'],
-                'redirect_uri' => AIGM_BASE_URL . '/aiknowledgesns.php',
+                'redirect_uri' => url2ai_auth_base_url() . '/aiknowledgesns.php',
                 'code_verifier' => isset($_SESSION['aks_code_verifier']) ? $_SESSION['aks_code_verifier'] : '',
                 'client_id' => $client_id,
             ));
@@ -149,7 +169,7 @@ function url2ai_auth_handle_login_flow($return_default = '/aiknowledgesns.php') 
         }
         $return_to = isset($_SESSION['aks_return_to']) ? $_SESSION['aks_return_to'] : $return_default;
         unset($_SESSION['aks_return_to']);
-        header('Location: ' . AIGM_BASE_URL . url2ai_auth_safe_return($return_to));
+        header('Location: ' . url2ai_auth_redirect_url($return_to));
         exit;
     }
 }
