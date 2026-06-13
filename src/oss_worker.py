@@ -402,12 +402,7 @@ def ai_request(prompt):
         response = claude_request(prompt)
         if response:
             return response
-        log.warning('Claude応答が空のためCodexへフォールバックします')
-        AI_PROVIDER = 'codex'
-        response = codex_request(prompt)
-        if response:
-            return response
-        log.warning('Codex応答も空のためOllamaへフォールバックします')
+        log.warning('Claude応答が空のためOllamaへフォールバックします')
         AI_PROVIDER = 'ollama'
         return ollama_request(prompt)
     if AI_PROVIDER == 'codex':
