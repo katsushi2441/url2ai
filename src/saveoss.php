@@ -586,6 +586,10 @@ if ($action === 'paragraph_update') {
 
 // ========== Paragraphへ投稿（管理画面から） ==========
 if ($action === 'paragraph_post') {
+    http_response_code(410);
+    echo json_encode(array('error' => 'paragraph_disabled'));
+    exit;
+
     $auth = url2ai_auth_bootstrap();
     if (empty($auth['is_admin'])) {
         http_response_code(403);

@@ -672,6 +672,7 @@ if (isset($_GET['api']) && $_GET['api'] !== '') {
     }
 
     if ($api === 'paragraph_post') {
+        fr_json_response(array('ok' => false, 'error' => 'paragraph_disabled'), 410);
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             fr_json_response(array('ok' => false, 'error' => 'POST required'), 405);
         }

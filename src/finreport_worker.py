@@ -95,6 +95,7 @@ OLLAMA_MODEL = os.environ.get(
     CONF.get("ollama", {}).get("default_model", "gemma4:e4b"),
 )
 FINREPORT_PARAGRAPH_STATUS = os.environ.get("FINREPORT_PARAGRAPH_STATUS", "published")
+FINREPORT_PARAGRAPH_ENABLED = os.environ.get("FINREPORT_PARAGRAPH_ENABLED", "0").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def parse_run_hours(raw: str) -> list[int]:
@@ -520,7 +521,7 @@ def process_candidates(dry_run: bool) -> int:
     state["queries_today"] = list(queries_today)
     save_state(state)
 
-    if created > 0 and not dry_run:
+    if created > 0 and not dry_run and FINREPORT_PARAGRAPH_ENABLED:
         try:
             import finrep2pg
             posted = 0
@@ -552,6 +553,8 @@ def process_candidates(dry_run: bool) -> int:
             log(f"paragraph posts created: {posted}")
         except Exception as exc:
             log(f"paragraph posting error: {exc}")
+    elif created > 0 and not dry_run:
+        log("paragraph posting disabled")
 
     if remote_failures:
         raise RuntimeError("; ".join(remote_failures[:3]))

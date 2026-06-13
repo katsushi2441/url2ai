@@ -82,6 +82,7 @@ PARAGRAPH_PUBLICATION_SLUG = os.environ.get(
     CONF.get("paragraph", {}).get("publication_slug", ""),
 )
 PARAGRAPH_API_URL = "https://public.api.paragraph.com/api/v1/posts"
+PARAGRAPH_POSTING_ENABLED = os.environ.get("PARAGRAPH_POSTING_ENABLED", "0").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def http_json(url: str, payload: dict | None = None, headers: dict | None = None, timeout: int = 120) -> dict:
@@ -214,6 +215,8 @@ def is_invalid_generated_content(content: str) -> bool:
 
 
 def post_to_paragraph(title: str, markdown: str, status: str) -> dict:
+    if not PARAGRAPH_POSTING_ENABLED:
+        raise RuntimeError("Paragraph posting is disabled")
     if not PARAGRAPH_API_KEY:
         raise RuntimeError("PARAGRAPH_API_KEY is not set")
     payload = {"title": title, "markdown": markdown, "status": status}
