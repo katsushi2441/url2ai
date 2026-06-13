@@ -109,6 +109,29 @@ function url2ai_auth_base64url($data) {
     return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
 }
 
+function url2ai_auth_base64url_decode($data) {
+    $data = strtr((string)$data, '-_', '+/');
+    $pad = strlen($data) % 4;
+    if ($pad) { $data .= str_repeat('=', 4 - $pad); }
+    $decoded = base64_decode($data, true);
+    return $decoded === false ? '' : $decoded;
+}
+
+function url2ai_auth_pack_state($nonce, $return_to) {
+    return $nonce . '.' . url2ai_auth_base64url($return_to);
+}
+
+function url2ai_auth_state_nonce($state) {
+    $parts = explode('.', (string)$state, 2);
+    return $parts[0];
+}
+
+function url2ai_auth_state_return($state) {
+    $parts = explode('.', (string)$state, 2);
+    if (count($parts) < 2) { return ''; }
+    return url2ai_auth_safe_return(url2ai_auth_base64url_decode($parts[1]));
+}
+
 function url2ai_auth_gen_verifier() {
     $bytes = '';
     for ($i = 0; $i < 32; $i++) { $bytes .= chr(mt_rand(0, 255)); }
@@ -144,10 +167,12 @@ function url2ai_auth_handle_login_flow($return_default = '/aiknowledgesns.php') 
         $client_id = isset($keys['X_API_KEY']) ? $keys['X_API_KEY'] : '';
         $verifier = url2ai_auth_gen_verifier();
         $challenge = url2ai_auth_gen_challenge($verifier);
-        $state = md5(uniqid('', true));
+        $state_nonce = md5(uniqid('', true));
+        $return_to = isset($_GET['return']) ? url2ai_auth_safe_return($_GET['return']) : url2ai_auth_safe_return($return_default);
+        $state = url2ai_auth_pack_state($state_nonce, $return_to);
         $_SESSION['aks_code_verifier'] = $verifier;
-        $_SESSION['aks_oauth_state'] = $state;
-        $_SESSION['aks_return_to'] = isset($_GET['return']) ? url2ai_auth_safe_return($_GET['return']) : url2ai_auth_safe_return($return_default);
+        $_SESSION['aks_oauth_state'] = $state_nonce;
+        $_SESSION['aks_return_to'] = $return_to;
         $params = array(
             'response_type' => 'code',
             'client_id' => $client_id,
@@ -160,8 +185,10 @@ function url2ai_auth_handle_login_flow($return_default = '/aiknowledgesns.php') 
         header('Location: https://twitter.com/i/oauth2/authorize?' . http_build_query($params));
         exit;
     }
-    if (isset($_GET['code'], $_GET['state'], $_SESSION['aks_oauth_state'])) {
-        if ($_GET['state'] === $_SESSION['aks_oauth_state']) {
+    if (isset($_GET['code'], $_GET['state'])) {
+        $state_return_to = url2ai_auth_state_return($_GET['state']);
+        $state_nonce = url2ai_auth_state_nonce($_GET['state']);
+        if (isset($_SESSION['aks_oauth_state']) && $state_nonce === $_SESSION['aks_oauth_state']) {
             $keys = url2ai_auth_load_x_keys();
             $client_id = isset($keys['X_API_KEY']) ? $keys['X_API_KEY'] : '';
             $client_secret = isset($keys['X_API_SECRET']) ? $keys['X_API_SECRET'] : '';
@@ -187,7 +214,7 @@ function url2ai_auth_handle_login_flow($return_default = '/aiknowledgesns.php') 
             }
             unset($_SESSION['aks_oauth_state'], $_SESSION['aks_code_verifier']);
         }
-        $return_to = isset($_SESSION['aks_return_to']) ? $_SESSION['aks_return_to'] : $return_default;
+        $return_to = isset($_SESSION['aks_return_to']) ? $_SESSION['aks_return_to'] : ($state_return_to !== '' ? $state_return_to : $return_default);
         unset($_SESSION['aks_return_to']);
         header('Location: ' . url2ai_auth_redirect_url($return_to));
         exit;
