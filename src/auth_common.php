@@ -5,6 +5,10 @@ if (!defined('URL2AI_AUTH_SESSION_LIFETIME')) {
     define('URL2AI_AUTH_SESSION_LIFETIME', 60 * 60 * 24 * 365);
 }
 
+if (!defined('URL2AI_AUTH_SESSION_NAME')) {
+    define('URL2AI_AUTH_SESSION_NAME', 'EXBRIDGESESSID');
+}
+
 function url2ai_auth_cookie_domain() {
     if (defined('AIGM_COOKIE_DOMAIN')) { return AIGM_COOKIE_DOMAIN; }
     $host = parse_url(url2ai_auth_site_base_url(), PHP_URL_HOST);
@@ -24,6 +28,7 @@ function url2ai_auth_site_base_url() {
 function url2ai_auth_start_session() {
     if (session_status() !== PHP_SESSION_NONE) { return; }
     $session_lifetime = URL2AI_AUTH_SESSION_LIFETIME;
+    session_name(URL2AI_AUTH_SESSION_NAME);
     ini_set('session.gc_maxlifetime', $session_lifetime);
     ini_set('session.cookie_lifetime', $session_lifetime);
     ini_set('session.cookie_path', '/');
@@ -36,6 +41,11 @@ function url2ai_auth_start_session() {
     session_cache_expire((int)($session_lifetime / 60));
     session_start();
     url2ai_auth_extend_session_cookie();
+}
+
+function url2ai_auth_delete_cookie($name) {
+    setcookie($name, '', time() - 3600, '/', url2ai_auth_cookie_domain(), true, true);
+    setcookie($name, '', time() - 3600, '/', '', true, true);
 }
 
 function url2ai_auth_extend_session_cookie() {
@@ -158,7 +168,8 @@ function url2ai_auth_handle_login_flow($return_default = '/aiknowledgesns.php') 
     if (isset($_GET['aks_logout'])) {
         $return_to = isset($_GET['return']) ? url2ai_auth_safe_return($_GET['return']) : $return_default;
         session_destroy();
-        setcookie(session_name(), '', time() - 3600, '/', url2ai_auth_cookie_domain(), true, true);
+        url2ai_auth_delete_cookie(URL2AI_AUTH_SESSION_NAME);
+        url2ai_auth_delete_cookie('PHPSESSID');
         header('Location: ' . url2ai_auth_redirect_url($return_to));
         exit;
     }
