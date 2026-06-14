@@ -696,7 +696,7 @@ $embed_url = $detail ? $BASE_URL . '/' . $THIS_FILE . '?id=' . urlencode($detail
 .slide-content{width:min(760px,100%);min-height:42%;display:flex;flex-direction:column;justify-content:center}
 .slide-count{position:absolute;top:18px;right:20px;font-size:13px;color:#64748b;font-weight:700}
 .slide-page h2,.slide-page .title-inline{font-size:clamp(22px,3vw,36px);line-height:1.25;margin:0 0 14px;color:#172033;font-weight:800}
-.slide-page p,.slide-page .body-inline{font-size:clamp(14px,1.35vw,18px);line-height:1.66;margin:0;white-space:pre-wrap;color:#334155}
+.slide-page p,.slide-page .body-inline{font-size:clamp(14px,1.35vw,18px);line-height:1.66;margin:0;white-space:pre-wrap;color:#334155}.slide-page .slide-body-md{font-size:clamp(13px,1.25vw,17px);line-height:1.6;color:#334155;white-space:normal}.slide-page .slide-body-md p{margin:.25em 0;font-size:inherit}.slide-page .slide-body-md h3,.slide-page .slide-body-md h4{margin:.5em 0 .2em;font-size:clamp(13px,1.1vw,16px);font-weight:700;color:#172033}.slide-page .slide-body-md ul,.slide-page .slide-body-md ol{margin:.3em 0;padding-left:1.5em}.slide-page .slide-body-md li{margin:.1em 0}.slide-page .slide-body-md table{border-collapse:collapse;width:100%;margin:.4em 0;font-size:clamp(11px,1vw,15px)}.slide-page .slide-body-md th,.slide-page .slide-body-md td{border:1px solid #cbd5e1;padding:.3em .6em;text-align:left;vertical-align:middle}.slide-page .slide-body-md th{background:#dbeafe;color:#1e3a8a;font-weight:700}.slide-page .slide-body-md tr:nth-child(even) td{background:#f8fafc}.slide-page .slide-body-md blockquote{border-left:4px solid #2563eb;background:#eff6ff;margin:.4em 0;padding:.35em .8em;color:#1e40af;font-weight:600;border-radius:0 6px 6px 0}.slide-page .slide-body-md code{background:#f1f5f9;border-radius:3px;padding:.1em .3em;font-size:.85em}.slide-page .slide-body-md strong{font-weight:700;color:#0f172a}.slide-page .slide-body-md del{color:#94a3b8;text-decoration:line-through}
 .slide-page .note{font-size:14px;margin-top:22px;color:#64748b}
 .slide-side{position:absolute;right:14px;bottom:24px;display:flex;flex-direction:column;gap:12px;z-index:4}
 .slide-side button,.pc-slide-nav button{background:rgba(15,23,42,.7);border:1px solid rgba(255,255,255,.18);border-radius:50%;width:38px;height:38px;color:#fff;font-size:18px;cursor:pointer;backdrop-filter:blur(4px)}
@@ -816,7 +816,7 @@ body.embed{background:#fff}.embed .main{max-width:none;padding:0}.embed .slide-p
           <div class="slide-count"><?php echo (int)($i + 1); ?> / <?php echo (int)count($detail['slides']); ?></div>
           <div class="slide-content">
             <h2><?php echo h(isset($s['title']) ? $s['title'] : ''); ?></h2>
-            <p><?php echo h(isset($s['body']) ? $s['body'] : ''); ?></p>
+            <p class="slide-body-raw"><?php echo h(isset($s['body']) ? $s['body'] : ''); ?></p>
             <?php if (!empty($s['note'])): ?><div class="note"><?php echo h($s['note']); ?></div><?php endif; ?>
           </div>
         </section>
@@ -924,6 +924,58 @@ function goSlide(idx) {
   var embed = document.getElementById('copy-embed');
   if (share) share.onclick = function(){ copyToClipboard(USLIDE_SHARE_TEXT, share); };
   if (embed) embed.onclick = function(){ copyToClipboard(USLIDE_EMBED_CODE, embed); };
+})();
+(function(){
+  if (document.querySelector('.slide-edit-form')) return;
+  function inlineMd(t){
+    t=t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+    t=t.replace(/~~(.+?)~~/g,'<del>$1</del>');
+    t=t.replace(/`([^`]+)`/g,'<code>$1</code>');
+    return t;
+  }
+  function mdToHtml(raw){
+    var lines=raw.split('\n'),out='',inUl=false,inOl=false,inTbl=false,tblHead=false,i=0,n=lines.length;
+    while(i<n){
+      var ln=lines[i],tr=ln.replace(/\r$/,'');
+      if(/^\|.+\|$/.test(tr)){
+        if(/^\|[\s\-:|]+\|$/.test(tr)){i++;continue;}
+        if(!inTbl){
+          if(inUl){out+='</ul>';inUl=false;}
+          if(inOl){out+='</ol>';inOl=false;}
+          out+='<table><thead><tr>';
+          tr.replace(/^\||\|$/g,'').split('|').forEach(function(c){out+='<th>'+inlineMd(c.trim())+'</th>';});
+          out+='</tr></thead><tbody>';
+          inTbl=true;i++;continue;
+        }
+        out+='<tr>';
+        tr.replace(/^\||\|$/g,'').split('|').forEach(function(c){out+='<td>'+inlineMd(c.trim())+'</td>';});
+        out+='</tr>';i++;continue;
+      }
+      if(inTbl){out+='</tbody></table>';inTbl=false;}
+      var hm=tr.match(/^(#{1,3})\s+(.+)$/);
+      if(hm){if(inUl){out+='</ul>';inUl=false;}if(inOl){out+='</ol>';inOl=false;}out+='<h'+(hm[1].length+2)+'>'+inlineMd(hm[2])+'</h'+(hm[1].length+2)+'>';i++;continue;}
+      var bq=tr.match(/^>\s*(.+)$/);
+      if(bq){if(inUl){out+='</ul>';inUl=false;}if(inOl){out+='</ol>';inOl=false;}out+='<blockquote>'+inlineMd(bq[1])+'</blockquote>';i++;continue;}
+      var ul=tr.match(/^[-*]\s+(.+)$/);
+      if(ul){if(inOl){out+='</ol>';inOl=false;}if(!inUl){out+='<ul>';inUl=true;}out+='<li>'+inlineMd(ul[1])+'</li>';i++;continue;}
+      var ol=tr.match(/^\d+\.\s+(.+)$/);
+      if(ol){if(inUl){out+='</ul>';inUl=false;}if(!inOl){out+='<ol>';inOl=true;}out+='<li>'+inlineMd(ol[1])+'</li>';i++;continue;}
+      if(inUl){out+='</ul>';inUl=false;}if(inOl){out+='</ol>';inOl=false;}
+      if(tr.trim()===''){out+='<br>';i++;continue;}
+      out+='<p>'+inlineMd(tr)+'</p>';i++;
+    }
+    if(inTbl)out+='</tbody></table>';
+    if(inUl)out+='</ul>';
+    if(inOl)out+='</ol>';
+    return out;
+  }
+  document.querySelectorAll('.slide-body-raw').forEach(function(el){
+    var raw=el.textContent;
+    var div=document.createElement('div');
+    div.className='slide-body-md';
+    div.innerHTML=mdToHtml(raw);
+    el.parentNode.replaceChild(div,el);
+  });
 })();
 (function(){
   var form = document.getElementById('generate-form');
