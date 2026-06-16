@@ -1,0 +1,278 @@
+/* @theme exbridge */
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Inter:wght@600;800;900&display=swap');
+
+:root {
+  --blue:     #2563EB;
+  --blue-d:   #1D4ED8;
+  --blue-l:   #EFF6FF;
+  --ink:      #0F172A;
+  --text:     #1E293B;
+  --sub:      #475569;
+  --muted:    #94A3B8;
+  --border:   #E2E8F0;
+  --line:     #F1F5F9;
+}
+
+/* ─────────── 基本スライド ─────────── */
+section {
+  width: 1280px;
+  height: 720px;
+  padding: 78px 90px 72px;
+  box-sizing: border-box;
+  background: #FFFFFF;
+  color: var(--text);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 26px;
+  line-height: 1.7;
+  letter-spacing: .01em;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* 上部のブランドライン */
+section::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, var(--blue) 0%, #60A5FA 100%);
+}
+
+/* ページ番号 */
+section::after {
+  position: absolute;
+  right: 44px;
+  bottom: 30px;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: .08em;
+}
+
+/* 右下ロゴ的なテキスト */
+section[data-marpit-pagination]:not(.lead):not(.chapter) {
+  background-image: none;
+}
+
+/* ─────────── 見出し ─────────── */
+h1 {
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 46px;
+  font-weight: 900;
+  color: var(--ink);
+  line-height: 1.25;
+  letter-spacing: -.01em;
+  margin: 0 0 36px;
+  padding: 4px 0 22px 0;
+  position: relative;
+}
+/* 見出し下の二色アンダーライン */
+h1::after {
+  content: '';
+  position: absolute;
+  left: 0; bottom: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--border);
+}
+h1::before {
+  content: '';
+  position: absolute;
+  left: 0; bottom: 0;
+  width: 88px;
+  height: 3px;
+  background: var(--blue);
+  z-index: 1;
+}
+
+h2 {
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 18px 0 10px;
+  padding-left: 18px;
+  border-left: 6px solid var(--blue);
+  line-height: 1.35;
+}
+
+h3 {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  margin: 16px 0 8px;
+}
+
+/* ─────────── 本文 ─────────── */
+p {
+  margin: 14px 0;
+  line-height: 1.85;
+  color: var(--sub);
+}
+strong { color: var(--ink); font-weight: 900; }
+em { font-style: normal; color: var(--blue); font-weight: 700; }
+
+/* ─────────── リスト ─────────── */
+ul { list-style: none; padding: 0; margin: 14px 0; }
+ul li {
+  position: relative;
+  padding-left: 38px;
+  margin: 18px 0;
+  line-height: 1.6;
+  color: var(--text);
+}
+ul li::before {
+  content: '';
+  position: absolute;
+  left: 6px; top: 14px;
+  width: 12px; height: 12px;
+  border-radius: 3px;
+  background: var(--blue);
+  transform: rotate(45deg);
+}
+
+ol { counter-reset: li; list-style: none; padding: 0; margin: 14px 0; }
+ol li {
+  position: relative;
+  padding-left: 56px;
+  margin: 20px 0;
+  line-height: 1.6;
+  color: var(--text);
+  min-height: 38px;
+}
+ol li::before {
+  counter-increment: li;
+  content: counter(li);
+  position: absolute;
+  left: 0; top: 2px;
+  width: 38px; height: 38px;
+  background: var(--blue-l);
+  color: var(--blue-d);
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  font-size: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─────────── テーブル ─────────── */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 22px;
+  margin: 16px 0;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--border);
+}
+th {
+  background: var(--blue);
+  color: #fff;
+  padding: 16px 22px;
+  font-weight: 700;
+  text-align: left;
+}
+td {
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--border);
+  color: var(--sub);
+  background: #fff;
+}
+tr:nth-child(even) td { background: #F8FAFF; }
+tr:last-child td { border-bottom: none; }
+
+/* ─────────── 引用 ─────────── */
+blockquote {
+  margin: 22px 0;
+  padding: 24px 32px;
+  background: var(--blue-l);
+  border-left: 8px solid var(--blue);
+  border-radius: 0 14px 14px 0;
+  color: var(--blue-d);
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1.6;
+}
+blockquote p { margin: 0; color: inherit; }
+blockquote strong { color: var(--ink); }
+
+/* ─────────── コード ─────────── */
+code {
+  background: var(--line);
+  border: 1px solid var(--border);
+  color: #4F46E5;
+  padding: 2px 9px;
+  border-radius: 6px;
+  font-size: .85em;
+  font-family: 'Consolas', monospace;
+}
+pre {
+  background: var(--ink);
+  border-radius: 14px;
+  padding: 26px 32px;
+  font-size: 19px;
+  line-height: 1.6;
+  margin: 18px 0;
+  box-shadow: 0 14px 40px rgba(15,23,42,.18);
+}
+pre code { background: none; border: none; color: #93C5FD; padding: 0; }
+
+/* ═══════════ カバー（表紙） ═══════════ */
+section.lead {
+  justify-content: center;
+  padding: 90px 100px;
+  background: #FFFFFF;
+}
+section.lead::before { height: 8px; }
+/* 左の縦アクセント */
+section.lead h1 {
+  font-size: 64px;
+  font-weight: 900;
+  line-height: 1.18;
+  color: var(--ink);
+  padding: 0 0 0 36px;
+  margin: 0 0 32px;
+  border-left: 10px solid var(--blue);
+}
+section.lead h1::before, section.lead h1::after { display: none; }
+section.lead ol, section.lead ul { margin-left: 38px; }
+section.lead ol li, section.lead ul li {
+  font-size: 26px;
+  color: var(--sub);
+}
+section.lead p {
+  font-size: 28px;
+  color: var(--sub);
+  padding-left: 38px;
+}
+section.lead::after { color: rgba(148,163,184,.5); }
+
+/* ═══════════ チャプター区切り ═══════════ */
+section.chapter {
+  justify-content: center;
+  padding: 90px 100px;
+  background: #FFFFFF;
+}
+section.chapter h1 {
+  font-size: 60px;
+  font-weight: 900;
+  color: var(--blue-d);
+  line-height: 1.2;
+  padding: 0 0 0 34px;
+  margin: 0 0 28px;
+  border-left: 12px solid var(--blue);
+}
+section.chapter h1::before, section.chapter h1::after { display: none; }
+section.chapter p, section.chapter li {
+  color: var(--sub);
+  font-size: 27px;
+}

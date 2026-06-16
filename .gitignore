@@ -27,3 +27,5 @@ tools/browser-use/.browser-profile/
 .env
 *.env
 !*.env.sample
+ppt-master/
+test_pptx_design.mjs
