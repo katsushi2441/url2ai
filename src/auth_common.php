@@ -48,10 +48,28 @@ function url2ai_auth_delete_cookie($name) {
     setcookie($name, '', time() - 3600, '/', '', true, true);
 }
 
+function url2ai_auth_delete_session_cookie_variants() {
+    $name = URL2AI_AUTH_SESSION_NAME;
+    $domains = array(
+        url2ai_auth_cookie_domain(),
+        '',
+        'aiknowledgecms.exbridge.jp',
+        'kurage.exbridge.jp',
+        '.exbridge.jp',
+    );
+    $seen = array();
+    foreach ($domains as $domain) {
+        $domain = (string)$domain;
+        if (isset($seen[$domain])) { continue; }
+        $seen[$domain] = true;
+        setcookie($name, '', time() - 3600, '/', $domain, true, true);
+        setcookie('PHPSESSID', '', time() - 3600, '/', $domain, true, true);
+    }
+}
+
 function url2ai_auth_extend_session_cookie() {
     if (session_status() !== PHP_SESSION_ACTIVE) { return; }
     $session_lifetime = URL2AI_AUTH_SESSION_LIFETIME;
-    setcookie(session_name(), '', time() - 3600, '/', '', true, true);
     setcookie(session_name(), session_id(), time() + $session_lifetime, '/', url2ai_auth_cookie_domain(), true, true);
 }
 
@@ -166,6 +184,14 @@ function url2ai_auth_get_json($url, $token) {
 
 function url2ai_auth_handle_login_flow($return_default = '/aiknowledgesns.php') {
     url2ai_auth_start_session();
+    if (isset($_GET['aks_reset_session'])) {
+        $return_to = isset($_GET['return']) ? url2ai_auth_safe_return($_GET['return']) : $return_default;
+        session_unset();
+        session_destroy();
+        url2ai_auth_delete_session_cookie_variants();
+        header('Location: ' . url2ai_auth_redirect_url($return_to));
+        exit;
+    }
     if (isset($_GET['aks_logout'])) {
         $return_to = isset($_GET['return']) ? url2ai_auth_safe_return($_GET['return']) : $return_default;
         session_destroy();
@@ -175,8 +201,6 @@ function url2ai_auth_handle_login_flow($return_default = '/aiknowledgesns.php') 
         exit;
     }
     if (isset($_GET['aks_login'])) {
-        session_regenerate_id(true);
-        url2ai_auth_extend_session_cookie();
         $keys = url2ai_auth_load_x_keys();
         $client_id = isset($keys['X_API_KEY']) ? $keys['X_API_KEY'] : '';
         $verifier = url2ai_auth_gen_verifier();
