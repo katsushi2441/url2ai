@@ -319,7 +319,6 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
 <div class="container">
     <div class="detail-header">
         <div class="detail-meta">
-            <span>@<?php echo h(isset($detail_post['username']) ? $detail_post['username'] : ''); ?></span>
             <span><?php echo h(isset($detail_post['saved_at']) ? $detail_post['saved_at'] : ''); ?></span>
             <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#ccc;"><?php echo h($detail_post['tweet_id']); ?></span>
         </div>
@@ -371,7 +370,7 @@ body{background:#fff;color:#222;font-family:-apple-system,'Helvetica Neue',sans-
             var lines = [];
             if (_dpBody) { lines.push('#URL2AI ' + _dpLabel); lines.push(_dpBody); }
             lines.push('');
-            if (_dp.tweet_url) lines.push(_dp.tweet_url);
+            if (_dp.tweet_url) lines.push('出典: ' + _dp.tweet_url);
             lines.push(_dpUrl);
             navigator.clipboard.writeText(lines.join('\n')).then(function() {
                 var btn = document.getElementById('copy-btn');
@@ -452,8 +451,6 @@ function renderUvPosts(from, to) {
         var detailUrl = 'ustoryv.php?id=' + encodeURIComponent(tid) + '&mode=' + encodeURIComponent(mode);
         var html = '<div class="post-card">'
             + '<div class="post-meta">'
-            + '<div class="avatar">' + uvEsc(avatar) + '</div>'
-            + '<div><div class="author-name">' + uvEsc(uname) + '</div><div class="author-handle">@' + uvEsc(uname) + '</div></div>'
             + '<div class="post-time">' + uvEsc(saved) + '</div>'
             + '</div>'
             + (tid ? '<a class="post-id" href="' + detailUrl + '">#' + uvEsc(tid) + '</a>' : '')
