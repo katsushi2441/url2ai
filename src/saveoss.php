@@ -514,6 +514,12 @@ if ($action === 'manual_register') {
         exit;
     }
 
+    // 汎用ハッシュタグ(#AI #OSS #GitHub 等)はAIが本文に付けても登録内容から除去する
+    $post_text = preg_replace('/#(?:AI|OSS|GitHub|opensource)\b/i', '', $post_text);
+    $post_text = preg_replace('/[ \t]{2,}/', ' ', $post_text);
+    $post_text = preg_replace('/[ \t]+\n/', "\n", $post_text);
+    $post_text = trim($post_text);
+
     $tags      = extract_tags($post_text, $reponame);
     $tag_str   = implode(' ', array_map(function($t){ return '#' . $t; }, $tags));
     $post_full = rtrim($post_text) . "\n" . $tag_str . "\n" . $github_url;
