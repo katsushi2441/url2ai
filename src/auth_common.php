@@ -220,7 +220,7 @@ function url2ai_auth_handle_login_flow($return_default = '/aiknowledgesns.php') 
             'code_challenge' => $challenge,
             'code_challenge_method' => 'S256',
         );
-        header('Location: https://twitter.com/i/oauth2/authorize?' . http_build_query($params));
+        header('Location: https://x.com/i/oauth2/authorize?' . http_build_query($params));
         exit;
     }
     if (isset($_GET['code'], $_GET['state'])) {
