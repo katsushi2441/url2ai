@@ -51,6 +51,7 @@ function url2ai_auth_delete_cookie($name) {
 function url2ai_auth_extend_session_cookie() {
     if (session_status() !== PHP_SESSION_ACTIVE) { return; }
     $session_lifetime = URL2AI_AUTH_SESSION_LIFETIME;
+    setcookie(session_name(), '', time() - 3600, '/', '', true, true);
     setcookie(session_name(), session_id(), time() + $session_lifetime, '/', url2ai_auth_cookie_domain(), true, true);
 }
 
@@ -174,6 +175,8 @@ function url2ai_auth_handle_login_flow($return_default = '/aiknowledgesns.php') 
         exit;
     }
     if (isset($_GET['aks_login'])) {
+        session_regenerate_id(true);
+        url2ai_auth_extend_session_cookie();
         $keys = url2ai_auth_load_x_keys();
         $client_id = isset($keys['X_API_KEY']) ? $keys['X_API_KEY'] : '';
         $verifier = url2ai_auth_gen_verifier();
