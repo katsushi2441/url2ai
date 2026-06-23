@@ -114,6 +114,12 @@ if (isset($_GET['feed'])) {
 
 $detail_id   = isset($_GET['id']) ? trim($_GET['id']) : '';
 $filter_tag  = isset($_GET['tag']) ? trim($_GET['tag']) : '';
+$search_query = isset($_GET['q']) ? trim((string)$_GET['q']) : '';
+if (function_exists('mb_strlen') && mb_strlen($search_query, 'UTF-8') > 120) {
+    $search_query = mb_substr($search_query, 0, 120);
+} elseif (!function_exists('mb_strlen') && strlen($search_query) > 240) {
+    $search_query = substr($search_query, 0, 240);
+}
 $detail_post = null;
 
 if ($detail_id) {
@@ -199,6 +205,37 @@ function oss_display_title($post) {
     }
     $label = oss_repo_label_from_post($post);
     return $label !== '' ? $label : (isset($post['id']) ? (string)$post['id'] : 'OSS Project');
+}
+
+function oss_search_normalize($text) {
+    $text = trim((string)$text);
+    if ($text === '') {
+        return '';
+    }
+    $text = preg_replace('!^https?://!i', '', $text);
+    $text = preg_replace('!^www\.!i', '', $text);
+    $text = preg_replace('!/$!', '', $text);
+    return function_exists('mb_strtolower') ? mb_strtolower($text, 'UTF-8') : strtolower($text);
+}
+
+function oss_post_matches_query($post, $query) {
+    $query = oss_search_normalize($query);
+    if ($query === '') {
+        return true;
+    }
+    $fields = array(
+        isset($post['id']) ? $post['id'] : '',
+        isset($post['title']) ? $post['title'] : '',
+        isset($post['display_title']) ? $post['display_title'] : '',
+        isset($post['github_url']) ? $post['github_url'] : '',
+        isset($post['post_text']) ? $post['post_text'] : '',
+        isset($post['analysis']) ? $post['analysis'] : '',
+    );
+    if (!empty($post['tags']) && is_array($post['tags'])) {
+        $fields[] = implode(' ', $post['tags']);
+    }
+    $haystack = oss_search_normalize(implode(' ', $fields));
+    return strpos($haystack, $query) !== false;
 }
 
 function oss_json_response($data, $status_code) {
@@ -380,10 +417,17 @@ if ($detail_post) {
 } elseif ($filter_tag) {
     $page_title       = '#' . htmlspecialchars($filter_tag) . ' の OSS一覧 | ' . $SITE_NAME;
     $page_description = htmlspecialchars($filter_tag) . ' に関連するAI系OSSプロジェクトの一覧です。';
-    $page_url         = $BASE_URL . '/' . $THIS_FILE . '?tag=' . urlencode($filter_tag);
+    $page_url         = $BASE_URL . '/' . $THIS_FILE . '?' . http_build_query(array_filter(array('tag' => $filter_tag, 'q' => $search_query), 'strlen'));
     $page_type        = 'website';
     $published_time   = '';
     $keywords         = htmlspecialchars($filter_tag) . ', AI, OSS, GitHub';
+} elseif ($search_query !== '') {
+    $page_title       = 'OSS検索: ' . htmlspecialchars($search_query) . ' | ' . $SITE_NAME;
+    $page_description = htmlspecialchars($search_query) . ' に一致するOSSプロジェクトの検索結果です。';
+    $page_url         = $BASE_URL . '/' . $THIS_FILE . '?q=' . urlencode($search_query);
+    $page_type        = 'website';
+    $published_time   = '';
+    $keywords         = htmlspecialchars($search_query) . ', AI, OSS, GitHub';
 } else {
     $page_title       = 'AI OSS Timeline | ' . $SITE_NAME;
     $page_description = 'GitHub Trendingから厳選したAI系OSSプロジェクトの紹介とAI考察。毎日更新。';
@@ -606,6 +650,57 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
 .admin-status.err { background: #fee2e2; color: #991b1b; display: inline-block; }
 .admin-status.loading { background: #f0eeff; color: #6c63ff; display: inline-block; }
 
+.search-panel {
+    background: #fff;
+    border-bottom: 1px solid #f0f0f0;
+    padding: 12px 20px;
+}
+.search-form {
+    max-width: 1000px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 8px;
+    align-items: center;
+}
+.search-form input[type=search] {
+    width: 100%;
+    border: 1px solid #d8d6f8;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 14px;
+    outline: none;
+}
+.search-form input[type=search]:focus {
+    border-color: #6c63ff;
+    box-shadow: 0 0 0 3px #f0eeff;
+}
+.search-button,
+.search-clear {
+    border: 1px solid #6c63ff;
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.search-button {
+    background: #6c63ff;
+    color: #fff;
+    cursor: pointer;
+}
+.search-clear {
+    background: #fff;
+    color: #6c63ff;
+}
+.search-hint {
+    max-width: 1000px;
+    margin: 7px auto 0;
+    color: #888;
+    font-size: 12px;
+}
+
 .tag-filter {
     background: #fafafa;
     border-bottom: 1px solid #f0f0f0;
@@ -747,6 +842,13 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
         border-left: 0;
         border-bottom: 1px solid #f0f0f0;
         padding: 14px 20px 16px;
+    }
+    .search-form {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .search-clear {
+        grid-column: 1 / -1;
+        text-align: center;
     }
 }
 
@@ -1126,14 +1228,40 @@ if ($filter_tag) {
     });
     $filtered_posts = array_values($filtered_posts);
 }
+if ($search_query !== '') {
+    $filtered_posts = array_filter($filtered_posts, function($p) use ($search_query) {
+        return oss_post_matches_query($p, $search_query);
+    });
+    $filtered_posts = array_values($filtered_posts);
+}
+$clear_search_params = $filter_tag ? array('tag' => $filter_tag) : array();
+$clear_search_url = 'oss.php' . ($clear_search_params ? '?' . http_build_query($clear_search_params) : '');
 ?>
+
+<div class="search-panel">
+    <form class="search-form" method="get" action="oss.php">
+        <?php if ($filter_tag): ?>
+        <input type="hidden" name="tag" value="<?php echo htmlspecialchars($filter_tag); ?>">
+        <?php endif; ?>
+        <input type="search" name="q" value="<?php echo htmlspecialchars($search_query); ?>" placeholder="OSS名・GitHub URL・作者名・説明文で検索 例: obra/superpowers">
+        <button class="search-button" type="submit">検索</button>
+        <?php if ($search_query !== ''): ?>
+        <a class="search-clear" href="<?php echo htmlspecialchars($clear_search_url); ?>">検索解除</a>
+        <?php endif; ?>
+    </form>
+    <div class="search-hint">登録済みと言われたOSSは、GitHub URLの一部やリポジトリ名で検索できます。</div>
+</div>
 
 <?php if (!empty($all_tags)): ?>
 <div class="tag-filter">
     <span class="tag-filter-label">タグ:</span>
-    <a class="tag-btn <?php echo !$filter_tag ? 'active' : ''; ?>" href="oss.php">すべて</a>
+    <a class="tag-btn <?php echo !$filter_tag ? 'active' : ''; ?>" href="oss.php<?php echo $search_query !== '' ? '?q=' . urlencode($search_query) : ''; ?>">すべて</a>
     <?php foreach ($all_tags as $tag => $count): ?>
-    <a class="tag-btn <?php echo $filter_tag === $tag ? 'active' : ''; ?>" href="oss.php?tag=<?php echo urlencode($tag); ?>" rel="tag">
+    <?php
+        $tag_params = array('tag' => $tag);
+        if ($search_query !== '') { $tag_params['q'] = $search_query; }
+    ?>
+    <a class="tag-btn <?php echo $filter_tag === $tag ? 'active' : ''; ?>" href="oss.php?<?php echo htmlspecialchars(http_build_query($tag_params)); ?>" rel="tag">
         #<?php echo htmlspecialchars($tag); ?> <span style="opacity:0.6"><?php echo $count; ?></span>
     </a>
     <?php endforeach; ?>
@@ -1149,8 +1277,13 @@ if ($filter_tag) {
     <?php echo count($filtered_posts); ?> posts
     <?php if ($filter_tag): ?>
     — #<?php echo htmlspecialchars($filter_tag); ?>
+    <?php endif; ?>
+    <?php if ($search_query !== ''): ?>
+    — search: <?php echo htmlspecialchars($search_query); ?>
     <?php else: ?>
+    <?php if (!$filter_tag): ?>
     by @xb_bittensor
+    <?php endif; ?>
     <?php endif; ?>
 </div>
 
@@ -1237,7 +1370,7 @@ observer.observe(sentinel);
 
 /* 初回ロード */
 if (posts.length === 0) {
-    document.getElementById('post-list').innerHTML = '<div class="empty">投稿がありません</div>';
+    document.getElementById('post-list').innerHTML = '<div class="empty"><?php echo $search_query !== '' ? '検索に一致する投稿がありません' : '投稿がありません'; ?></div>';
 } else {
     loadMore();
 }
