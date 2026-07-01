@@ -78,6 +78,40 @@ function oss_is_failed_ai_text($text) {
     return false;
 }
 
+function oss_repo_label_from_url($github_url) {
+    $github_url = trim((string)$github_url);
+    if (preg_match('!github\.com/([^/]+)/([^/?#]+)!i', $github_url, $m)) {
+        return $m[1] . '/' . preg_replace('/\.git$/i', '', $m[2]);
+    }
+    return preg_replace('!^https?://github\.com/!i', '', rtrim($github_url, '/'));
+}
+
+function oss_strip_hashtags_from_text($text) {
+    $text = trim((string)$text);
+    if ($text === '') return '';
+    $lines = preg_split('/\R/u', $text);
+    $clean = array();
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '') {
+            $clean[] = '';
+            continue;
+        }
+        if (preg_match('/^(?:#[^\s#]+(?:\s+|$))+$/u', $line)) {
+            continue;
+        }
+        $line = preg_replace('/(^|\s)#[^\s#]+/u', '$1', $line);
+        $line = preg_replace('/[ \t]{2,}/u', ' ', $line);
+        $line = trim($line);
+        if ($line !== '') {
+            $clean[] = $line;
+        }
+    }
+    $text = trim(implode("\n", $clean));
+    $text = preg_replace("/\n{3,}/u", "\n\n", $text);
+    return trim($text);
+}
+
 function oss_notice_author($value) {
     $value = trim((string)$value);
     return $value === 'osszenn' ? 'osszenn' : 'oss';
@@ -332,7 +366,11 @@ function clean_title_line($line) {
 function is_generic_oss_title($title) {
     $title = strtolower(trim((string)$title));
     if ($title === '') return true;
-    return in_array($title, array('about', 'overview', 'readme', 'introduction', 'getting started', 'home', 'docs', 'documentation'), true);
+    $title = trim($title, " \t\n\r\0\x0B:-");
+    if (in_array($title, array('about', 'overview', 'readme', 'introduction', 'getting started', 'home', 'docs', 'documentation'), true)) {
+        return true;
+    }
+    return preg_match('/^(special thanks|special thanks to|thanks|thank you|acknowledg(?:e)?ments?|contributors?|contributing|sponsors?|support|table of contents)$/i', $title) === 1;
 }
 
 function extract_title_from_readme($readme, $fallback) {
@@ -514,15 +552,9 @@ if ($action === 'manual_register') {
         exit;
     }
 
-    // 汎用ハッシュタグ(#AI #OSS #GitHub 等)はAIが本文に付けても登録内容から除去する
-    $post_text = preg_replace('/#(?:AI|OSS|GitHub|opensource)\b/i', '', $post_text);
-    $post_text = preg_replace('/[ \t]{2,}/', ' ', $post_text);
-    $post_text = preg_replace('/[ \t]+\n/', "\n", $post_text);
-    $post_text = trim($post_text);
-
-    $tags      = extract_tags($post_text, $reponame);
-    $tag_str   = implode(' ', array_map(function($t){ return '#' . $t; }, $tags));
-    $post_full = rtrim($post_text) . "\n" . $tag_str . "\n" . $github_url;
+    $post_text = oss_strip_hashtags_from_text($post_text);
+    $tags      = array();
+    $post_full = rtrim($post_text) . "\n" . $github_url;
 
     $repo_id = $user . '_' . $reponame;
     $repo_id = preg_replace('/[^a-zA-Z0-9\-_]/', '-', $repo_id);
@@ -717,14 +749,15 @@ $github_url = isset($input['github_url']) ? trim($input['github_url']) : '';
 $title      = isset($input['title'])      ? trim($input['title'])      : '';
 $analysis   = isset($input['analysis'])   ? trim($input['analysis'])   : '';
 $post_text  = isset($input['post_text'])  ? trim($input['post_text'])  : '';
-$tags       = isset($input['tags']) && is_array($input['tags']) ? array_values($input['tags']) : array();
-$tags       = array_slice(array_values(array_filter($tags, function($t) { return trim((string)$t) !== ''; })), 0, 1);
+$tags       = array();
 
 if (!$github_url || !$title) {
     http_response_code(400);
     echo json_encode(array('error' => 'github_url and title required'));
     exit;
 }
+$title = is_generic_oss_title($title) ? oss_repo_label_from_url($github_url) : $title;
+$post_text = oss_strip_hashtags_from_text($post_text);
 if (oss_is_failed_ai_text($analysis) || oss_is_failed_ai_text($post_text)) {
     http_response_code(500);
     echo json_encode(array('error' => 'Ollamaの考察生成に失敗したため登録しませんでした'), JSON_UNESCAPED_UNICODE);

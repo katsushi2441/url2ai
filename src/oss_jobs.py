@@ -99,13 +99,12 @@ def generate_register_job(
         )
 
     analysis = oss_worker.make_analysis(title, github_url, readme, snippet)
-    post_text = oss_worker.make_post_text(title, github_url, readme, snippet)
+    post_text = oss_worker.strip_hashtags_from_text(oss_worker.make_post_text(title, github_url, readme, snippet))
     if not analysis or not post_text:
         raise RuntimeError("OSS AI generation returned empty text")
 
-    tags = oss_worker.extract_tags(post_text, github_url)
-    tag_str = " ".join("#" + t for t in tags)
-    post_full = post_text.rstrip() + "\n" + tag_str + "\n" + github_url
+    tags = []
+    post_full = post_text.rstrip() + "\n" + github_url
     result = oss_worker.save_to_cms(title, github_url, analysis, post_full, tags)
     status = result.get("status", "")
     if status not in {"ok", "updated", "duplicate"}:

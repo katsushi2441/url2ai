@@ -194,8 +194,10 @@ function oss_repo_label_from_post($post) {
 function oss_is_generic_title($title) {
     $title = trim((string)$title);
     if ($title === '') return true;
+    $normalized = trim(strtolower($title), " \t\n\r\0\x0B:-");
     $generic = array('about', 'overview', 'readme', 'introduction', 'getting started', 'home', 'docs', 'documentation');
-    return in_array(strtolower($title), $generic, true);
+    if (in_array($normalized, $generic, true)) return true;
+    return preg_match('/^(special thanks|special thanks to|thanks|thank you|acknowledg(?:e)?ments?|contributors?|contributing|sponsors?|support|table of contents)$/i', $normalized) === 1;
 }
 
 function oss_display_title($post) {
@@ -1156,38 +1158,43 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
 var detailPost    = <?php echo json_encode($detail_post, JSON_UNESCAPED_UNICODE); ?>;
 var detailPageUrl = '<?php echo $BASE_URL; ?>/oss.php?id=<?php echo urlencode($detail_post['id']); ?>';
 
+function cleanShareText(text) {
+    return String(text || '')
+        .replace(/https?:\/\/\S+/g, '')
+        .split(/\n/)
+        .map(function(line) {
+            return line
+                .replace(/(^|\s)#[^\s#]+/g, '$1')
+                .replace(/[ \t]{2,}/g, ' ')
+                .trim();
+        })
+        .filter(function(line) { return line.length > 0; })
+        .join('\n')
+        .trim();
+}
+
 function buildDetailText(post) {
     var lines = [];
-    lines.push('#URL2AI OSS');
     lines.push(post.display_title || post.title);
     lines.push('');
     if (post.post_text) {
-        var textOnly = post.post_text.replace(/https?:\/\/\S+/g, '').trim();
+        var textOnly = cleanShareText(post.post_text);
         if (textOnly) lines.push(textOnly);
     }
     if (post.analysis) {
         lines.push('');
         lines.push('【AI考察】');
-        var analysisOnly = post.analysis.replace(/https?:\/\/\S+/g, '').trim();
+        var analysisOnly = cleanShareText(post.analysis);
         if (analysisOnly) lines.push(analysisOnly);
     }
     lines.push('');
     lines.push(post.github_url);
     lines.push(detailPageUrl);
-    if (post.tags && post.tags.length) {
-        lines.push(post.tags.slice(0, 1).map(function(t){ return '#' + t; }).join(' '));
-    }
     return lines.join('\n');
 }
 
 function buildXText(post) {
-    var lines = [];
-    if (post.post_text) {
-        var textOnly = post.post_text.replace(/https?:\/\/\S+/g, '').trim();
-        if (textOnly) lines.push(textOnly);
-    }
-    lines.push(detailPageUrl);
-    return lines.join('\n');
+    return buildDetailText(post);
 }
 
 function copyDetail() {
@@ -1379,38 +1386,43 @@ function getDetailUrl(post) {
     return BASE_URL + '/oss.php?id=' + encodeURIComponent(post.id);
 }
 
+function cleanShareText(text) {
+    return String(text || '')
+        .replace(/https?:\/\/\S+/g, '')
+        .split(/\n/)
+        .map(function(line) {
+            return line
+                .replace(/(^|\s)#[^\s#]+/g, '$1')
+                .replace(/[ \t]{2,}/g, ' ')
+                .trim();
+        })
+        .filter(function(line) { return line.length > 0; })
+        .join('\n')
+        .trim();
+}
+
 function buildPostText(post) {
     var lines = [];
-    lines.push('#URL2AI OSS');
     lines.push(post.display_title || post.title);
     lines.push('');
     if (post.post_text) {
-        var textOnly = post.post_text.replace(/https?:\/\/\S+/g, '').trim();
+        var textOnly = cleanShareText(post.post_text);
         if (textOnly) lines.push(textOnly);
     }
     if (post.analysis) {
         lines.push('');
         lines.push('【AI考察】');
-        var analysisOnly = post.analysis.replace(/https?:\/\/\S+/g, '').trim();
+        var analysisOnly = cleanShareText(post.analysis);
         if (analysisOnly) lines.push(analysisOnly);
     }
     lines.push('');
     lines.push(post.github_url);
     lines.push(getDetailUrl(post));
-    if (post.tags && post.tags.length) {
-        lines.push(post.tags.slice(0, 1).map(function(t){ return '#' + t; }).join(' '));
-    }
     return lines.join('\n');
 }
 
 function buildXText(post) {
-    var lines = [];
-    if (post.post_text) {
-        var textOnly = post.post_text.replace(/https?:\/\/\S+/g, '').trim();
-        if (textOnly) lines.push(textOnly);
-    }
-    lines.push(getDetailUrl(post));
-    return lines.join('\n');
+    return buildPostText(post);
 }
 
 function copyPost(idx) {

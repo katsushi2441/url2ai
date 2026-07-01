@@ -182,7 +182,10 @@ def is_valid_github_repo(path):
 def extract_title_from_readme(readme, fallback):
     generic_titles = {
         'about', 'overview', 'readme', 'introduction',
-        'getting started', 'home', 'docs', 'documentation'
+        'getting started', 'home', 'docs', 'documentation',
+        'special thanks', 'special thanks to', 'thanks', 'thank you',
+        'acknowledgements', 'acknowledgments', 'contributors',
+        'contributing', 'sponsors', 'support', 'table of contents'
     }
     for line in readme.splitlines():
         line = line.strip()
@@ -207,38 +210,34 @@ def extract_title_from_readme(readme, fallback):
             continue
         if line.startswith('#'):
             title = line.lstrip('#').strip()
-            if title.lower() in generic_titles:
+            if title.lower().strip(' \t\r\n:-') in generic_titles:
                 continue
             if title and len(title) > 2:
                 return title
         if not line.startswith('<') and not line.startswith('|'):
-            if line.lower() in generic_titles:
+            cleaned = line.lower().strip(' \t\r\n:-')
+            if cleaned in generic_titles:
                 continue
             return line
     return fallback
 
+def strip_hashtags_from_text(text):
+    clean = []
+    for line in (text or '').splitlines():
+        line = line.strip()
+        if not line:
+            clean.append('')
+            continue
+        if re.fullmatch(r'(?:#[^\s#]+(?:\s+|$))+', line):
+            continue
+        line = re.sub(r'(^|\s)#[^\s#]+', r'\1', line)
+        line = re.sub(r'[ \t]{2,}', ' ', line).strip()
+        if line:
+            clean.append(line)
+    return re.sub(r'\n{3,}', '\n\n', '\n'.join(clean)).strip()
+
 def extract_tags(post_text, github_url):
-    tags = re.findall(r'#(\w+)', post_text)
-    generic = {'OSS', 'AI', 'GitHub', 'opensource', 'OpenSource', 'Github'}
-    tags = [t for t in tags if t not in generic]
-
-    m = re.match(r'https://github\.com/[^/]+/([^/\?#]+)', github_url)
-    if m:
-        repo_tag = re.sub(r'[-_.]', '', m.group(1))
-        if repo_tag and repo_tag.lower() not in [t.lower() for t in tags]:
-            tags.append(repo_tag)
-
-    for fixed in ['AI', 'OSS', 'GitHub']:
-        if fixed not in tags:
-            tags.append(fixed)
-
-    seen = set()
-    result = []
-    for t in tags:
-        if t.lower() not in seen:
-            seen.add(t.lower())
-            result.append(t)
-    return result
+    return []
 
 def fetch_github_search(period='daily', language='', page=1, per_page=50):
     today = datetime.date.today()
@@ -496,7 +495,7 @@ def make_post_text(title, url, readme, snippet):
 ルール：
 - 本文は100文字以内
 - 技術的に正確、具体的な特徴を1〜2点
-- ハッシュタグは付けない（別途自動付与します）
+- ハッシュタグは絶対に付けない
 - 煽り・誇張なし
 - URLは含めない（別途付与します）
 
@@ -690,12 +689,11 @@ def run_job(period='daily', top_n=3):
         log.info('タイトル: %s', title)
 
         analysis          = make_analysis(title, r['url'], readme, r['snippet'])
-        post_text         = make_post_text(title, r['url'], readme, r['snippet'])
+        post_text         = strip_hashtags_from_text(make_post_text(title, r['url'], readme, r['snippet']))
         paragraph_title   = make_paragraph_title(title, r['url'], readme, r['snippet'])
         paragraph_content = make_paragraph_content(title, r['url'], readme, r['snippet'])
-        tags              = extract_tags(post_text, r['url'])
-        tag_str           = ' '.join(['#' + t for t in tags])
-        post_full         = post_text.rstrip() + '\n' + tag_str + '\n' + r['url']
+        tags              = []
+        post_full         = post_text.rstrip() + '\n' + r['url']
 
         res    = save_to_cms(title, r['url'], analysis, post_full, tags)
         status = res.get('status', '')
