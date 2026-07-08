@@ -1294,6 +1294,9 @@ $clear_search_url = 'oss.php' . ($clear_search_params ? '?' . http_build_query($
     <?php endif; ?>
 </div>
 
+<?php /* 最新Kurage動画ウィジェット(AIKnowledgeCMS Loopが毎tick生成・送客計測ref=akc-w付き) */
+@include __DIR__ . '/kurage_videos.html'; ?>
+
 <div id="post-list"></div>
 <div id="load-sentinel" style="height:1px;"></div>
 <div id="load-indicator" style="display:none;text-align:center;padding:16px;font-size:13px;color:#888;">読み込み中...</div>
