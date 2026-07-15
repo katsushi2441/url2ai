@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: llm2api
-  description: OpenAI-compatible LLM API powered by Gemma 4 E4B via Ollama. Send chat completions requests and get fast, cost-effective AI responses.
+  description: OpenAI-compatible LLM API powered by Gemma 4 12B via Ollama. Send chat completions requests and get fast, cost-effective AI responses.
   version: 1.0.0
 servers:
   - url: http://exbridge.ddns.net:8018
