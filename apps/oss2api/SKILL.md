@@ -20,7 +20,7 @@ GitHub: [katsushi2441/url2ai](https://github.com/katsushi2441/url2ai)
 
 | Gateway | Base URL | Payment |
 |---|---|---|
-| Bankr x402 | `https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/oss2api` | USDC on Base ($0.01/req) |
+| Bankr x402 | `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api` | USDC on Base ($0.01/req) |
 | JPYC x402 | `https://exbridge.ddns.net:8017` | JPYC on Polygon (1.5 JPYC/req) |
 
 **Use the Bankr endpoint by default.** Append the skill path to the base URL.

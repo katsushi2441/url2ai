@@ -17,7 +17,7 @@ $BASE_URL = 'https://aiknowledgecms.exbridge.jp';
 $THIS_FILE = 'uimagev.php';
 $SITE_NAME = 'UImageV';
 $ADMIN = 'xb_bittensor';
-$UIMAGE_X402_URL = 'https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/uimage';
+$UIMAGE_X402_URL = 'https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage';
 
 $x_keys_file = __DIR__ . '/x_api_keys.sh';
 $x_keys = array();

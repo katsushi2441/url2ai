@@ -20,7 +20,7 @@ GitHub: [katsushi2441/url2ai](https://github.com/katsushi2441/url2ai)
 
 | Gateway | URL | Payment |
 |---|---|---|
-| Bankr x402 | `https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/llm2api` | USDC on Base ($0.01/req) |
+| Bankr x402 | `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api` | USDC on Base ($0.01/req) |
 | JPYC x402 | `https://exbridge.ddns.net:8020` | JPYC on Polygon (1.5 JPYC/req) |
 
 **Use the Bankr endpoint by default.**
@@ -83,7 +83,7 @@ OpenAI-compatible. Drop-in replacement for `openai.chat.completions.create` call
 ### curl (Bankr x402)
 
 ```bash
-bankr x402 call https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/llm2api/v1/chat/completions \
+bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api/v1/chat/completions \
   -X POST -H 'content-type: application/json' \
   -d '{"messages":[{"role":"user","content":"日本語で自己紹介して"}]}'
 ```
@@ -112,7 +112,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key="<bankr-wallet-api-key>",
-    base_url="https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/llm2api/v1",
+    base_url="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api/v1",
 )
 
 response = client.chat.completions.create(
@@ -132,5 +132,5 @@ print(response.choices[0].message.content)
 ## Schema discovery
 
 ```bash
-bankr x402 schema https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/llm2api
+bankr x402 schema https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api
 ```

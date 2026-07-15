@@ -490,14 +490,14 @@ h1 {
             AI エージェントが直接呼び出せる x402 paid API です。PayAPI Market で公開中の OSS2API / URL2AI と、Bankr x402（USDC on Base）、JPYC x402（JPYC on Polygon）に対応しています。
         </div>
         <div class="system-list" style="margin-bottom:24px;">
-            <div class="system-row"><div class="system-file">OSS2API</div><div class="system-kind">Bankr x402</div><div class="system-desc">OSSをラップした multi-skill ゲートウェイ。0.01 USDC/リクエスト（USDC on Base）。<br>・<code>POST …/oss2api/image/remove-background</code> — 背景除去・置換・ぼかし（imgly AGPL-3.0）<br>・<code>POST …/oss2api/url/analyze</code> — URL 構造抽出（title / headings / links / entities）<br>・<code>POST …/oss2api/url/browse</code> — Playwright スクリーンショット / 動的抽出<br>・<code>POST …/oss2api/url/scan</code> — Shannon-like 3フェーズ セキュリティスキャン（HTTP headers + static HTML + Ollama AI）<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/oss2api</span></div></div>
+            <div class="system-row"><div class="system-file">OSS2API</div><div class="system-kind">Bankr x402</div><div class="system-desc">OSSをラップした multi-skill ゲートウェイ。0.01 USDC/リクエスト（USDC on Base）。<br>・<code>POST …/oss2api/image/remove-background</code> — 背景除去・置換・ぼかし（imgly AGPL-3.0）<br>・<code>POST …/oss2api/url/analyze</code> — URL 構造抽出（title / headings / links / entities）<br>・<code>POST …/oss2api/url/browse</code> — Playwright スクリーンショット / 動的抽出<br>・<code>POST …/oss2api/url/scan</code> — Shannon-like 3フェーズ セキュリティスキャン（HTTP headers + static HTML + Ollama AI）<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api</span></div></div>
             <div class="system-row"><div class="system-file">OSS2API</div><div class="system-kind">JPYC x402</div><div class="system-desc">同スキルを JPYC（日本円ステーブルコイン）で利用可能。1.5 JPYC（≈¥1）/リクエスト（JPYC on Polygon）。EIP-3009 transferWithAuthorization によるオンチェーン決済。<br>・<code>POST https://exbridge.ddns.net:8017/oss2api/image/remove-background</code><br>・<code>POST https://exbridge.ddns.net:8017/oss2api/url/analyze</code><br>・<code>POST https://exbridge.ddns.net:8017/oss2api/url/browse</code><br>・<code>POST https://exbridge.ddns.net:8017/oss2api/url/scan</code></div></div>
-            <div class="system-row"><div class="system-file">LLM2API</div><div class="system-kind">Bankr x402</div><div class="system-desc">OSS2API の LLM 推論基盤として URL2AI プロジェクト内で開発した Gemma 4 12B 推論 API。OpenAI 互換の chat/completions エンドポイントを x402 で提供。0.01 USDC/リクエスト（USDC on Base）。<br>・<code>POST …/llm2api/v1/chat/completions</code> — Gemma 4 12B による日本語対応テキスト生成<br>・入力上限 4,000 文字 / 出力上限 2,048 トークン<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/llm2api</span></div></div>
+            <div class="system-row"><div class="system-file">LLM2API</div><div class="system-kind">Bankr x402</div><div class="system-desc">OSS2API の LLM 推論基盤として URL2AI プロジェクト内で開発した Gemma 4 12B 推論 API。OpenAI 互換の chat/completions エンドポイントを x402 で提供。0.01 USDC/リクエスト（USDC on Base）。<br>・<code>POST …/llm2api/v1/chat/completions</code> — Gemma 4 12B による日本語対応テキスト生成<br>・入力上限 4,000 文字 / 出力上限 2,048 トークン<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api</span></div></div>
             <div class="system-row"><div class="system-file">LLM2API</div><div class="system-kind">JPYC x402</div><div class="system-desc">同 Gemma 4 12B 推論を JPYC（日本円ステーブルコイン）で利用可能。1.5 JPYC（≈¥1）/リクエスト（JPYC on Polygon）。<br>・<code>POST https://exbridge.ddns.net:8020/v1/chat/completions</code></div></div>
             <div class="system-row"><div class="system-file">LLM2API</div><div class="system-kind">RapidAPI</div><div class="system-desc">同 Gemma 4 12B 推論を RapidAPI マーケットプレイスから利用可能。クレジットカード決済対応。$0.01/リクエスト。<br>・<code>POST https://llm2api.p.rapidapi.com/v1/chat/completions</code><br><span style="font-size:12px;color:#6B7280;">https://rapidapi.com/katsushi2441/api/llm2api</span></div></div>
             <div class="system-row"><div class="system-file">OSS2API + LLM2API</div><div class="system-kind">PayAPI / CDP x402</div><div class="system-desc">PayAPI Market 公開済みの Coinbase CDP ファシリテーター対応ゲートウェイ。0.01 USDC/リクエスト（USDC on Base）。<br>・<code>POST https://bittensorman.xyz/background-removal</code> — 背景除去・置換・ぼかし<br>・<code>POST https://bittensorman.xyz/oss2api/image/remove-background</code><br>・<code>POST https://bittensorman.xyz/oss2api/url/analyze</code><br>・<code>POST https://bittensorman.xyz/oss2api/url/browse</code><br>・<code>POST https://bittensorman.xyz/oss2api/url/scan</code><br>・<code>POST https://bittensorman.xyz/llm/v1/chat/completions</code><br><span style="font-size:12px;color:#6B7280;">PayAPI: https://payapi.market/provider/bittensorman<br>Discovery: https://bittensorman.xyz/.well-known/x402.json</span></div></div>
-            <div class="system-row"><div class="system-file">UPDF2MD</div><div class="system-kind">Bankr x402</div><div class="system-desc">PDF URL や企業名・銘柄名から agent-ready Markdown を返す universal Markdown conversion endpoint。0.001 USDC/リクエスト。<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/updf2md</span></div></div>
-            <div class="system-row"><div class="system-file">UImage</div><div class="system-kind">Bankr x402</div><div class="system-desc">プロンプト・テキスト・URL・X投稿から画像を生成する ERNIE Image API。0.01 USDC/リクエスト。<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/uimage</span></div></div>
+            <div class="system-row"><div class="system-file">UPDF2MD</div><div class="system-kind">Bankr x402</div><div class="system-desc">PDF URL や企業名・銘柄名から agent-ready Markdown を返す universal Markdown conversion endpoint。0.001 USDC/リクエスト。<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md</span></div></div>
+            <div class="system-row"><div class="system-file">UImage</div><div class="system-kind">Bankr x402</div><div class="system-desc">プロンプト・テキスト・URL・X投稿から画像を生成する ERNIE Image API。0.01 USDC/リクエスト。<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage</span></div></div>
         </div>
         <div class="card-grid">
             <div class="card">
@@ -509,7 +509,7 @@ h1 {
                     <div class="pill">PAID AGENT · USDC</div>
                     <h4>OSS2API — Bankr x402</h4>
                     <p>背景除去 / URL解析 / Playwright ブラウズ / セキュリティスキャンを提供するマルチスキルゲートウェイ。0.01 USDC/リクエスト。</p>
-                    <a href="https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/oss2api" class="button" target="_blank" rel="noopener">View Bankr Endpoint</a>
+                    <a href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api" class="button" target="_blank" rel="noopener">View Bankr Endpoint</a>
                 </div>
             </div>
 
@@ -535,7 +535,7 @@ h1 {
                     <div class="pill">PAID AGENT · USDC</div>
                     <h4>LLM2API — Bankr x402</h4>
                     <p>URL2AI プロジェクトが OSS2API の LLM 基盤として開発した Gemma 4 12B 推論 API。OpenAI 互換エンドポイントを x402 で提供。0.01 USDC/リクエスト。<br><small style="color:#6B7280;">入力上限 4,000 文字 / 出力上限 2,048 トークン</small></p>
-                    <a href="https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/llm2api" class="button" target="_blank" rel="noopener">View Bankr Endpoint</a>
+                    <a href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api" class="button" target="_blank" rel="noopener">View Bankr Endpoint</a>
                 </div>
             </div>
 
@@ -587,7 +587,7 @@ h1 {
                     <div class="pill">PAID AGENT · USDC</div>
                     <h4>UPDF2MD x402</h4>
                     <p>PDF URL や企業名・銘柄名から agent-ready Markdown を返す universal Markdown conversion endpoint。0.001 USDC/リクエスト。</p>
-                    <a href="https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/updf2md" class="button" target="_blank" rel="noopener">View x402 Endpoint</a>
+                    <a href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md" class="button" target="_blank" rel="noopener">View x402 Endpoint</a>
                 </div>
             </div>
 
@@ -600,7 +600,7 @@ h1 {
                     <div class="pill">PAID AGENT · USDC</div>
                     <h4>UImage x402</h4>
                     <p>プロンプト・テキスト・URL・X投稿から画像を生成する ERNIE Image API。AI エージェントから直接呼び出せます。0.01 USDC/リクエスト。</p>
-                    <a href="https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/uimage" class="button" target="_blank" rel="noopener">View x402 Endpoint</a>
+                    <a href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage" class="button" target="_blank" rel="noopener">View x402 Endpoint</a>
                 </div>
             </div>
         </div>
