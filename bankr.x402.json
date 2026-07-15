@@ -4,13 +4,17 @@
   "services": {
     "llm2api": {
       "price": "0.01",
-      "description": "LLM2API — Gemma 4 E4B inference via Ollama. OpenAI-compatible chat completions API for AI agents and MCP workflows. Send a messages array and receive a response from Google Gemma 4 Edge 4B (gemma4:e4b). Supports streaming and non-streaming modes. Input is capped at 4,000 characters total across all messages; max 20 messages per request; output is capped at 2,048 tokens per request.",
-      "methods": ["POST"],
+      "description": "LLM2API — Gemma 4 12B inference via Ollama, plus crypto pre-trade checks. OpenAI-compatible chat completions API for AI agents and MCP workflows: send a messages array to POST .../llm2api/v1/chat/completions and receive a response from Google Gemma 4 12B (gemma4:12b-it-qat). Input capped at 4,000 characters across max 20 messages; output capped at 2,048 tokens.\n\nSkills:\n  POST .../llm2api/v1/chat/completions\n    OpenAI-compatible chat completion (Gemma 4 12B).\n\n  POST .../llm2api/trade/risk-check\n    Crypto token risk check. Body: {\"symbol\": \"BTC\"}. Scans recent news for hack/exploit/delisting/rug-pull/lawsuit events, classifies them with confidence scores and returns verdict block|ok. Same pipeline that protects the live Kurage FreqAI trading system (kurage.exbridge.jp/kfreqai.php).\n\n  POST .../llm2api/trade/size-check\n    Crypto order size / liquidity check. Body: {\"symbol\": \"DOGE\", \"order_size_usdt\": 5000}. Applies the live system's 0.1%-of-24h-volume liquidity cap and returns max_safe_size_usdt plus a thin-market warning. No LLM, sub-second.",
+      "methods": [
+        "POST"
+      ],
       "upstream_endpoint": "http://exbridge.ddns.net:8019",
       "schema": {
         "input": {
           "type": "object",
-          "required": ["messages"],
+          "required": [
+            "messages"
+          ],
           "properties": {
             "messages": {
               "type": "array",
@@ -18,8 +22,17 @@
               "items": {
                 "type": "object",
                 "properties": {
-                  "role": { "type": "string", "enum": ["system", "user", "assistant"] },
-                  "content": { "type": "string" }
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "system",
+                      "user",
+                      "assistant"
+                    ]
+                  },
+                  "content": {
+                    "type": "string"
+                  }
                 }
               }
             },
@@ -40,9 +53,18 @@
         "output": {
           "type": "object",
           "properties": {
-            "id": { "type": "string", "description": "Completion ID." },
-            "object": { "type": "string", "description": "Always chat.completion." },
-            "model": { "type": "string", "description": "Model used: gemma4:e4b." },
+            "id": {
+              "type": "string",
+              "description": "Completion ID."
+            },
+            "object": {
+              "type": "string",
+              "description": "Always chat.completion."
+            },
+            "model": {
+              "type": "string",
+              "description": "Model used: gemma4:e4b."
+            },
             "choices": {
               "type": "array",
               "description": "Array of completion choices.",
@@ -52,20 +74,32 @@
                   "message": {
                     "type": "object",
                     "properties": {
-                      "role": { "type": "string" },
-                      "content": { "type": "string" }
+                      "role": {
+                        "type": "string"
+                      },
+                      "content": {
+                        "type": "string"
+                      }
                     }
                   },
-                  "finish_reason": { "type": "string" }
+                  "finish_reason": {
+                    "type": "string"
+                  }
                 }
               }
             },
             "usage": {
               "type": "object",
               "properties": {
-                "prompt_tokens": { "type": "integer" },
-                "completion_tokens": { "type": "integer" },
-                "total_tokens": { "type": "integer" }
+                "prompt_tokens": {
+                  "type": "integer"
+                },
+                "completion_tokens": {
+                  "type": "integer"
+                },
+                "total_tokens": {
+                  "type": "integer"
+                }
               }
             }
           }
@@ -103,8 +137,7 @@
               "description": "Optional filename to send to the backend when the URL has no useful PDF name."
             }
           },
-          "required": [
-          ],
+          "required": [],
           "anyOf": [
             {
               "required": [
