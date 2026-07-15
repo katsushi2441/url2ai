@@ -906,19 +906,19 @@ h1 {
                 </ol>
             </div>
             <div class="endpoint-box">Endpoint:
-https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md
+https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/updf2md
 
 Pricing:
 0.001 USDC / request
 The endpoint returns a 402 Payment Required challenge before paid execution.
 
 CLI:
-bankr x402 schema https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md
-bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md \
+bankr x402 schema https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/updf2md
+bankr x402 call https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/updf2md \
   -X POST \
   -H 'content-type: application/json' \
   -d '{"pdf_url":"https://example.com/document.pdf"}'
-bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md \
+bankr x402 call https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/updf2md \
   -X POST \
   -H 'content-type: application/json' \
   -d '{"mode":"ticker","ticker":"NVIDIA"}'</div>

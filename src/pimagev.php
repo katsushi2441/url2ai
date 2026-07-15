@@ -19,7 +19,7 @@ $BASE_URL = AIGM_BASE_URL;
 $THIS_FILE = 'pimagev.php';
 $SITE_NAME = 'PImageV';
 $ADMIN = AIGM_ADMIN;
-$UIMAGE_X402_URL = 'https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage';
+$UIMAGE_X402_URL = 'https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/uimage';
 
 $x_keys_file = __DIR__ . '/x_api_keys.sh';
 $x_keys = array();

@@ -26,10 +26,10 @@ If you see the `URL2AI` token referenced in Bankr or project materials, it repre
 - URL2AI token launch: [bankr.bot/launches/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3](https://bankr.bot/launches/0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3)
 - Token address: `0xDaecDda6AD112f0E1E4097fB735dD01D9C33cBA3`
 - Bankr x402 endpoints (USDC on Base):
-  - `updf2md`: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md` — 0.001 USDC/req
-  - `uimage`: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage` — 0.01 USDC/req
-  - `oss2api`: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api` — 0.01 USDC/req
-  - `llm2api`: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api` — 0.01 USDC/req
+  - `updf2md`: `https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/updf2md` — 0.001 USDC/req
+  - `uimage`: `https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/uimage` — 0.01 USDC/req
+  - `oss2api`: `https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/oss2api` — 0.01 USDC/req
+  - `llm2api`: `https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/llm2api` — 0.01 USDC/req
 - JPYC x402 endpoints (JPYC on Polygon, 1.5 JPYC/req):
   - `https://exbridge.ddns.net:8017/oss2api/image/remove-background`
   - `https://exbridge.ddns.net:8017/oss2api/url/analyze`
@@ -55,47 +55,47 @@ CLI examples:
 
 ```bash
 # updf2md
-bankr x402 schema https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md
+bankr x402 schema https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/updf2md
 
-bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md \
+bankr x402 call https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/updf2md \
   -X POST -H 'content-type: application/json' \
   -d '{"pdf_url":"https://example.com/document.pdf"}'
 
-bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md \
+bankr x402 call https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/updf2md \
   -X POST -H 'content-type: application/json' \
   -d '{"mode":"ticker","ticker":"NVIDIA"}'
 
 # uimage
-bankr x402 schema https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage
+bankr x402 schema https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/uimage
 
-bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage \
+bankr x402 call https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/uimage \
   -X POST -H 'content-type: application/json' \
   -d '{"input_type":"prompt","prompt":"bright pop illustration of a futuristic harbor at sunset","width":1024,"height":1024}'
 
 # oss2api — background removal
-bankr x402 schema https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api
+bankr x402 schema https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/oss2api
 
-bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api/image/remove-background \
+bankr x402 call https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/oss2api/image/remove-background \
   -X POST -H 'content-type: application/json' \
   -d '{"image_url":"https://example.com/photo.jpg","mode":"remove","response":"json"}'
 
 # oss2api — URL analysis
-bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api/url/analyze \
+bankr x402 call https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/oss2api/url/analyze \
   -X POST -H 'content-type: application/json' \
   -d '{"url":"https://example.com","depth":"full"}'
 
 # oss2api — browser screenshot
-bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api/url/browse \
+bankr x402 call https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/oss2api/url/browse \
   -X POST -H 'content-type: application/json' \
   -d '{"url":"https://example.com","action":"screenshot"}'
 
 # oss2api — security scan
-bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api/url/scan \
+bankr x402 call https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/oss2api/url/scan \
   -X POST -H 'content-type: application/json' \
   -d '{"url":"https://example.com"}'
 
 # llm2api — Gemma 4 E4B chat (OpenAI-compatible)
-bankr x402 call https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api/v1/chat/completions \
+bankr x402 call https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/llm2api/v1/chat/completions \
   -X POST -H 'content-type: application/json' \
   -d '{"messages":[{"role":"user","content":"日本語で自己紹介して"}]}'
 ```
@@ -113,14 +113,14 @@ If a workflow needs to remove/replace/blur an image background, extract structur
 If a workflow needs Gemma 4 E4B text generation via an OpenAI-compatible API, call the `llm2api` endpoint (`POST /v1/chat/completions`) with a `messages` array. The endpoint is the LLM backbone of OSS2API, developed within the URL2AI project. Input is capped at 4,000 characters; output at 2,048 tokens per request.
 
 - Skill definitions: `apps/llm-gateway/SKILL.md`
-- Bankr endpoint: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api`
+- Bankr endpoint: `https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/llm2api`
 - JPYC endpoint: `https://exbridge.ddns.net:8020/v1/chat/completions`
 
 - Skill definitions: `apps/oss2api/SKILL.md`
-- Bankr endpoint: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api`
+- Bankr endpoint: `https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/oss2api`
 - JPYC endpoint: `https://exbridge.ddns.net:8017/oss2api`
-- Hosted updf2md endpoint: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md`
-- Hosted image endpoint: `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage`
+- Hosted updf2md endpoint: `https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/updf2md`
+- Hosted image endpoint: `https://x402.bankr.bot/0x121e8a5402af8059ce8af9f7d3b033494deecf28/uimage`
 
 ## Overview
 

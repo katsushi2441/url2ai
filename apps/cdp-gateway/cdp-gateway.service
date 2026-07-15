@@ -8,7 +8,7 @@ ExecStart=/home/kojima/.nvm/versions/node/v20.20.2/bin/node server.js
 Restart=always
 RestartSec=5
 Environment=PORT=8021
-Environment=PAY_TO=0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd
+Environment=PAY_TO=0x121e8a5402af8059ce8af9f7d3b033494deecf28
 Environment=OSS2API_URL=http://127.0.0.1:8015
 Environment=LLM_URL=http://127.0.0.1:8019
 Environment=NETWORK=base
