@@ -38,7 +38,7 @@ function llmRoute() {
     price: PRICE_LLM,
     network: NETWORK,
     config: {
-      description: "OpenAI-compatible chat completions via Gemma 4 E4B (Ollama)",
+      description: "OpenAI-compatible chat completions via Gemma 4 12B (Ollama)",
       discoverable: true,
       inputSchema: {
         bodyType: "json",
@@ -46,6 +46,41 @@ function llmRoute() {
           messages: { type: "array", description: "Array of {role, content} objects" },
           temperature: { type: "number" },
           max_tokens: { type: "integer" },
+        },
+      },
+    },
+  };
+}
+
+function tradeRiskRoute() {
+  return {
+    price: PRICE_LLM,
+    network: NETWORK,
+    config: {
+      description: "Crypto token risk check: scans recent news for hack/exploit/delisting/rug-pull/lawsuit events and returns a block/ok verdict with classified evidence. Same pipeline that protects the live Kurage FreqAI trading system.",
+      discoverable: true,
+      inputSchema: {
+        bodyType: "json",
+        properties: {
+          symbol: { type: "string", description: "Base symbol, e.g. BTC (2-15 alphanumeric chars)" },
+        },
+      },
+    },
+  };
+}
+
+function tradeSizeRoute() {
+  return {
+    price: PRICE_LLM,
+    network: NETWORK,
+    config: {
+      description: "Crypto order size / liquidity check: applies the live Kurage FreqAI 0.1%-of-24h-volume cap and returns max safe size with thin-market warning. Sub-second.",
+      discoverable: true,
+      inputSchema: {
+        bodyType: "json",
+        properties: {
+          symbol: { type: "string", description: "Base symbol, e.g. DOGE" },
+          order_size_usdt: { type: "number", description: "Intended order size in USDT" },
         },
       },
     },
@@ -130,6 +165,10 @@ const routes = {
   "POST /llm2api/v1/chat/completions": llmRoute(),
   "GET /llm/v1/chat/completions": llmRoute(),
   "POST /llm/v1/chat/completions": llmRoute(),
+  "GET /llm2api/trade/risk-check": tradeRiskRoute(),
+  "POST /llm2api/trade/risk-check": tradeRiskRoute(),
+  "GET /llm2api/trade/size-check": tradeSizeRoute(),
+  "POST /llm2api/trade/size-check": tradeSizeRoute(),
 };
 
 const app = express();
@@ -231,7 +270,7 @@ const X402_WELL_KNOWN = {
       "price": PRICE_LLM,
       "network": NETWORK,
       "pay_to": WALLET,
-      "description": "OpenAI-compatible chat completions via Gemma 4 E4B (Ollama)"
+      "description": "OpenAI-compatible chat completions via Gemma 4 12B (Ollama)"
     },
     {
       "path": "/llm2api/v1/chat/completions",
@@ -239,7 +278,7 @@ const X402_WELL_KNOWN = {
       "price": PRICE_LLM,
       "network": NETWORK,
       "pay_to": WALLET,
-      "description": "OpenAI-compatible chat completions via Gemma 4 E4B (Ollama)"
+      "description": "OpenAI-compatible chat completions via Gemma 4 12B (Ollama)"
     },
     {
       "path": "/llm/v1/chat/completions",
@@ -247,7 +286,23 @@ const X402_WELL_KNOWN = {
       "price": PRICE_LLM,
       "network": NETWORK,
       "pay_to": WALLET,
-      "description": "OpenAI-compatible chat completions via Gemma 4 E4B (Ollama)"
+      "description": "OpenAI-compatible chat completions via Gemma 4 12B (Ollama)"
+    },
+    {
+      "path": "/llm2api/trade/risk-check",
+      "method": "POST",
+      "price": PRICE_LLM,
+      "network": NETWORK,
+      "pay_to": WALLET,
+      "description": "Crypto token risk check: recent hack/exploit/delisting/rug-pull/lawsuit scan with block/ok verdict"
+    },
+    {
+      "path": "/llm2api/trade/size-check",
+      "method": "POST",
+      "price": PRICE_LLM,
+      "network": NETWORK,
+      "pay_to": WALLET,
+      "description": "Crypto order size / liquidity check: max safe size from 24h volume (0.1% cap rule)"
     }
   ]
 };
@@ -267,6 +322,8 @@ app.post("/llm2api",                         (req, res) => proxyTo(`${LLM_URL}/v
 app.post("/llm2api/",                        (req, res) => proxyTo(`${LLM_URL}/v1/chat/completions`, req, res));
 app.post("/llm2api/v1/chat/completions",     (req, res) => proxyTo(`${LLM_URL}/v1/chat/completions`, req, res));
 app.post("/llm/v1/chat/completions",         (req, res) => proxyTo(`${LLM_URL}/v1/chat/completions`, req, res));
+app.post("/llm2api/trade/risk-check",        (req, res) => proxyTo(`${LLM_URL}/trade/risk-check`, req, res));
+app.post("/llm2api/trade/size-check",        (req, res) => proxyTo(`${LLM_URL}/trade/size-check`, req, res));
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`CDP gateway → http://0.0.0.0:${PORT}`);
