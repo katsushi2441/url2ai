@@ -10,7 +10,7 @@ RestartSec=5
 Environment=PORT=8018
 Environment=OLLAMA_HOST=192.168.0.14
 Environment=OLLAMA_PORT=11434
-Environment=DEFAULT_MODEL=gemma4:e4b
+Environment=DEFAULT_MODEL=gemma4:12b-it-qat
 Environment=RAPIDAPI_PROXY_SECRET=66d96810-4398-11f1-a2f4-a7c07f71b58c
 
 [Install]
