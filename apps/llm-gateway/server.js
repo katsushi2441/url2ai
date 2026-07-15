@@ -51,10 +51,11 @@ function proxyToOllama(req, res, ollamaPath, bodyStr) {
   };
 
   const proxyReq = http.request(options, (proxyRes) => {
+    // Transfer-Encodingは手で書かない(空値ヘッダは不正なHTTPになり、RapidAPI等の
+    // 厳格なプロキシが502にする。Nodeが自動でchunkedを管理する)
     res.writeHead(proxyRes.statusCode || 200, {
       "Content-Type": proxyRes.headers["content-type"] || "application/json",
       "Cache-Control": "no-store",
-      "Transfer-Encoding": proxyRes.headers["transfer-encoding"] || "",
     });
     proxyRes.pipe(res);
   });
