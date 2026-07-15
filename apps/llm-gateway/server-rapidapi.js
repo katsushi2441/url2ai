@@ -7,6 +7,9 @@ const OLLAMA_HOST        = process.env.OLLAMA_HOST         || "192.168.0.14";
 const OLLAMA_PORT        = Number.parseInt(process.env.OLLAMA_PORT || "11434", 10);
 const DEFAULT_MODEL      = process.env.DEFAULT_MODEL       || "gemma4:e4b";
 const RAPIDAPI_SECRET    = process.env.RAPIDAPI_PROXY_SECRET || "";
+// kfreqai judgment API (trade pre-checks)
+const JUDGMENT_HOST      = process.env.JUDGMENT_HOST || "127.0.0.1";
+const JUDGMENT_PORT      = Number.parseInt(process.env.JUDGMENT_PORT || "18321", 10);
 const MAX_BODY_BYTES     = 64 * 1024;
 const MAX_INPUT_CHARS    = Number.parseInt(process.env.MAX_INPUT_CHARS   || "4000", 10);
 const MAX_MESSAGES       = Number.parseInt(process.env.MAX_MESSAGES      || "20",   10);
@@ -107,6 +110,29 @@ async function handle(req, res) {
     }
 
     return proxyToOllama(req, res, "/v1/chat/completions", JSON.stringify(body));
+  }
+
+  // Trade pre-checks (kfreqai judgment API)
+  if (req.method === "POST" && (path === "/trade/risk-check" || path === "/trade/size-check")) {
+    const bodyStr = await readBody(req);
+    try { JSON.parse(bodyStr); } catch { return json(res, 400, { error: "Invalid JSON" }); }
+    const options = {
+      hostname: JUDGMENT_HOST, port: JUDGMENT_PORT, path: `/v1${path}`, method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(bodyStr) },
+      timeout: 180000,
+    };
+    const proxyReq = http.request(options, (proxyRes) => {
+      res.writeHead(proxyRes.statusCode || 200, {
+        "Content-Type": proxyRes.headers["content-type"] || "application/json",
+        "Cache-Control": "no-store",
+      });
+      proxyRes.pipe(res);
+    });
+    proxyReq.on("timeout", () => proxyReq.destroy(new Error("upstream timeout")));
+    proxyReq.on("error", (err) => json(res, 502, { error: `judgment API unavailable: ${err.message}` }));
+    proxyReq.write(bodyStr);
+    proxyReq.end();
+    return;
   }
 
   return json(res, 404, { error: "Not found", hint: "POST /v1/chat/completions" });

@@ -6,6 +6,9 @@ const PORT          = Number.parseInt(process.env.PORT || "8019", 10);
 const OLLAMA_HOST   = process.env.OLLAMA_HOST  || "192.168.0.14";
 const OLLAMA_PORT   = Number.parseInt(process.env.OLLAMA_PORT || "11434", 10);
 const DEFAULT_MODEL = process.env.DEFAULT_MODEL || "gemma4:e4b";
+// kfreqai judgment API (trade pre-checks: risk-check / size-check)
+const JUDGMENT_HOST = process.env.JUDGMENT_HOST || "127.0.0.1";
+const JUDGMENT_PORT = Number.parseInt(process.env.JUDGMENT_PORT || "18321", 10);
 const MAX_BODY_BYTES   = 64 * 1024;                                      // 64KB body limit
 const MAX_INPUT_CHARS  = Number.parseInt(process.env.MAX_INPUT_CHARS  || "4000",  10); // total message chars
 const MAX_MESSAGES     = Number.parseInt(process.env.MAX_MESSAGES     || "20",    10); // message count
@@ -64,6 +67,34 @@ function proxyToOllama(req, res, ollamaPath, bodyStr) {
   proxyReq.end();
 }
 
+function proxyToJudgment(res, path, bodyStr) {
+  const options = {
+    hostname: JUDGMENT_HOST,
+    port: JUDGMENT_PORT,
+    path,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Content-Length": Buffer.byteLength(bodyStr),
+    },
+    // risk-checkはニュース収集+LLM分類で数十秒かかることがある
+    timeout: 180000,
+  };
+  const proxyReq = http.request(options, (proxyRes) => {
+    res.writeHead(proxyRes.statusCode || 200, {
+      "Content-Type": proxyRes.headers["content-type"] || "application/json",
+      "Cache-Control": "no-store",
+    });
+    proxyRes.pipe(res);
+  });
+  proxyReq.on("timeout", () => proxyReq.destroy(new Error("upstream timeout")));
+  proxyReq.on("error", (err) => {
+    json(res, 502, { error: `judgment API unavailable: ${err.message}` });
+  });
+  proxyReq.write(bodyStr);
+  proxyReq.end();
+}
+
 async function handle(req, res) {
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
   const skill = normalizeSkill(url.pathname);
@@ -106,6 +137,14 @@ async function handle(req, res) {
     }
 
     return proxyToOllama(req, res, "/v1/chat/completions", JSON.stringify(body));
+  }
+
+  // Trade pre-checks (kfreqai judgment API)
+  // risk-check: 銘柄の直近ネガティブイベント検査 / size-check: 流動性・注文サイズ診断
+  if (req.method === "POST" && (skill === "/trade/risk-check" || skill === "/trade/size-check")) {
+    const bodyStr = await readBody(req);
+    try { JSON.parse(bodyStr); } catch { return json(res, 400, { error: "Invalid JSON" }); }
+    return proxyToJudgment(res, `/v1${skill}`, bodyStr);
   }
 
   // Completions (legacy)

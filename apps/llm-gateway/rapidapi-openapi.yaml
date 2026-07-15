@@ -6,6 +6,48 @@ info:
 servers:
   - url: http://exbridge.ddns.net:8018
 paths:
+  /trade/risk-check:
+    post:
+      summary: Crypto Token Risk Check
+      description: Scans recent news for hack / exploit / delisting / rug-pull / lawsuit events for a crypto symbol and returns a block/ok verdict with classified evidence. Powered by the same pipeline that protects the live Kurage FreqAI trading system.
+      operationId: tradeRiskCheck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [symbol]
+              properties:
+                symbol:
+                  type: string
+                  example: BTC
+                  description: Base symbol (2-15 alphanumeric chars)
+      responses:
+        '200':
+          description: Risk verdict with classified news events
+  /trade/size-check:
+    post:
+      summary: Crypto Order Size / Liquidity Check
+      description: Checks an order size against 24h traded volume (0.1% liquidity cap rule from the live Kurage FreqAI system) and returns the max safe size plus a thin-market warning. No LLM, sub-second.
+      operationId: tradeSizeCheck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [symbol, order_size_usdt]
+              properties:
+                symbol:
+                  type: string
+                  example: DOGE
+                order_size_usdt:
+                  type: number
+                  example: 5000
+      responses:
+        '200':
+          description: Liquidity verdict with max safe size
   /v1/chat/completions:
     post:
       summary: Chat Completions
