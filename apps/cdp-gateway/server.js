@@ -8,7 +8,7 @@ const OSS2API    = process.env.OSS2API_URL || "http://127.0.0.1:8015";
 const LLM_URL    = process.env.LLM_URL    || "http://127.0.0.1:8019";
 const NETWORK    = process.env.NETWORK    || "base";
 const PRICE_OSS  = process.env.PRICE_OSS  || "$0.01";
-const PRICE_LLM  = process.env.PRICE_LLM  || "$0.01";
+const PRICE_LLM  = process.env.PRICE_LLM  || "$0.05";
 const BACKGROUND_REMOVAL_SCHEMA = {
   bodyType: "json",
   properties: {

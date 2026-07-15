@@ -3,7 +3,7 @@
   "currency": "USDC",
   "services": {
     "llm2api": {
-      "price": "0.01",
+      "price": "0.05",
       "description": "LLM2API — Gemma 4 12B inference via Ollama, plus crypto pre-trade checks. OpenAI-compatible chat completions API for AI agents and MCP workflows: send a messages array to POST .../llm2api/v1/chat/completions and receive a response from Google Gemma 4 12B (gemma4:12b-it-qat). Input capped at 4,000 characters across max 20 messages; output capped at 2,048 tokens.\n\nSkills:\n  POST .../llm2api/v1/chat/completions\n    OpenAI-compatible chat completion (Gemma 4 12B).\n\n  POST .../llm2api/trade/risk-check\n    Crypto token risk check. Body: {\"symbol\": \"BTC\"}. Scans recent news for hack/exploit/delisting/rug-pull/lawsuit events, classifies them with confidence scores and returns verdict block|ok. Same pipeline that protects the live Kurage FreqAI trading system (kurage.exbridge.jp/kfreqai.php).\n\n  POST .../llm2api/trade/size-check\n    Crypto order size / liquidity check. Body: {\"symbol\": \"DOGE\", \"order_size_usdt\": 5000}. Applies the live system's 0.1%-of-24h-volume liquidity cap and returns max_safe_size_usdt plus a thin-market warning. No LLM, sub-second.",
       "methods": [
         "POST"

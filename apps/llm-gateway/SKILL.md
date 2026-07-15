@@ -20,8 +20,8 @@ GitHub: [katsushi2441/url2ai](https://github.com/katsushi2441/url2ai)
 
 | Gateway | URL | Payment |
 |---|---|---|
-| Bankr x402 | `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api` | USDC on Base ($0.01/req) |
-| JPYC x402 | `https://exbridge.ddns.net:8020` | JPYC on Polygon (1.5 JPYC/req) |
+| Bankr x402 | `https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api` | USDC on Base ($0.05/req) |
+| JPYC x402 | `https://exbridge.ddns.net:8020` | JPYC on Polygon (7.5 JPYC/req) |
 
 **Use the Bankr endpoint by default.**
 
