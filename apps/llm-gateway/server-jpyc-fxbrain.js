@@ -68,6 +68,17 @@ const SKILLS = {
   "/fxbrain/fingpt/report": "/v1/vendor/fingpt/report",
   "/fxbrain/hedge/news-sentiment": "/v1/vendor/ai-hedge-fund/news-sentiment",
   "/fxbrain/hedge/portfolio": "/v1/vendor/ai-hedge-fund/portfolio",
+  "/fxbrain/finrobot/forecast": "/v1/vendor/finrobot/forecast",
+  "/fxbrain/finrobot/report/income_stmt": "/v1/vendor/finrobot/report/income_stmt",
+  "/fxbrain/finrobot/report/balance_sheet": "/v1/vendor/finrobot/report/balance_sheet",
+  "/fxbrain/finrobot/report/cash_flow": "/v1/vendor/finrobot/report/cash_flow",
+  "/fxbrain/finrobot/report/segment_stmt": "/v1/vendor/finrobot/report/segment_stmt",
+  "/fxbrain/finrobot/report/risk_assessment": "/v1/vendor/finrobot/report/risk_assessment",
+  "/fxbrain/finrobot/report/competitors": "/v1/vendor/finrobot/report/competitors",
+  "/fxbrain/finrobot/report/business_highlights": "/v1/vendor/finrobot/report/business_highlights",
+  "/fxbrain/finrobot/report/company_description": "/v1/vendor/finrobot/report/company_description",
+  "/fxbrain/finmem/decide": "/v1/vendor/finmem/decide",
+  "/fxbrain/finmem/reflect": "/v1/vendor/finmem/reflect",
   "/fxbrain/tradingagents/run": "/v1/vendor/tradingagents/run",
 };
 

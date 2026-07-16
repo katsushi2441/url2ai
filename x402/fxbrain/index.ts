@@ -31,6 +31,17 @@ const SKILLS: Record<string, string> = {
   "/fingpt/report": "/v1/vendor/fingpt/report",
   "/hedge/news-sentiment": "/v1/vendor/ai-hedge-fund/news-sentiment",
   "/hedge/portfolio": "/v1/vendor/ai-hedge-fund/portfolio",
+  "/finrobot/forecast": "/v1/vendor/finrobot/forecast",
+  "/finrobot/report/income_stmt": "/v1/vendor/finrobot/report/income_stmt",
+  "/finrobot/report/balance_sheet": "/v1/vendor/finrobot/report/balance_sheet",
+  "/finrobot/report/cash_flow": "/v1/vendor/finrobot/report/cash_flow",
+  "/finrobot/report/segment_stmt": "/v1/vendor/finrobot/report/segment_stmt",
+  "/finrobot/report/risk_assessment": "/v1/vendor/finrobot/report/risk_assessment",
+  "/finrobot/report/competitors": "/v1/vendor/finrobot/report/competitors",
+  "/finrobot/report/business_highlights": "/v1/vendor/finrobot/report/business_highlights",
+  "/finrobot/report/company_description": "/v1/vendor/finrobot/report/company_description",
+  "/finmem/decide": "/v1/vendor/finmem/decide",
+  "/finmem/reflect": "/v1/vendor/finmem/reflect",
 };
 
 function json(data: unknown, init?: ResponseInit): Response {
