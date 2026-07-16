@@ -137,6 +137,13 @@ async function handle(req, res) {
       body.max_tokens = MAX_OUTPUT_TOKENS;
     }
 
+    // gemma4は思考型モデル: 既定で思考を無効化しないと、低いmax_tokensで
+    // 思考トークンがcontentを食い潰し空応答になる(PayAPI検証で実証)。
+    // 呼び出し側が明示的にreasoning_effortを渡した場合のみ尊重する。
+    if (body.reasoning_effort === undefined) {
+      body.reasoning_effort = "none";
+    }
+
     return proxyToOllama(req, res, "/v1/chat/completions", JSON.stringify(body));
   }
 
