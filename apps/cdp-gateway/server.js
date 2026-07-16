@@ -1,4 +1,5 @@
 import express from "express";
+import nodeHttp from "node:http";
 import { paymentMiddleware } from "x402-express";
 import { createFacilitatorConfig } from "@coinbase/x402";
 
@@ -9,6 +10,10 @@ const LLM_URL    = process.env.LLM_URL    || "http://127.0.0.1:8019";
 const NETWORK    = process.env.NETWORK    || "base";
 const PRICE_OSS  = process.env.PRICE_OSS  || "$0.01";
 const PRICE_LLM  = process.env.PRICE_LLM  || "$0.05";
+const FXBRAIN_URL   = process.env.FXBRAIN_URL   || "http://127.0.0.1:18326";
+const FXBRAIN_TOKEN = process.env.FXBRAIN_TOKEN || "";
+// TradingAgentsフルグラフは1回5分超(実測5.5分)のマルチエージェント討論なので高価格帯
+const PRICE_FXGRAPH = process.env.PRICE_FXGRAPH || "$0.50";
 const BACKGROUND_REMOVAL_SCHEMA = {
   bodyType: "json",
   properties: {
@@ -84,6 +89,77 @@ function tradeSizeRoute() {
         },
       },
     },
+  };
+}
+
+// Kurage FX Brain (kfxbrain :18326) — FX judgment APIs backed by Gemma 4 12B.
+// Vendored OSS intelligence: TradingAgents (Apache-2.0), FinGPT (MIT), ai-hedge-fund (MIT).
+const FXBRAIN_EVIDENCE_SCHEMA = {
+  bodyType: "json",
+  properties: {
+    pair: { type: "string", description: "FX pair like USD_JPY or EUR_USD (required)" },
+    timeframe: { type: "string", description: "e.g. M15, H1, D (default H1)" },
+    technicals: { type: "object", description: "Indicator values, ranges, closes" },
+    macro: { type: "object", description: "Rates, CPI, policy expectations" },
+    news: { type: "array", description: "Headlines (max 40)" },
+    position: { type: "object", description: "Open position context" },
+    history: { type: "array", description: "Recent trades (max 30)" },
+    question: { type: "string", description: "Optional focused question" },
+  },
+};
+const FXBRAIN_GRAPH_SCHEMA = {
+  bodyType: "json",
+  properties: {
+    pair: { type: "string", description: "FX pair like USD_JPY (required)" },
+    trade_date: { type: "string", description: "YYYY-MM-DD (default today)" },
+    debate_rounds: { type: "integer", description: "1-3 (default 1)" },
+    risk_rounds: { type: "integer", description: "1-3 (default 1)" },
+    output_language: { type: "string", description: "Report language (default Japanese)" },
+  },
+};
+
+// gateway suffix -> [upstream path, price, description, schema]
+const FXBRAIN_ENDPOINTS = {
+  "analyze/technical": ["/v1/analyze/technical", PRICE_LLM,
+    "FX technical analysis (trend, levels, momentum) as structured JSON with evidence and invalidation. Gemma 4 12B."],
+  "analyze/macro": ["/v1/analyze/macro", PRICE_LLM,
+    "FX macro analysis: rate differentials, growth, policy divergence as structured JSON. Gemma 4 12B."],
+  "analyze/sentiment": ["/v1/analyze/sentiment", PRICE_LLM,
+    "FX news and market sentiment analysis as structured JSON. Gemma 4 12B."],
+  "analyze/full": ["/v1/analyze/full", PRICE_LLM,
+    "All FX perspectives (technical, macro, sentiment, decision) in one structured response. Gemma 4 12B."],
+  "debate/bull-bear": ["/v1/debate/bull-bear", PRICE_LLM,
+    "Bull vs bear argument mapping for an FX pair as structured JSON. Gemma 4 12B."],
+  "decide/trade": ["/v1/decide/trade", PRICE_LLM,
+    "BUY / SELL / HOLD judgment for an FX pair from supplied evidence. Judgment only — never executes orders."],
+  "assess/risk": ["/v1/assess/risk", PRICE_LLM,
+    "Risk gate for a proposed FX trade: approve / reduce / reject with reasons. Judgment only."],
+  "decide/portfolio": ["/v1/decide/portfolio", PRICE_LLM,
+    "Manage open FX positions: hold / close / adjust judgments as structured JSON. Judgment only."],
+  "review/trade": ["/v1/review/trade", PRICE_LLM,
+    "Post-trade review: category, verdict, lesson from a closed FX trade. Gemma 4 12B."],
+  "fingpt/sentiment": ["/v1/vendor/fingpt/sentiment", PRICE_LLM,
+    "FinGPT (MIT) financial sentiment classification task executed on Gemma 4 12B."],
+  "fingpt/headline": ["/v1/vendor/fingpt/headline", PRICE_LLM,
+    "FinGPT (MIT) headline classification task executed on Gemma 4 12B."],
+  "fingpt/forecast": ["/v1/vendor/fingpt/forecast", PRICE_LLM,
+    "FinGPT (MIT) Forecaster task: evidence-grounded FX outlook on Gemma 4 12B."],
+  "fingpt/report": ["/v1/vendor/fingpt/report", PRICE_LLM,
+    "FinGPT (MIT) financial report analysis task executed on Gemma 4 12B."],
+  "hedge/news-sentiment": ["/v1/vendor/ai-hedge-fund/news-sentiment", PRICE_LLM,
+    "ai-hedge-fund (MIT) news sentiment agent: per-headline classification plus aggregate signal for an FX pair."],
+  "hedge/portfolio": ["/v1/vendor/ai-hedge-fund/portfolio", PRICE_LLM,
+    "ai-hedge-fund (MIT) portfolio manager synthesis over supplied analyst signals. Judgment only."],
+  "tradingagents/run": ["/v1/vendor/tradingagents/run", PRICE_FXGRAPH,
+    "TradingAgents (Apache-2.0) full multi-agent graph on real FX market data: analyst reports, bull/bear debate, trader plan, risk debate, final decision. Runs minutes (~5-6 min measured), not seconds. Gemma 4 12B.",
+    FXBRAIN_GRAPH_SCHEMA],
+};
+
+function fxbrainRoute(price, description, schema) {
+  return {
+    price,
+    network: NETWORK,
+    config: { description, discoverable: true, inputSchema: schema || FXBRAIN_EVIDENCE_SCHEMA },
   };
 }
 
@@ -170,6 +246,10 @@ const routes = {
   "GET /llm2api/trade/size-check": tradeSizeRoute(),
   "POST /llm2api/trade/size-check": tradeSizeRoute(),
 };
+
+for (const [suffix, [, price, description, schema]] of Object.entries(FXBRAIN_ENDPOINTS)) {
+  routes[`POST /fxbrain/${suffix}`] = fxbrainRoute(price, description, schema);
+}
 
 const app = express();
 app.set("trust proxy", true);
@@ -292,6 +372,17 @@ const X402_WELL_KNOWN = {
   ]
 };
 
+for (const [suffix, [, price, description]] of Object.entries(FXBRAIN_ENDPOINTS)) {
+  X402_WELL_KNOWN.endpoints.push({
+    path: `/fxbrain/${suffix}`,
+    method: "POST",
+    price,
+    network: NETWORK,
+    pay_to: WALLET,
+    description,
+  });
+}
+
 app.get("/.well-known/x402.json", (_req, res) => {
   res.json(X402_WELL_KNOWN);
 });
@@ -309,6 +400,40 @@ app.post("/llm2api/v1/chat/completions",     (req, res) => proxyTo(`${LLM_URL}/v
 app.post("/llm/v1/chat/completions",         (req, res) => proxyTo(`${LLM_URL}/v1/chat/completions`, req, res));
 app.post("/llm2api/trade/risk-check",        (req, res) => proxyTo(`${LLM_URL}/trade/risk-check`, req, res));
 app.post("/llm2api/trade/size-check",        (req, res) => proxyTo(`${LLM_URL}/trade/size-check`, req, res));
+
+// kfxbrain proxy: node:httpで長タイムアウト(TradingAgentsフルグラフは実測5.5分、
+// fetch/undiciの既定headersTimeout 300秒では途中で切れる)。認証トークンを注入。
+function proxyToFxbrain(upstreamPath, req, res) {
+  const body = JSON.stringify(req.body);
+  const url = new URL(`${FXBRAIN_URL}${upstreamPath}`);
+  const options = {
+    hostname: url.hostname,
+    port: url.port,
+    path: url.pathname,
+    method: "POST",
+    timeout: 30 * 60 * 1000,
+    headers: {
+      "Content-Type": "application/json",
+      "Content-Length": Buffer.byteLength(body),
+      "X-KFXBRAIN-Token": FXBRAIN_TOKEN,
+    },
+  };
+  const proxyReq = nodeHttp.request(options, (upRes) => {
+    res.status(upRes.statusCode || 502);
+    res.set("Content-Type", upRes.headers["content-type"] || "application/json");
+    upRes.pipe(res);
+  });
+  proxyReq.on("timeout", () => proxyReq.destroy(new Error("fxbrain upstream timeout")));
+  proxyReq.on("error", (err) => {
+    if (!res.headersSent) res.status(502).json({ error: `fxbrain unavailable: ${err.message}` });
+  });
+  proxyReq.write(body);
+  proxyReq.end();
+}
+
+for (const [suffix, [upstreamPath]] of Object.entries(FXBRAIN_ENDPOINTS)) {
+  app.post(`/fxbrain/${suffix}`, (req, res) => proxyToFxbrain(upstreamPath, req, res));
+}
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`CDP gateway → http://0.0.0.0:${PORT}`);
