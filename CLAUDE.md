@@ -59,11 +59,13 @@ cd src && python3 ftpphp.py
 | 8015 | **oss2api** | Node.js | OSS2API Bankr x402 endpoint。`apps/oss2api/`。systemd: `oss2api.service` |
 | 8016 | **polymarket** | Python (FastAPI) | Polymarket連携。`apps/polymarket/` |
 | 8017 | **oss2api-jpyc** | Node.js | OSS2API JPYC x402 gateway (proxies to 8015)。systemd: `oss2api-jpyc.service` |
-| 8018 | (未使用) | — | — |
+| 8018 | **(使用中・詳細不明)** | ? | root所有の既存サービスがLISTEN(HTTP/JSONで403応答)。2026-07-17にfxbrain-jpycを置こうとして衝突。**空きではないので使うな** |
 | 8019 | **llm-gateway** | Node.js | LLM2API Bankr x402 endpoint (Gemma 4 E4B via Ollama)。systemd: `llm-gateway.service` |
 | 8020 | **llm-gateway-jpyc** | Node.js | LLM2API JPYC x402 gateway (proxies to 8019)。systemd: `llm-gateway-jpyc.service` |
 | 8021 | **cdp-gateway** | Node.js | OSS2API + LLM2API 統合 CDP x402 gateway。Coinbase Bazaar discovery対応（discoverable:true）。systemd: `cdp-gateway.service` |
 | 8022 | **uslideblog** | Node.js | USlideBlog renderer。Marp / PptxGenJS によるMarkdown・HTML・PPTX変換。systemd: `uslideblog.service` |
+
+※ 8000番台は満杯。以降の新規サービスはワークスペース規約どおり**18300番台の空き最若番号**を使う（例: fxbrain-jpyc=18327、`apps/llm-gateway/server-jpyc-fxbrain.js`、systemd: `fxbrain-jpyc.service`）。
 
 ### api_gateway (port 8010) の再起動方法
 
