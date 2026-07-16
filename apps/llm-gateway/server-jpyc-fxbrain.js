@@ -6,7 +6,7 @@
  * kfxbrain(:18326)へトークンを注入してプロキシする。
  *
  * Ports:
- *   This server : PORT_JPYC (default 8018)
+ *   This server : PORT_JPYC_FXBRAIN (default 18327; 8018は既存サービスが使用中)
  *   Upstream    : kfxbrain FXBRAIN_URL (default http://127.0.0.1:18326)
  *
  * 価格: 通常スキル JPYC_AMOUNT (7.5 JPYC ≒ $0.05)
@@ -28,7 +28,7 @@ import { privateKeyToAccount } from "viem/accounts";
 
 const HOST          = process.env.HOST           || "0.0.0.0";
 // 専用のenv名にする: 共有する.env.jpycのPORT_JPYC(8020=llm2api用)に上書きされないため
-const PORT          = Number.parseInt(process.env.PORT_JPYC_FXBRAIN || "8018", 10);
+const PORT          = Number.parseInt(process.env.PORT_JPYC_FXBRAIN || "18327", 10);
 const TLS_CERT      = process.env.TLS_CERT || "/etc/letsencrypt/live/exbridge.ddns.net/fullchain.pem";
 const TLS_KEY       = process.env.TLS_KEY  || "/etc/letsencrypt/live/exbridge.ddns.net/privkey.pem";
 const FXBRAIN_URL   = process.env.FXBRAIN_URL || "http://127.0.0.1:18326";
