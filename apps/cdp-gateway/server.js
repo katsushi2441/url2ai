@@ -211,19 +211,12 @@ app.get(["/health", "/healthz"], (_req, res) => {
 const WALLET = PAY_TO;
 const X402_WELL_KNOWN = {
   "version": "1",
+  "x402Version": 1,
   "pay_to": WALLET,
   "wallet": WALLET,
   "treasury": WALLET,
   "network": NETWORK,
   "endpoints": [
-    {
-      "path": "/background-removal",
-      "method": "POST",
-      "price": PRICE_OSS,
-      "network": NETWORK,
-      "pay_to": WALLET,
-      "description": "Remove or replace image background (imgly/background-removal-js AGPL-3.0)"
-    },
     {
       "path": "/oss2api",
       "method": "POST",
@@ -274,14 +267,6 @@ const X402_WELL_KNOWN = {
     },
     {
       "path": "/llm2api/v1/chat/completions",
-      "method": "POST",
-      "price": PRICE_LLM,
-      "network": NETWORK,
-      "pay_to": WALLET,
-      "description": "OpenAI-compatible chat completions via Gemma 4 12B (Ollama)"
-    },
-    {
-      "path": "/llm/v1/chat/completions",
       "method": "POST",
       "price": PRICE_LLM,
       "network": NETWORK,
