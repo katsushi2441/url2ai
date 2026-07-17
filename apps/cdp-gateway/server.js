@@ -189,7 +189,7 @@ const FXBRAIN_ENDPOINTS = {
   ].map((p) => [`signal/pair/${p}`, [`/v1/signal/pair/${p}`, PRICE_LLM,
     `Single evidence-bounded FX signal for ${p}: watch_buy_base/watch_sell_base/wait/avoid with invalidation and event risks. Judgment only, never places orders.`]])),
   "tradingagents/run": ["/v1/vendor/tradingagents/run", PRICE_FXGRAPH,
-    "TradingAgents (Apache-2.0) full multi-agent graph on real FX market data: analyst reports, bull/bear debate, trader plan, risk debate, final decision. Runs minutes (~5-6 min measured), not seconds. Gemma 4 12B.",
+    "TradingAgents (Apache-2.0) full multi-agent graph on real FX market data: analyst reports, bull/bear debate, trader plan, risk debate, final decision. Runs ~2.5 min (fast multi-agent profile), not seconds; over the gateway deadline it fails cleanly with no charge. Gemma 4 12B.",
     FXBRAIN_GRAPH_SCHEMA, 600],
 };
 
@@ -443,6 +443,12 @@ app.post("/llm2api/trade/size-check",        (req, res) => proxyTo(`${LLM_URL}/t
 
 // kfxbrain proxy: node:httpで長タイムアウト(TradingAgentsフルグラフは実測5.5分、
 // fetch/undiciの既定headersTimeout 300秒では途中で切れる)。認証トークンを注入。
+// エッジ(bittensorman.xyz/nginx)のproxy_read_timeoutが約180秒。ここより手前で
+// 打ち切って >=400 を返せば、x402-expressのpaymentMiddlewareは settle をスキップする
+// (res.statusCode >= 400 で決済しない)。これで「処理が長引いた時に課金だけされて
+// 納品されない(charge-without-delivery)」を構造的に防ぐ。PayApi/Chet 2026-07-18指摘。
+const FXBRAIN_DEADLINE_MS = Number(process.env.FXBRAIN_DEADLINE_MS || 170000);
+
 function proxyToFxbrain(upstreamPath, req, res) {
   const body = JSON.stringify(req.body);
   const url = new URL(`${FXBRAIN_URL}${upstreamPath}`);
@@ -451,21 +457,36 @@ function proxyToFxbrain(upstreamPath, req, res) {
     port: url.port,
     path: url.pathname,
     method: "POST",
-    timeout: 30 * 60 * 1000,
+    timeout: FXBRAIN_DEADLINE_MS + 10000,
     headers: {
       "Content-Type": "application/json",
       "Content-Length": Buffer.byteLength(body),
       "X-KFXBRAIN-Token": FXBRAIN_TOKEN,
     },
   };
+  let settled = false;
+  const once = (fn) => { if (!settled) { settled = true; clearTimeout(deadline); fn(); } };
   const proxyReq = nodeHttp.request(options, (upRes) => {
-    res.status(upRes.statusCode || 502);
-    res.set("Content-Type", upRes.headers["content-type"] || "application/json");
-    upRes.pipe(res);
+    once(() => {
+      res.status(upRes.statusCode || 502);
+      res.set("Content-Type", upRes.headers["content-type"] || "application/json");
+      upRes.pipe(res);
+    });
   });
+  // ハード締切: 超えたら上流を切って504を返す → x402は課金しない(no charge)。
+  const deadline = setTimeout(() => {
+    once(() => {
+      proxyReq.destroy(new Error("fxbrain deadline"));
+      if (!res.headersSent) {
+        res.status(504).json({
+          error: "workflow exceeded the gateway deadline; no payment was captured. Please retry.",
+        });
+      }
+    });
+  }, FXBRAIN_DEADLINE_MS);
   proxyReq.on("timeout", () => proxyReq.destroy(new Error("fxbrain upstream timeout")));
   proxyReq.on("error", (err) => {
-    if (!res.headersSent) res.status(502).json({ error: `fxbrain unavailable: ${err.message}` });
+    once(() => { if (!res.headersSent) res.status(502).json({ error: `fxbrain unavailable: ${err.message}` }); });
   });
   proxyReq.write(body);
   proxyReq.end();
