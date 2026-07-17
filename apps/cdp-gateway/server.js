@@ -118,6 +118,17 @@ const FXBRAIN_GRAPH_SCHEMA = {
   },
 };
 
+const FXBRAIN_MARKET_SCHEMA = {
+  bodyType: "json",
+  properties: {
+    pairs: { type: "array", description: "1-40 pair evidence objects: {pair, market, technicals, macro, flows, positioning, news}" },
+    timeframe: { type: "string", description: "e.g. H1 (default)" },
+    global_context: { type: "object", description: "Risk sentiment, calendar, cross-market context" },
+    account_context: { type: "object", description: "Leverage, equity, margin (for margin-risk)" },
+    question: { type: "string", description: "Optional focused question" },
+  },
+};
+
 // gateway suffix -> [upstream path, price, description, schema]
 const FXBRAIN_ENDPOINTS = {
   "analyze/technical": ["/v1/analyze/technical", PRICE_LLM,
@@ -161,6 +172,22 @@ const FXBRAIN_ENDPOINTS = {
     "FinMem (MIT) layered-memory trading decision: pass short/mid/long/reflection memories via prior_reports{}; character switches risk-seeking/averse by cumulative return."],
   "finmem/reflect": ["/v1/vendor/finmem/reflect", PRICE_LLM,
     "FinMem (MIT) reflection loop: extract the lesson from a trade outcome plus supporting memories, ready to store as a reflection memory."],
+  "market/opportunity-ranking": ["/v1/market/opportunity-ranking", PRICE_LLM,
+    "Multi-pair FX opportunity ranking (up to 40 pairs in one call): risk-adjusted scores, duplicated-currency exposure conflicts, event risk. Body: {pairs:[{pair, technicals, news, flows, positioning}...], global_context}. Gemma 4 12B.",
+    FXBRAIN_MARKET_SCHEMA],
+  "market/flow-ranking": ["/v1/market/flow-ranking", PRICE_LLM,
+    "Multi-pair currency-flow strength ranking from supplied COT/positioning, rate differential, carry and liquidity evidence. Same multi-pair body. Gemma 4 12B.",
+    FXBRAIN_MARKET_SCHEMA],
+  "market/anomaly": ["/v1/market/anomaly", PRICE_LLM,
+    "Cross-pair FX anomaly detection: price/spread/volatility/volume/rates/positioning/correlation/intervention/liquidity, severity low-critical. Ordinary volatility is not flagged. Same multi-pair body.",
+    FXBRAIN_MARKET_SCHEMA],
+  "market/margin-risk": ["/v1/market/margin-risk", PRICE_LLM,
+    "Margin-call and stop-out risk ranking per pair plus systemic risk, from supplied leverage/equity/margin thresholds. Never assumes broker rules. Same multi-pair body.",
+    FXBRAIN_MARKET_SCHEMA],
+  ...Object.fromEntries([
+    "USD_JPY", "EUR_JPY", "GBP_JPY", "EUR_USD", "GBP_USD", "AUD_USD",
+  ].map((p) => [`signal/pair/${p}`, [`/v1/signal/pair/${p}`, PRICE_LLM,
+    `Single evidence-bounded FX signal for ${p}: watch_buy_base/watch_sell_base/wait/avoid with invalidation and event risks. Judgment only, never places orders.`]])),
   "tradingagents/run": ["/v1/vendor/tradingagents/run", PRICE_FXGRAPH,
     "TradingAgents (Apache-2.0) full multi-agent graph on real FX market data: analyst reports, bull/bear debate, trader plan, risk debate, final decision. Runs minutes (~5-6 min measured), not seconds. Gemma 4 12B.",
     FXBRAIN_GRAPH_SCHEMA],

@@ -42,6 +42,10 @@ const SKILLS: Record<string, string> = {
   "/finrobot/report/company_description": "/v1/vendor/finrobot/report/company_description",
   "/finmem/decide": "/v1/vendor/finmem/decide",
   "/finmem/reflect": "/v1/vendor/finmem/reflect",
+  "/market/opportunity-ranking": "/v1/market/opportunity-ranking",
+  "/market/flow-ranking": "/v1/market/flow-ranking",
+  "/market/anomaly": "/v1/market/anomaly",
+  "/market/margin-risk": "/v1/market/margin-risk",
 };
 
 function json(data: unknown, init?: ResponseInit): Response {
@@ -61,7 +65,11 @@ export default async function handler(req: Request): Promise<Response> {
     return json({ error: "POST required" }, { status: 405 });
   }
 
-  const upstreamPath = SKILLS[path];
+  let upstreamPath = SKILLS[path];
+  // 単一ペアシグナルはパスパラメータ(/signal/pair/USD_JPY等)なので動的にマッチ
+  if (!upstreamPath && /^\/signal\/pair\/[A-Z]{3}_[A-Z]{3}$/.test(path)) {
+    upstreamPath = `/v1${path}`;
+  }
   if (!upstreamPath) {
     return json(
       {

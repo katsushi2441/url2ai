@@ -80,6 +80,10 @@ const SKILLS = {
   "/fxbrain/finmem/decide": "/v1/vendor/finmem/decide",
   "/fxbrain/finmem/reflect": "/v1/vendor/finmem/reflect",
   "/fxbrain/tradingagents/run": "/v1/vendor/tradingagents/run",
+  "/fxbrain/market/opportunity-ranking": "/v1/market/opportunity-ranking",
+  "/fxbrain/market/flow-ranking": "/v1/market/flow-ranking",
+  "/fxbrain/market/anomaly": "/v1/market/anomaly",
+  "/fxbrain/market/margin-risk": "/v1/market/margin-risk",
 };
 
 function amountFor(pathname) {
@@ -262,7 +266,10 @@ async function handle(req, res) {
     return json(res, result.status, result.body);
   }
 
-  const upstreamPath = SKILLS[url.pathname];
+  let upstreamPath = SKILLS[url.pathname];
+  if (!upstreamPath && /^\/fxbrain\/signal\/pair\/[A-Z]{3}_[A-Z]{3}$/.test(url.pathname)) {
+    upstreamPath = url.pathname.replace("/fxbrain", "/v1");
+  }
   if (req.method !== "POST" || !upstreamPath) {
     return json(res, 404, {
       error: "Unknown endpoint",
