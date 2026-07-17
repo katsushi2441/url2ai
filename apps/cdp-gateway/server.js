@@ -190,15 +190,17 @@ const FXBRAIN_ENDPOINTS = {
     `Single evidence-bounded FX signal for ${p}: watch_buy_base/watch_sell_base/wait/avoid with invalidation and event risks. Judgment only, never places orders.`]])),
   "tradingagents/run": ["/v1/vendor/tradingagents/run", PRICE_FXGRAPH,
     "TradingAgents (Apache-2.0) full multi-agent graph on real FX market data: analyst reports, bull/bear debate, trader plan, risk debate, final decision. Runs minutes (~5-6 min measured), not seconds. Gemma 4 12B.",
-    FXBRAIN_GRAPH_SCHEMA],
+    FXBRAIN_GRAPH_SCHEMA, 600],
 };
 
-function fxbrainRoute(price, description, schema) {
-  return {
-    price,
-    network: NETWORK,
-    config: { description, discoverable: true, inputSchema: schema || FXBRAIN_EVIDENCE_SCHEMA },
-  };
+function fxbrainRoute(price, description, schema, maxTimeoutSeconds) {
+  const config = { description, discoverable: true, inputSchema: schema || FXBRAIN_EVIDENCE_SCHEMA };
+  // 既定のmaxTimeoutSeconds(60)はEIP-3009のvalidBefore=now+60sを意味する。
+  // 処理が60秒を超えるエンドポイント(tradingagents/run ~5.5分)はここで延長しないと、
+  // 決済時にblock.timestamp>validBeforeで期限切れ拒否され、GPU計算だけ浪費される
+  // (PayApi Chet 2026-07-17指摘)。
+  if (maxTimeoutSeconds) config.maxTimeoutSeconds = maxTimeoutSeconds;
+  return { price, network: NETWORK, config };
 }
 
 if (!PAY_TO) { console.error("PAY_TO is required"); process.exit(1); }
@@ -285,8 +287,8 @@ const routes = {
   "POST /llm2api/trade/size-check": tradeSizeRoute(),
 };
 
-for (const [suffix, [, price, description, schema]] of Object.entries(FXBRAIN_ENDPOINTS)) {
-  routes[`POST /fxbrain/${suffix}`] = fxbrainRoute(price, description, schema);
+for (const [suffix, [, price, description, schema, maxTimeoutSeconds]] of Object.entries(FXBRAIN_ENDPOINTS)) {
+  routes[`POST /fxbrain/${suffix}`] = fxbrainRoute(price, description, schema, maxTimeoutSeconds);
 }
 
 const app = express();
