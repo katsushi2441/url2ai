@@ -51,8 +51,8 @@ cd src && python3 ftpphp.py
 
 | Port | Service | Stack | Notes |
 |------|---------|-------|-------|
-| 8010 | **api_gateway** | Python (ernie venv) | Unified gateway: `/image` → ernie-image-turbo, `/pdf` → updf2md. Started manually with `nohup uvicorn api_gateway:app ...` from `apps/` |
-| 8011 | **ernie-image-turbo** | Python | ERNIE image generation standalone. systemd: なし、直接起動 |
+| 8010 | **api_gateway** | Python (ernie venv) | Unified gateway: `/image/*` is proxied to 8011, `/pdf/*` runs in the gateway. user systemd: `url2ai-api-gateway.service` |
+| 8011 | **ernie-image-turbo** | Python | The only ERNIE model owner. system systemd: `ernie-image-turbo.service` |
 | 8012 | **Smithery / nginx SSL proxy** | nginx | Smithery MCP用。`/mcp` → 127.0.0.1:8013 など |
 | 8013 | **url2ai-mcp** | Python (FastMCP) | MCP server, localhost only。`apps/url2ai-mcp/`。systemd: `url2ai-mcp.service` |
 | 8014 | **finreport** | Python (FastAPI) | 投資レポート生成。`apps/finreport/`。systemd: なし |
@@ -67,16 +67,15 @@ cd src && python3 ftpphp.py
 
 ※ 8000番台は満杯。以降の新規サービスはワークスペース規約どおり**18300番台の空き最若番号**を使う（例: fxbrain-jpyc=18327、`apps/llm-gateway/server-jpyc-fxbrain.js`、systemd: `fxbrain-jpyc.service`）。
 
-### api_gateway (port 8010) の再起動方法
+### ERNIE / api_gateway (ports 8011 / 8010) の再起動方法
 
-api_gateway はsystemdサービスがないため、手動で再起動する:
+ERNIE本体は8011だけで起動する。8010は既存の`/image/*` URLを8011へ中継し、モデルを読み込まない。
 
 ```bash
-kill $(pgrep -f "api_gateway:app")
-cd /home/kojima/exdirect/url2ai/apps
-nohup /home/kojima/exdirect/url2ai/apps/ernie-image-turbo/.venv-cu128/bin/python \
-  /home/kojima/exdirect/url2ai/apps/ernie-image-turbo/.venv-cu128/bin/uvicorn \
-  api_gateway:app --host 0.0.0.0 --port 8010 > /tmp/api_gateway.log 2>&1 &
+sudo systemctl is-active ernie-image-turbo.service
+systemctl --user restart url2ai-api-gateway.service
+curl -fsS http://127.0.0.1:8011/healthz
+curl -fsS http://127.0.0.1:8010/image/healthz
 ```
 
 ernie venv に必要なパッケージ: `PyMuPDF`, `pytesseract`, `Pillow`, `yfinance` (updf2md/finreportの依存を同じvenvで動かすため)
