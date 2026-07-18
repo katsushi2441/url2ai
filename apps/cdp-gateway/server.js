@@ -190,7 +190,7 @@ const FXBRAIN_ENDPOINTS = {
     `Single evidence-bounded FX signal for ${p}: watch_buy_base/watch_sell_base/wait/avoid with invalidation and event risks. Judgment only, never places orders.`]])),
   "tradingagents/run": ["/v1/vendor/tradingagents/run", PRICE_FXGRAPH,
     "TradingAgents (Apache-2.0) full multi-agent graph on real FX market data: analyst reports, bull/bear debate, trader plan, risk debate, final decision. Runs ~2.5 min (fast multi-agent profile), not seconds; over the gateway deadline it fails cleanly with no charge. Gemma 4 12B.",
-    FXBRAIN_GRAPH_SCHEMA, 600],
+    FXBRAIN_GRAPH_SCHEMA, 180],
 };
 
 function fxbrainRoute(price, description, schema, maxTimeoutSeconds) {
