@@ -14,6 +14,14 @@ const FXBRAIN_URL   = process.env.FXBRAIN_URL   || "http://127.0.0.1:18326";
 const FXBRAIN_TOKEN = process.env.FXBRAIN_TOKEN || "";
 // TradingAgentsフルグラフは1回5分超(実測5.5分)のマルチエージェント討論なので高価格帯
 const PRICE_FXGRAPH = process.env.PRICE_FXGRAPH || "$0.50";
+const KCBRAIN_URL   = process.env.KCBRAIN_URL   || "http://127.0.0.1:18328";
+const KCBRAIN_TOKEN = process.env.KCBRAIN_TOKEN || "";
+// nofx(claw402)のAI Trading Signals($0.001)と同水準。DeepSeek実測原価は単発判断で
+// $0.0001程度(原価率約10%)。2026-07-21 ユーザー承認済み(claw402価格に合わせる方針)。
+const PRICE_KC_SINGLE = process.env.PRICE_KC_SINGLE || "$0.001";
+// bull/bear/manager等、generate_jsonを複数回連鎖する多段エンドポイント用。単発と同額だと
+// 原価率60%超になるため、claw402上のDeepSeek Chat/Reasoner相場($0.003-0.005)に合わせる。
+const PRICE_KC_CHAIN  = process.env.PRICE_KC_CHAIN  || "$0.003";
 const BACKGROUND_REMOVAL_SCHEMA = {
   bodyType: "json",
   properties: {
@@ -203,6 +211,97 @@ function fxbrainRoute(price, description, schema, maxTimeoutSeconds) {
   return { price, network: NETWORK, config };
 }
 
+// Kurage Crypto Brain (kcbrain :18328) — crypto judgment APIs backed by DeepSeek
+// (deepseek-v4-flash)。Vendored OSS: ai-hedge-fund-crypto, crypto-trading-agents,
+// Vibe-Trading, LLM_trader, HELM Agents。単発判断(generate_json 1回)と、bull/bear/manager
+// 等の多段連鎖(generate_json複数回)で原価が10倍近く違うため価格帯を分ける(2026-07-21実測)。
+const KCBRAIN_EVIDENCE_SCHEMA = {
+  bodyType: "json",
+  properties: {
+    symbol: { type: "string", description: "Crypto pair like BTC_USDT or ETH_USDT (required)" },
+    timeframe: { type: "string", description: "e.g. H1, H4, D (default H1)" },
+    technicals: { type: "object", description: "Indicator values, ranges, closes" },
+    derivatives: { type: "object", description: "Funding rate, open interest, liquidations" },
+    onchain: { type: "object", description: "Exchange flows, active addresses, whale activity" },
+    defi: { type: "object", description: "TVL, protocol metrics" },
+    news: { type: "array", description: "Headlines (max 60)" },
+    social: { type: "array", description: "Social posts/sentiment (max 60)" },
+    position: { type: "object", description: "Open position context" },
+    portfolio: { type: "object", description: "Cash, positions, margin (for portfolio endpoints)" },
+    history: { type: "array", description: "Recent trades (max 50)" },
+    question: { type: "string", description: "Optional focused question" },
+  },
+};
+
+const KCBRAIN_MARKET_SCHEMA = {
+  bodyType: "json",
+  properties: {
+    pairs: { type: "array", description: "1-40 pair evidence objects: {symbol, market, technicals, derivatives, onchain, news}" },
+    timeframe: { type: "string", description: "e.g. H1 (default)" },
+    global_context: { type: "object", description: "Risk sentiment, macro, cross-market context" },
+    account_context: { type: "object", description: "Leverage, equity, margin (for liquidation-risk)" },
+    question: { type: "string", description: "Optional focused question" },
+  },
+};
+
+// gateway suffix -> [upstream path, price, description, schema]
+const KCBRAIN_ENDPOINTS = {
+  "analyze/technical": ["/v1/analyze/technical", PRICE_KC_SINGLE,
+    "Crypto technical analysis (trend, levels, momentum) as structured JSON with evidence and invalidation. DeepSeek."],
+  "analyze/onchain": ["/v1/analyze/onchain", PRICE_KC_SINGLE,
+    "Crypto on-chain analysis: exchange flows, whale activity, address growth as structured JSON. DeepSeek."],
+  "analyze/sentiment": ["/v1/analyze/sentiment", PRICE_KC_SINGLE,
+    "Crypto news and social sentiment analysis as structured JSON. DeepSeek."],
+  "analyze/full": ["/v1/analyze/full", PRICE_KC_SINGLE,
+    "All crypto perspectives (technical, onchain, sentiment, debate, trade, risk) in one structured response. DeepSeek."],
+  "debate/bull-bear": ["/v1/debate/bull-bear", PRICE_KC_SINGLE,
+    "Bull vs bear argument mapping for a crypto pair as structured JSON. DeepSeek."],
+  "decide/trade": ["/v1/decide/trade", PRICE_KC_SINGLE,
+    "BUY / SELL / HOLD judgment for a crypto pair from supplied evidence. Judgment only — never executes orders."],
+  "assess/risk": ["/v1/assess/risk", PRICE_KC_SINGLE,
+    "Risk gate for a proposed crypto trade: approve / reduce / reject with reasons. Judgment only."],
+  "decide/portfolio": ["/v1/decide/portfolio", PRICE_KC_SINGLE,
+    "Manage open crypto positions: hold / close / adjust judgments as structured JSON. Judgment only."],
+  "review/trade": ["/v1/review/trade", PRICE_KC_SINGLE,
+    "Post-trade review: category, verdict, lesson from a closed crypto trade. DeepSeek."],
+  "market/opportunity-ranking": ["/v1/market/opportunity-ranking", PRICE_KC_SINGLE,
+    "Multi-pair crypto opportunity ranking (up to 40 pairs in one call): risk-adjusted scores, event risk. Body: {pairs:[{symbol, technicals, derivatives, onchain, news}...], global_context}. DeepSeek.",
+    KCBRAIN_MARKET_SCHEMA],
+  "market/flow-ranking": ["/v1/market/flow-ranking", PRICE_KC_SINGLE,
+    "Multi-pair crypto capital-flow strength ranking from supplied exchange-flow, funding, and positioning evidence. Same multi-pair body. DeepSeek.",
+    KCBRAIN_MARKET_SCHEMA],
+  "market/anomaly": ["/v1/market/anomaly", PRICE_KC_SINGLE,
+    "Cross-pair crypto anomaly detection: price/spread/volatility/volume/funding/OI/liquidation, severity low-critical. Ordinary volatility is not flagged. Same multi-pair body.",
+    KCBRAIN_MARKET_SCHEMA],
+  "market/liquidation-risk": ["/v1/market/liquidation-risk", PRICE_KC_SINGLE,
+    "Liquidation-cascade risk ranking per pair plus systemic risk, from supplied leverage/OI/funding thresholds. Never assumes exchange rules. Same multi-pair body.",
+    KCBRAIN_MARKET_SCHEMA],
+  ...Object.fromEntries([
+    "BTC_USDT", "ETH_USDT", "SOL_USDT", "BNB_USDT", "XRP_USDT", "DOGE_USDT",
+  ].map((p) => [`signal/pair/${p}`, [`/v1/signal/pair/${p}`, PRICE_KC_SINGLE,
+    `Single evidence-bounded crypto signal for ${p}: watch_buy_base/watch_sell_base/wait/avoid with invalidation and event risks. Judgment only, never places orders.`]])),
+  "vendor/ai-hedge-fund-crypto/portfolio": ["/v1/vendor/ai-hedge-fund-crypto/portfolio", PRICE_KC_SINGLE,
+    "ai-hedge-fund-crypto (MIT) portfolio manager synthesis over supplied analyst signals. Single-call judgment only."],
+  "vendor/llm-trader/analyze": ["/v1/vendor/llm-trader/analyze", PRICE_KC_SINGLE,
+    "LLM_trader decision-gated crypto analysis: trend, momentum, funding, confluence, risk/reward. Single-call structured JSON."],
+  "vendor/crypto-trading-agents/debate": ["/v1/vendor/crypto-trading-agents/debate", PRICE_KC_CHAIN,
+    "crypto-trading-agents (from TradingAgents, Apache-2.0) bull vs bear researcher debate chained into a research-manager decision. 3 sequential DeepSeek calls."],
+  "vendor/vibe-trading/research": ["/v1/vendor/vibe-trading/research", PRICE_KC_CHAIN,
+    "Vibe-Trading crypto trading desk preset: multiple specialist agents plus a risk-manager synthesis. 4+ sequential DeepSeek calls."],
+  "vendor/helm-agents/consensus": ["/v1/vendor/helm-agents/consensus", PRICE_KC_CHAIN,
+    "HELM Agents 4-analyst consensus (market/sentiment/news/fundamentals) chained into a portfolio-manager rating. 5 sequential DeepSeek calls."],
+};
+
+// x402のmaxTimeoutSeconds(validBefore)はプロキシのハード締切(60s)より必ず長くする。
+// 同値だと決済期限切れと処理中断がほぼ同時に起き、正常応答でも決済が拒否されうる
+// (PayApi/Chetがfxbrainで指摘したのと同じ理由)。10秒マージンを常に持たせる。
+function kcbrainRoute(price, description, schema) {
+  return {
+    price, network: NETWORK,
+    config: { description, discoverable: true, inputSchema: schema || KCBRAIN_EVIDENCE_SCHEMA, maxTimeoutSeconds: 70 },
+  };
+}
+
 if (!PAY_TO) { console.error("PAY_TO is required"); process.exit(1); }
 
 const facilitator = createFacilitatorConfig(
@@ -289,6 +388,9 @@ const routes = {
 
 for (const [suffix, [, price, description, schema, maxTimeoutSeconds]] of Object.entries(FXBRAIN_ENDPOINTS)) {
   routes[`POST /fxbrain/${suffix}`] = fxbrainRoute(price, description, schema, maxTimeoutSeconds);
+}
+for (const [suffix, [, price, description, schema]] of Object.entries(KCBRAIN_ENDPOINTS)) {
+  routes[`POST /kcbrain/${suffix}`] = kcbrainRoute(price, description, schema);
 }
 
 const app = express();
@@ -422,6 +524,16 @@ for (const [suffix, [, price, description]] of Object.entries(FXBRAIN_ENDPOINTS)
     description,
   });
 }
+for (const [suffix, [, price, description]] of Object.entries(KCBRAIN_ENDPOINTS)) {
+  X402_WELL_KNOWN.endpoints.push({
+    path: `/kcbrain/${suffix}`,
+    method: "POST",
+    price,
+    network: NETWORK,
+    pay_to: WALLET,
+    description,
+  });
+}
 
 app.get("/.well-known/x402.json", (_req, res) => {
   res.json(X402_WELL_KNOWN);
@@ -496,8 +608,60 @@ for (const [suffix, [upstreamPath]] of Object.entries(FXBRAIN_ENDPOINTS)) {
   app.post(`/fxbrain/${suffix}`, (req, res) => proxyToFxbrain(upstreamPath, req, res));
 }
 
+// kcbrain proxy: DeepSeek(hosted API)はkfxbrainのローカルGemma 4より大幅に速い
+// (単発判断は実測2.5秒)。多段連鎖(3-5コール)でも数十秒想定のため締切は60秒で十分。
+// 締切超過は>=400を返しx402-express側でsettleをスキップ(charge-without-delivery防止、
+// PayApi/Chet指摘のfxbrainと同じ構造)。
+const KCBRAIN_DEADLINE_MS = Number(process.env.KCBRAIN_DEADLINE_MS || 60000);
+
+function proxyToKcbrain(upstreamPath, req, res) {
+  const body = JSON.stringify(req.body);
+  const url = new URL(`${KCBRAIN_URL}${upstreamPath}`);
+  const options = {
+    hostname: url.hostname,
+    port: url.port,
+    path: url.pathname,
+    method: "POST",
+    timeout: KCBRAIN_DEADLINE_MS + 10000,
+    headers: {
+      "Content-Type": "application/json",
+      "Content-Length": Buffer.byteLength(body),
+      "X-KCBRAIN-Token": KCBRAIN_TOKEN,
+    },
+  };
+  let settled = false;
+  const once = (fn) => { if (!settled) { settled = true; clearTimeout(deadline); fn(); } };
+  const proxyReq = nodeHttp.request(options, (upRes) => {
+    once(() => {
+      res.status(upRes.statusCode || 502);
+      res.set("Content-Type", upRes.headers["content-type"] || "application/json");
+      upRes.pipe(res);
+    });
+  });
+  const deadline = setTimeout(() => {
+    once(() => {
+      proxyReq.destroy(new Error("kcbrain deadline"));
+      if (!res.headersSent) {
+        res.status(504).json({
+          error: "workflow exceeded the gateway deadline; no payment was captured. Please retry.",
+        });
+      }
+    });
+  }, KCBRAIN_DEADLINE_MS);
+  proxyReq.on("timeout", () => proxyReq.destroy(new Error("kcbrain upstream timeout")));
+  proxyReq.on("error", (err) => {
+    once(() => { if (!res.headersSent) res.status(502).json({ error: `kcbrain unavailable: ${err.message}` }); });
+  });
+  proxyReq.write(body);
+  proxyReq.end();
+}
+
+for (const [suffix, [upstreamPath]] of Object.entries(KCBRAIN_ENDPOINTS)) {
+  app.post(`/kcbrain/${suffix}`, (req, res) => proxyToKcbrain(upstreamPath, req, res));
+}
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`CDP gateway → http://0.0.0.0:${PORT}`);
-  console.log(`  OSS2API: ${OSS2API}  LLM: ${LLM_URL}`);
+  console.log(`  OSS2API: ${OSS2API}  LLM: ${LLM_URL}  FXBRAIN: ${FXBRAIN_URL}  KCBRAIN: ${KCBRAIN_URL}`);
   console.log(`  Network: ${NETWORK}  PayTo: ${PAY_TO}`);
 });
