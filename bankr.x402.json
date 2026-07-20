@@ -460,6 +460,94 @@
           }
         }
       }
+    },
+    "kcbrain": {
+      "price": "0.001",
+      "description": "Kurage Crypto Brain — 15 crypto judgment skills on DeepSeek (deepseek-v4-flash), built from vendored open-source trading intelligence: ai-hedge-fund-crypto (MIT), crypto-trading-agents from TradingAgents (Apache-2.0), LLM_trader, pinned commits with full attribution. Judgment only: no exchange credentials, no order execution. Select a skill by path after the service URL. Skills: POST .../kcbrain/analyze/technical | /analyze/onchain | /analyze/sentiment | /analyze/full (all perspectives in one call) | /debate/bull-bear | /decide/trade (BUY/SELL/HOLD) | /assess/risk (approve/reduce/reject) | /decide/portfolio | /review/trade | /market/opportunity-ranking (rank up to 40 pairs by risk-adjusted opportunity in one call; body {pairs:[{symbol,technicals,derivatives,onchain,news}...],global_context}) | /market/flow-ranking | /market/anomaly | /market/liquidation-risk | /vendor/ai-hedge-fund-crypto/portfolio (ai-hedge-fund-crypto MIT portfolio manager synthesis) | /vendor/llm-trader/analyze (LLM_trader decision-gated analysis) | /signal/pair/{SYMBOL} (e.g. /signal/pair/BTC_USDT: evidence-bounded watch/wait/avoid signal). Body: {symbol (required, e.g. BTC_USDT), timeframe, technicals{}, derivatives{}, onchain{}, defi{}, news[], social[], position{}, portfolio{}, history[], question} — at least one evidence field required. Returns structured JSON with signal/confidence/evidence and upstream attribution. Multi-agent chained debates (bull/bear researcher, multi-analyst desks — 3-5 sequential LLM calls) are sold separately on the direct x402 rail: POST https://bittensorman.xyz/kcbrain/vendor/crypto-trading-agents/debate | /vendor/vibe-trading/research | /vendor/helm-agents/consensus ($0.003 each).",
+      "methods": [
+        "POST"
+      ],
+      "upstream_endpoint": "http://exbridge.ddns.net:18328",
+      "schema": {
+        "input": {
+          "type": "object",
+          "required": [
+            "symbol"
+          ],
+          "properties": {
+            "symbol": {
+              "type": "string",
+              "description": "Crypto pair like BTC_USDT or ETH_USDT"
+            },
+            "timeframe": {
+              "type": "string",
+              "description": "e.g. H1, H4, D. Default H1"
+            },
+            "technicals": {
+              "type": "object",
+              "description": "Indicator values, ranges, closes"
+            },
+            "derivatives": {
+              "type": "object",
+              "description": "Funding rate, open interest, liquidations"
+            },
+            "onchain": {
+              "type": "object",
+              "description": "Exchange flows, active addresses, whale activity"
+            },
+            "defi": {
+              "type": "object",
+              "description": "TVL, protocol metrics"
+            },
+            "news": {
+              "type": "array",
+              "description": "Headlines, max 60"
+            },
+            "social": {
+              "type": "array",
+              "description": "Social posts/sentiment, max 60"
+            },
+            "position": {
+              "type": "object",
+              "description": "Open position context"
+            },
+            "portfolio": {
+              "type": "object",
+              "description": "Cash, positions, margin (for portfolio endpoints)"
+            },
+            "history": {
+              "type": "array",
+              "description": "Recent trades, max 50"
+            },
+            "question": {
+              "type": "string",
+              "description": "Optional focused question"
+            }
+          }
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean"
+            },
+            "endpoint": {
+              "type": "string"
+            },
+            "model": {
+              "type": "string",
+              "description": "deepseek-v4-flash"
+            },
+            "latency_ms": {
+              "type": "integer"
+            },
+            "result": {
+              "type": "object",
+              "description": "Structured judgment: signal/confidence/evidence/invalidation, or vendor output with upstream attribution (repository, commit, license, function)"
+            }
+          }
+        }
+      }
     }
   }
 }
