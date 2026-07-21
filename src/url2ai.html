@@ -499,6 +499,8 @@ h1 {
             <div class="system-row"><div class="system-file">Kurage FX Brain</div><div class="system-kind">CDP x402 / PayAPI</div><div class="system-desc">GitHubで人気のFX/トレーディングOSS（TradingAgents Apache-2.0 / FinGPT MIT / ai-hedge-fund MIT、コミット固定でvendor化）のLLM知能をGemma 4 12BでFX向け判断APIにしたもの。判断のみを返し、ブローカー認証情報・注文実行権限は持ちません。34スキル(37パス)、$0.05 USDC/リクエスト（USDC on Base）。<br>・<code>POST https://bittensorman.xyz/fxbrain/analyze/technical</code> — テクニカル分析（他 macro / sentiment / full）<br>・<code>POST https://bittensorman.xyz/fxbrain/decide/trade</code> — BUY / SELL / HOLD 判断<br>・<code>POST https://bittensorman.xyz/fxbrain/assess/risk</code> — リスクゲート（許可/縮小/拒否）<br>・<code>POST https://bittensorman.xyz/fxbrain/debate/bull-bear</code> ほか fingpt / hedge 系スキル<br>・<code>POST https://bittensorman.xyz/fxbrain/tradingagents/run</code> — <strong>TradingAgentsマルチエージェント討論グラフ完全実行（実測約5.5分、$0.50）</strong>: アナリストレポート→強弱討論→トレーダー計画→リスク討論→最終判断<br><span style="font-size:12px;color:#6B7280;">製品サイト: <a href="https://kfxbrain.exbridge.jp/kfxbrain.html">kfxbrain.exbridge.jp</a>（英日2言語）<br>無料テスト: <a href="https://kurage.exbridge.jp/kfxbrain.php">FX Intelligence Workbench</a>（本番APIをブラウザから実行・x402の402チャレンジも支払いなしで検証可）<br>Discovery: https://bittensorman.xyz/.well-known/x402.json（/fxbrain/ 配下37本。FinRobot/FinMem/マーケットインテリジェンス追加済み）</span></div></div>
             <div class="system-row"><div class="system-file">Kurage FX Brain</div><div class="system-kind">Bankr x402</div><div class="system-desc">同FX判断スキル15本をBankrから利用可能。0.05 USDC/リクエスト（USDC on Base）。パスでスキルを選択（…/fxbrain/analyze/technical 等）。フルグラフ実行はCDP直販のみ。<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/fxbrain</span></div></div>
             <div class="system-row"><div class="system-file">Kurage FX Brain</div><div class="system-kind">JPYC x402</div><div class="system-desc">同FX判断APIを JPYC（日本円ステーブルコイン）で利用可能。通常スキル 7.5 JPYC（≈¥7.5）、TradingAgentsフルグラフ 75 JPYC（JPYC on Polygon）。EIP-3009 transferWithAuthorization によるオンチェーン決済。<br>・<code>POST https://exbridge.ddns.net:18327/fxbrain/analyze/technical</code>（他スキルも同パス形式）<br>・<code>POST https://exbridge.ddns.net:18327/fxbrain/tradingagents/run</code></div></div>
+            <div class="system-row"><div class="system-file">url2brain</div><div class="system-kind">CDP x402 / PayAPI</div><div class="system-desc">URLを渡すと解析→告知文→ブログ記事を生成し、Bluesky/はてなブックマーク/AIxSNS/Bludit/はてなブログへ<strong>実際に投稿</strong>できるパブリッシングAPI。生成はDeepSeek稼働、投稿はKurage/bittensormanペルソナで自動枠付け。x402決済そのものが投稿の許可になる設計で、認証情報は不要。$1.00 USDC/リクエスト(全スキル共通)。<br>・<code>POST https://bittensorman.xyz/url2brain/generate/from-url</code> — URL解析+告知文+ブログ記事を1コールで生成<br>・<code>POST https://bittensorman.xyz/url2brain/post/bluesky</code> ほか post/hatena-bookmark・post/aixsns・post/bludit・post/hatena-blog<br><span style="font-size:12px;color:#6B7280;">製品サイト: <a href="https://url2ai.exbridge.jp/">url2ai.exbridge.jp</a>（英日2言語、無料Webアプリ版はXログインで利用可）<br>OSS: <a href="https://github.com/katsushi2441/url2brain">github.com/katsushi2441/url2brain</a>（自前運用は無料）<br>Discovery: https://bittensorman.xyz/.well-known/x402.json</span></div></div>
+            <div class="system-row"><div class="system-file">url2brain</div><div class="system-kind">Bankr x402</div><div class="system-desc">同url2brainスキルをBankrから利用可能。$1.00 USDC/リクエスト。パスでスキルを選択（…/url2brain/generate/from-url 等）。<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/url2brain</span></div></div>
             <div class="system-row"><div class="system-file">UPDF2MD</div><div class="system-kind">Bankr x402</div><div class="system-desc">PDF URL や企業名・銘柄名から agent-ready Markdown を返す universal Markdown conversion endpoint。0.001 USDC/リクエスト。<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md</span></div></div>
             <div class="system-row"><div class="system-file">UImage</div><div class="system-kind">Bankr x402</div><div class="system-desc">プロンプト・テキスト・URL・X投稿から画像を生成する ERNIE Image API。0.01 USDC/リクエスト。<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage</span></div></div>
         </div>
@@ -582,6 +584,19 @@ h1 {
             </div>
 
             <div class="card">
+                <div class="card-visual" style="--card-accent:#6D28D9;">
+                    <div class="card-visual-badge">📰 url2brain <span class="card-visual-id">X402</span></div>
+                    <img src="./images/oss2api.png" alt="url2brain" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">PAID AGENT · USDC</div>
+                    <h4>url2brain x402</h4>
+                    <p>URLを解析して告知文・ブログ記事を生成し、Bluesky/はてな/AIxSNS/Bludit/はてなブログへ実際に投稿できるパブリッシングAPI。$1.00 USDC/リクエスト。</p>
+                    <a href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/url2brain" class="button" target="_blank" rel="noopener">View Bankr Endpoint</a>
+                </div>
+            </div>
+
+            <div class="card">
                 <div class="card-visual" style="--card-accent:#1D4ED8;">
                     <div class="card-visual-badge">📄 UPDF2MD <span class="card-visual-id">X402</span></div>
                     <img src="./images/updf2md.png" alt="UPDF2MD" onerror="this.parentNode.className+=' is-fallback';">
@@ -615,6 +630,19 @@ h1 {
             AI エージェントが生成した成果物を無料で確認できる Web デモです。出力品質の検証や動作確認にご利用ください。
         </div>
         <div class="card-grid">
+            <div class="card">
+                <div class="card-visual" style="--card-accent:#0A726B;">
+                    <div class="card-visual-badge">🪼 URL2AI Publisher <span class="card-visual-id">FREE</span></div>
+                    <img src="./images/oss2api.png" alt="Kurage URL2AI Publisher" onerror="this.parentNode.className+=' is-fallback';">
+                </div>
+                <div class="card-body">
+                    <div class="pill">FREE · X LOGIN</div>
+                    <h4>Kurage URL2AI Publisher</h4>
+                    <p>URLを渡すとKurageさんが記事を読んで告知文・ブログ記事を書き、Bluesky/はてな/AIxSNS/Kurageブログ/はてなブログの5媒体へ自動配信します。Xログインで無料。</p>
+                    <a href="https://url2ai.exbridge.jp/" class="button" target="_blank" rel="noopener">Open Kurage URL2AI Publisher</a>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-visual" style="--card-accent:#0F766E;">
                     <div class="card-visual-badge">📈 FinReport <span class="card-visual-id">FREE</span></div>
