@@ -22,6 +22,11 @@ const PRICE_KC_SINGLE = process.env.PRICE_KC_SINGLE || "$0.001";
 // bull/bear/manager等、generate_jsonを複数回連鎖する多段エンドポイント用。単発と同額だと
 // 原価率60%超になるため、claw402上のDeepSeek Chat/Reasoner相場($0.003-0.005)に合わせる。
 const PRICE_KC_CHAIN  = process.env.PRICE_KC_CHAIN  || "$0.003";
+const URL2BRAIN_URL   = process.env.URL2BRAIN_URL   || "http://127.0.0.1:18332";
+const URL2BRAIN_TOKEN = process.env.URL2BRAIN_TOKEN || "";
+// URL解析+告知文+ブログ記事生成(Gemma 4 12Bはセルフホストなので原価はほぼ電気代のみ)。
+// 2026-07-21 ユーザー指定: 1コール$1.00固定(llm2apiと同じく、エンドポイントによらず均一)。
+const PRICE_URL2BRAIN = process.env.PRICE_URL2BRAIN || "$1.00";
 const BACKGROUND_REMOVAL_SCHEMA = {
   bodyType: "json",
   properties: {
@@ -302,6 +307,50 @@ function kcbrainRoute(price, description, schema) {
   };
 }
 
+// Kurage URL2AI Publisher brain (url2brain :18332) — URL解析+告知文+ブログ記事生成。
+// Gemma 4 12B(Ollama、セルフホスト)。/v1/post/*(Kurage自身のSNS/ブログへの投稿)は
+// 第三者が課金だけで投稿できてしまうため、意図的にゲートウェイへ載せない
+// (analyze/generateの読み取り専用スキルのみ公開)。
+const URL2BRAIN_URL_SCHEMA = {
+  bodyType: "json",
+  properties: {
+    url: { type: "string", description: "Publicly reachable HTTP(S) URL to analyze and write about (required for analyze/url, generate/from-url)" },
+    language: { type: "string", description: "Output language. Default ja (Japanese); pass en for English." },
+    tone: { type: "string", description: "Optional tone hint, e.g. neutral, enthusiastic. Default neutral." },
+  },
+};
+const URL2BRAIN_SOURCE_SCHEMA = {
+  bodyType: "json",
+  properties: {
+    source: { type: "object", description: "The object returned in result.source by analyze/url or generate/from-url (required)" },
+    language: { type: "string", description: "Output language. Default ja (Japanese); pass en for English." },
+    tone: { type: "string", description: "Optional tone hint, e.g. neutral, enthusiastic. Default neutral." },
+  },
+};
+
+// gateway suffix -> [upstream path, description, schema]
+const URL2BRAIN_ENDPOINTS = {
+  "analyze/url": ["/v1/analyze/url",
+    "Fetch a URL and extract structured content: title, description, headings, links, body text.",
+    URL2BRAIN_URL_SCHEMA],
+  "generate/announcement": ["/v1/generate/announcement",
+    "Generate a <=280 char announcement (Japanese by default) grounded only in the supplied extracted content (source from analyze/url). Gemma 4 12B.",
+    URL2BRAIN_SOURCE_SCHEMA],
+  "generate/blog-article": ["/v1/generate/blog-article",
+    "Generate a 300-600 word blog article (Japanese by default) grounded only in the supplied extracted content (source from analyze/url). Gemma 4 12B.",
+    URL2BRAIN_SOURCE_SCHEMA],
+  "generate/from-url": ["/v1/generate/from-url",
+    "Convenience endpoint: fetch a URL, then generate both an announcement and a blog article from it in one call. The recommended single-call skill for 'just paste a URL'. Gemma 4 12B.",
+    URL2BRAIN_URL_SCHEMA],
+};
+
+function url2brainRoute(description, schema) {
+  return {
+    price: PRICE_URL2BRAIN, network: NETWORK,
+    config: { description, discoverable: true, inputSchema: schema, maxTimeoutSeconds: 100 },
+  };
+}
+
 if (!PAY_TO) { console.error("PAY_TO is required"); process.exit(1); }
 
 const facilitator = createFacilitatorConfig(
@@ -391,6 +440,9 @@ for (const [suffix, [, price, description, schema, maxTimeoutSeconds]] of Object
 }
 for (const [suffix, [, price, description, schema]] of Object.entries(KCBRAIN_ENDPOINTS)) {
   routes[`POST /kcbrain/${suffix}`] = kcbrainRoute(price, description, schema);
+}
+for (const [suffix, [, description, schema]] of Object.entries(URL2BRAIN_ENDPOINTS)) {
+  routes[`POST /url2brain/${suffix}`] = url2brainRoute(description, schema);
 }
 
 const app = express();
@@ -534,6 +586,16 @@ for (const [suffix, [, price, description]] of Object.entries(KCBRAIN_ENDPOINTS)
     description,
   });
 }
+for (const [suffix, [, description]] of Object.entries(URL2BRAIN_ENDPOINTS)) {
+  X402_WELL_KNOWN.endpoints.push({
+    path: `/url2brain/${suffix}`,
+    method: "POST",
+    price: PRICE_URL2BRAIN,
+    network: NETWORK,
+    pay_to: WALLET,
+    description,
+  });
+}
 
 app.get("/.well-known/x402.json", (_req, res) => {
   res.json(X402_WELL_KNOWN);
@@ -660,8 +722,67 @@ for (const [suffix, [upstreamPath]] of Object.entries(KCBRAIN_ENDPOINTS)) {
   app.post(`/kcbrain/${suffix}`, (req, res) => proxyToKcbrain(upstreamPath, req, res));
 }
 
+// url2brain proxy: Gemma 4 12B(Ollama, セルフホスト)はDeepSeekより遅い可能性があるため
+// 締切を90秒に取る(実測: generate/from-url で約11秒)。fxbrain/kcbrainと同じ
+// charge-without-delivery防止パターン(締切超過は>=400を返しx402側でsettleをスキップ)。
+const URL2BRAIN_DEADLINE_MS = Number(process.env.URL2BRAIN_DEADLINE_MS || 90000);
+
+// 有料x402コールは常にDeepSeek(ホスト型API)へ強制する。url2pub Webアプリ(url2brainへ直接
+// アクセスするローカル呼び出し)はこの注入を経由しないためローカルGemma4のまま
+// (2026-07-21方針: 課金コールとローカルGPUのKurage本番系を競合させない)。
+const URL2BRAIN_LLM_SUFFIXES = new Set(["generate/announcement", "generate/blog-article", "generate/from-url"]);
+
+function proxyToUrl2brain(upstreamPath, req, res, suffix) {
+  const payload = URL2BRAIN_LLM_SUFFIXES.has(suffix)
+    ? { ...req.body, provider: "deepseek" }
+    : req.body;
+  const body = JSON.stringify(payload);
+  const url = new URL(`${URL2BRAIN_URL}${upstreamPath}`);
+  const options = {
+    hostname: url.hostname,
+    port: url.port,
+    path: url.pathname,
+    method: "POST",
+    timeout: URL2BRAIN_DEADLINE_MS + 10000,
+    headers: {
+      "Content-Type": "application/json",
+      "Content-Length": Buffer.byteLength(body),
+      "X-URL2BRAIN-Token": URL2BRAIN_TOKEN,
+    },
+  };
+  let settled = false;
+  const once = (fn) => { if (!settled) { settled = true; clearTimeout(deadline); fn(); } };
+  const proxyReq = nodeHttp.request(options, (upRes) => {
+    once(() => {
+      res.status(upRes.statusCode || 502);
+      res.set("Content-Type", upRes.headers["content-type"] || "application/json");
+      upRes.pipe(res);
+    });
+  });
+  const deadline = setTimeout(() => {
+    once(() => {
+      proxyReq.destroy(new Error("url2brain deadline"));
+      if (!res.headersSent) {
+        res.status(504).json({
+          error: "generation exceeded the gateway deadline; no payment was captured. Please retry.",
+        });
+      }
+    });
+  }, URL2BRAIN_DEADLINE_MS);
+  proxyReq.on("timeout", () => proxyReq.destroy(new Error("url2brain upstream timeout")));
+  proxyReq.on("error", (err) => {
+    once(() => { if (!res.headersSent) res.status(502).json({ error: `url2brain unavailable: ${err.message}` }); });
+  });
+  proxyReq.write(body);
+  proxyReq.end();
+}
+
+for (const [suffix, [upstreamPath]] of Object.entries(URL2BRAIN_ENDPOINTS)) {
+  app.post(`/url2brain/${suffix}`, (req, res) => proxyToUrl2brain(upstreamPath, req, res, suffix));
+}
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`CDP gateway → http://0.0.0.0:${PORT}`);
-  console.log(`  OSS2API: ${OSS2API}  LLM: ${LLM_URL}  FXBRAIN: ${FXBRAIN_URL}  KCBRAIN: ${KCBRAIN_URL}`);
+  console.log(`  OSS2API: ${OSS2API}  LLM: ${LLM_URL}  FXBRAIN: ${FXBRAIN_URL}  KCBRAIN: ${KCBRAIN_URL}  URL2BRAIN: ${URL2BRAIN_URL}`);
   console.log(`  Network: ${NETWORK}  PayTo: ${PAY_TO}`);
 });

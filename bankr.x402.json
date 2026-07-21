@@ -548,6 +548,56 @@
           }
         }
       }
+    },
+    "url2brain": {
+      "price": "1.00",
+      "description": "Kurage URL2AI Publisher brain — paste a URL and get back a ready-to-post Japanese (or English) announcement plus a full blog article, grounded only in the page's own extracted content. Runs on Gemma 4 12B (Ollama) by default. This is the same brain behind the Kurage URL2AI Publisher web app (https://url2ai.exbridge.jp/), which auto-distributes the output to 5 media (Bluesky, Hatena Bookmark, AIxSNS, Kurage's Bludit blog, Hatena Blog) — this API exposes only the analysis/generation step, not the posting step. Select a skill by path after the service URL. Skills: POST .../url2brain/analyze/url (fetch+extract title/description/headings/body from a URL) | /generate/announcement (<=280 char announcement from extracted content) | /generate/blog-article (300-600 word blog article from extracted content) | /generate/from-url (convenience endpoint: fetch + both generators in one call — the recommended single-call skill). Body for generate/from-url and analyze/url: {url (required), language (default ja), tone}. Body for generate/announcement and generate/blog-article: {source (required, the object returned by analyze/url), language, tone}.",
+      "methods": [
+        "POST"
+      ],
+      "upstream_endpoint": "http://exbridge.ddns.net:18332",
+      "schema": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "[analyze/url, generate/from-url] Publicly reachable HTTP(S) URL to analyze and write about."
+            },
+            "source": {
+              "type": "object",
+              "description": "[generate/announcement, generate/blog-article] The object returned in result.source by analyze/url or generate/from-url."
+            },
+            "language": {
+              "type": "string",
+              "description": "Output language. Default ja (Japanese); pass en for English."
+            },
+            "tone": {
+              "type": "string",
+              "description": "Optional tone hint, e.g. neutral, enthusiastic. Default neutral."
+            }
+          }
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "endpoint": {
+              "type": "string"
+            },
+            "model": {
+              "type": "string",
+              "description": "gemma4:12b-it-qat"
+            },
+            "latency_ms": {
+              "type": "integer"
+            },
+            "result": {
+              "type": "object",
+              "description": "[analyze/url] {title, description, headings, links, content}. [generate/announcement] {text}. [generate/blog-article] {title, body_markdown}. [generate/from-url] {source, announcement, blog_article} — all three combined."
+            }
+          }
+        }
+      }
     }
   }
 }
