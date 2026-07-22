@@ -5,7 +5,7 @@ info:
     Crypto judgment intelligence API. 15 skills (technical / onchain / sentiment analysis,
     trade / risk / portfolio decisions, market ranking, pair signals) built from vendored
     open-source trading intelligence (ai-hedge-fund-crypto, crypto-trading-agents, LLM_trader),
-    served by a local Gemma 4 model. Judgment only — no exchange credentials, no order execution.
+    powered by DeepSeek (deepseek-v4-flash). Judgment only — no exchange credentials, no order execution.
     Returns structured JSON with signal / confidence / evidence and upstream attribution.
   version: 1.0.0
 servers:

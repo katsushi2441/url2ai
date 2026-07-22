@@ -5,7 +5,7 @@ info:
     FX judgment intelligence API. 15 skills (technical / macro / sentiment analysis,
     trade / risk / portfolio decisions, FinGPT / FinRobot / FinMem tasks, market ranking,
     pair signals) built from vendored open-source trading intelligence (TradingAgents, FinGPT,
-    ai-hedge-fund), served by a local Gemma 4 model. Judgment only — no broker credentials,
+    ai-hedge-fund), powered by DeepSeek (deepseek-v4-flash). Judgment only — no broker credentials,
     no order execution. Returns structured JSON with signal / confidence / evidence and
     upstream attribution.
   version: 1.0.0
