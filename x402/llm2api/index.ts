@@ -2,7 +2,7 @@
  * LLM2API x402 service handler.
  *
  * Proxies paid requests to the LLM gateway (port 8019).
- * Powered by Ollama + Gemma 4 12B.
+ * Powered by DeepSeek (deepseek-v4-flash).
  * OpenAI-compatible: POST /llm2api/v1/chat/completions
  */
 

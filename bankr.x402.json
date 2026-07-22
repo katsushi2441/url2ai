@@ -4,7 +4,7 @@
   "services": {
     "llm2api": {
       "price": "0.05",
-      "description": "LLM2API — Gemma 4 12B inference via Ollama, plus crypto pre-trade checks. OpenAI-compatible chat completions API for AI agents and MCP workflows: send a messages array to POST .../llm2api/v1/chat/completions and receive a response from Google Gemma 4 12B (gemma4:12b-it-qat). Input capped at 4,000 characters across max 20 messages; output capped at 2,048 tokens.\n\nSkills:\n  POST .../llm2api/v1/chat/completions\n    OpenAI-compatible chat completion (Gemma 4 12B).\n\n  POST .../llm2api/trade/risk-check\n    Crypto token risk check. Body: {\"symbol\": \"BTC\"}. Scans recent news for hack/exploit/delisting/rug-pull/lawsuit events, classifies them with confidence scores and returns verdict block|ok. Same pipeline that protects the live Kurage FreqAI trading system (kurage.exbridge.jp/kfreqai.php).\n\n  POST .../llm2api/trade/size-check\n    Crypto order size / liquidity check. Body: {\"symbol\": \"DOGE\", \"order_size_usdt\": 5000}. Applies the live system's 0.1%-of-24h-volume liquidity cap and returns max_safe_size_usdt plus a thin-market warning. No LLM, sub-second.",
+      "description": "LLM2API — DeepSeek (deepseek-v4-flash) inference, plus crypto pre-trade checks. OpenAI-compatible chat completions API for AI agents and MCP workflows: send a messages array to POST .../llm2api/v1/chat/completions and receive a response from DeepSeek (deepseek-v4-flash). Input capped at 4,000 characters across max 20 messages; output capped at 2,048 tokens.\n\nSkills:\n  POST .../llm2api/v1/chat/completions\n    OpenAI-compatible chat completion (DeepSeek).\n\n  POST .../llm2api/trade/risk-check\n    Crypto token risk check. Body: {\"symbol\": \"BTC\"}. Scans recent news for hack/exploit/delisting/rug-pull/lawsuit events, classifies them with confidence scores and returns verdict block|ok. Same pipeline that protects the live Kurage FreqAI trading system (kurage.exbridge.jp/kfreqai.php).\n\n  POST .../llm2api/trade/size-check\n    Crypto order size / liquidity check. Body: {\"symbol\": \"DOGE\", \"order_size_usdt\": 5000}. Applies the live system's 0.1%-of-24h-volume liquidity cap and returns max_safe_size_usdt plus a thin-market warning. No LLM, sub-second.",
       "methods": [
         "POST"
       ],
@@ -63,7 +63,7 @@
             },
             "model": {
               "type": "string",
-              "description": "Model used: gemma4:e4b."
+              "description": "Model used: deepseek-v4-flash."
             },
             "choices": {
               "type": "array",
@@ -391,7 +391,7 @@
     },
     "fxbrain": {
       "price": "0.05",
-      "description": "Kurage FX Brain — 15 FX judgment skills on Gemma 4 12B, built from vendored open-source trading intelligence: TradingAgents (Apache-2.0), FinGPT (MIT), ai-hedge-fund (MIT), pinned commits with full attribution. Judgment only: no broker credentials, no order execution. Select a skill by path after the service URL. Skills: POST .../fxbrain/analyze/technical | /analyze/macro | /analyze/sentiment | /analyze/full (all perspectives in one call) | /debate/bull-bear | /decide/trade (BUY/SELL/HOLD) | /assess/risk (approve/reduce/reject) | /decide/portfolio | /review/trade | /fingpt/sentiment | /fingpt/headline | /fingpt/forecast | /fingpt/report | /hedge/news-sentiment | /hedge/portfolio | /finrobot/forecast (FinRobot Apache-2.0 Market Forecaster: next-week move with % range) | /finrobot/report/{income_stmt,balance_sheet,cash_flow,segment_stmt,risk_assessment,competitors,business_highlights,company_description} | /finmem/decide (FinMem MIT layered-memory decision with risk-seeking/averse character) | /finmem/reflect | /market/opportunity-ranking (rank up to 40 pairs by risk-adjusted opportunity in one call; body {pairs:[{pair,technicals,news,flows,positioning}...],global_context}) | /market/flow-ranking | /market/anomaly | /market/margin-risk | /signal/pair/{PAIR} (e.g. /signal/pair/USD_JPY: evidence-bounded watch/wait/avoid signal). Body: {pair (required, e.g. USD_JPY), timeframe, technicals{}, macro{}, news[], position{}, history[], question} — at least one evidence field required. Returns structured JSON with signal/confidence/evidence and upstream attribution. The full TradingAgents multi-agent graph (~5.5 min compute) is sold separately on the direct x402 rail: POST https://bittensorman.xyz/fxbrain/tradingagents/run ($0.50).",
+      "description": "Kurage FX Brain — 15 FX judgment skills on DeepSeek (deepseek-v4-flash), built from vendored open-source trading intelligence: TradingAgents (Apache-2.0), FinGPT (MIT), ai-hedge-fund (MIT), pinned commits with full attribution. Judgment only: no broker credentials, no order execution. Select a skill by path after the service URL. Skills: POST .../fxbrain/analyze/technical | /analyze/macro | /analyze/sentiment | /analyze/full (all perspectives in one call) | /debate/bull-bear | /decide/trade (BUY/SELL/HOLD) | /assess/risk (approve/reduce/reject) | /decide/portfolio | /review/trade | /fingpt/sentiment | /fingpt/headline | /fingpt/forecast | /fingpt/report | /hedge/news-sentiment | /hedge/portfolio | /finrobot/forecast (FinRobot Apache-2.0 Market Forecaster: next-week move with % range) | /finrobot/report/{income_stmt,balance_sheet,cash_flow,segment_stmt,risk_assessment,competitors,business_highlights,company_description} | /finmem/decide (FinMem MIT layered-memory decision with risk-seeking/averse character) | /finmem/reflect | /market/opportunity-ranking (rank up to 40 pairs by risk-adjusted opportunity in one call; body {pairs:[{pair,technicals,news,flows,positioning}...],global_context}) | /market/flow-ranking | /market/anomaly | /market/margin-risk | /signal/pair/{PAIR} (e.g. /signal/pair/USD_JPY: evidence-bounded watch/wait/avoid signal). Body: {pair (required, e.g. USD_JPY), timeframe, technicals{}, macro{}, news[], position{}, history[], question} — at least one evidence field required. Returns structured JSON with signal/confidence/evidence and upstream attribution.",
       "methods": [
         "POST"
       ],
@@ -448,7 +448,7 @@
             },
             "model": {
               "type": "string",
-              "description": "gemma4:12b-it-qat"
+              "description": "deepseek-v4-flash"
             },
             "latency_ms": {
               "type": "integer"
@@ -551,7 +551,7 @@
     },
     "url2brain": {
       "price": "1.00",
-      "description": "Kurage URL2AI Publisher brain — paste a URL and get back a ready-to-post Japanese (or English) announcement plus a full blog article, grounded only in the page's own extracted content. Runs on Gemma 4 12B (Ollama) by default. This is the same brain behind the Kurage URL2AI Publisher web app (https://url2ai.exbridge.jp/), which auto-distributes the output to 5 media (Bluesky, Hatena Bookmark, AIxSNS, Kurage's Bludit blog, Hatena Blog) — this API exposes only the analysis/generation step, not the posting step. Select a skill by path after the service URL. Skills: POST .../url2brain/analyze/url (fetch+extract title/description/headings/body from a URL) | /generate/announcement (<=280 char announcement from extracted content) | /generate/blog-article (300-600 word blog article from extracted content) | /generate/from-url (convenience endpoint: fetch + both generators in one call — the recommended single-call skill). Body for generate/from-url and analyze/url: {url (required), language (default ja), tone}. Body for generate/announcement and generate/blog-article: {source (required, the object returned by analyze/url), language, tone}.",
+      "description": "Kurage URL2AI Publisher brain — paste a URL and get back a ready-to-post Japanese (or English) announcement plus a full blog article, grounded only in the page's own extracted content. Runs on DeepSeek (deepseek-v4-flash) for paid x402 calls. This is the same brain behind the Kurage URL2AI Publisher web app (https://url2ai.exbridge.jp/). Select a skill by path after the service URL.\n\nGeneration skills: POST .../url2brain/analyze/url (fetch+extract title/description/headings/body from a URL) | /generate/announcement (<=280 char announcement from extracted content) | /generate/blog-article (300-600 word blog article from extracted content) | /generate/from-url (convenience endpoint: fetch + both generators in one call — the recommended single-call skill). Body for generate/from-url and analyze/url: {url (required), language (default ja), tone}. Body for generate/announcement and generate/blog-article: {source (required, the object returned by analyze/url), language, tone}.\n\nPublishing skills ($1.00 each — these ACTUALLY POST to Kurage/EXBRIDGE's own accounts; payment is the posting authorization, no credentials needed from the caller): POST .../url2brain/post/bluesky {text, url} → posts to @bittensorman.bsky.social, framed in the Kurage persona | /post/hatena-bookmark {url, comment, tags} → posts to Kurage's Hatena Bookmark, no framing | /post/aixsns {content, author} → posts to aixec.exbridge.jp, framed as bittensorman (developer/business persona) | /post/bludit {title, body_markdown} → posts a full article to Kurage's Bludit blog (kurage.exbridge.jp/blog, url2pub category), framed in the Kurage persona | /post/hatena-blog {title, body_markdown} → posts a full article to bittensorman's Hatena Blog, framed as bittensorman. Typical flow: call generate/from-url first to get announcement/blog_article text, then feed that text into the post/* skill(s) of your choice.",
       "methods": [
         "POST"
       ],
@@ -562,7 +562,7 @@
           "properties": {
             "url": {
               "type": "string",
-              "description": "[analyze/url, generate/from-url] Publicly reachable HTTP(S) URL to analyze and write about."
+              "description": "[analyze/url, generate/from-url, post/hatena-bookmark] Publicly reachable HTTP(S) URL."
             },
             "source": {
               "type": "object",
@@ -575,6 +575,26 @@
             "tone": {
               "type": "string",
               "description": "Optional tone hint, e.g. neutral, enthusiastic. Default neutral."
+            },
+            "text": {
+              "type": "string",
+              "description": "[post/bluesky] Post text, max 280 chars including the Kurage persona prefix (required)."
+            },
+            "content": {
+              "type": "string",
+              "description": "[post/aixsns] Post content, max 2000 chars (required)."
+            },
+            "title": {
+              "type": "string",
+              "description": "[post/bludit, post/hatena-blog] Article title (required)."
+            },
+            "body_markdown": {
+              "type": "string",
+              "description": "[post/bludit, post/hatena-blog] Article body in Markdown (required)."
+            },
+            "comment": {
+              "type": "string",
+              "description": "[post/hatena-bookmark] Bookmark comment, max 100 chars."
             }
           }
         },
@@ -586,14 +606,14 @@
             },
             "model": {
               "type": "string",
-              "description": "gemma4:12b-it-qat"
+              "description": "deepseek-v4-flash (generation skills) or the posting backend name (post/* skills)"
             },
             "latency_ms": {
               "type": "integer"
             },
             "result": {
               "type": "object",
-              "description": "[analyze/url] {title, description, headings, links, content}. [generate/announcement] {text}. [generate/blog-article] {title, body_markdown}. [generate/from-url] {source, announcement, blog_article} — all three combined."
+              "description": "[analyze/url] {title, description, headings, links, content}. [generate/announcement] {text}. [generate/blog-article] {title, body_markdown}. [generate/from-url] {source, announcement, blog_article}. [post/*] {ok, status, platform, detail} — detail includes the live post URL on success."
             }
           }
         }

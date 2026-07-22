@@ -24,7 +24,7 @@ const PRICE_KC_SINGLE = process.env.PRICE_KC_SINGLE || "$0.001";
 const PRICE_KC_CHAIN  = process.env.PRICE_KC_CHAIN  || "$0.003";
 const URL2BRAIN_URL   = process.env.URL2BRAIN_URL   || "http://127.0.0.1:18332";
 const URL2BRAIN_TOKEN = process.env.URL2BRAIN_TOKEN || "";
-// URL解析+告知文+ブログ記事生成(Gemma 4 12Bはセルフホストなので原価はほぼ電気代のみ)。
+// URL解析+告知文+ブログ記事生成(DeepSeek/deepseek-v4-flash。x402課金コールはDeepSeekへ)。
 // 2026-07-21 ユーザー指定: 1コール$1.00固定(llm2apiと同じく、エンドポイントによらず均一)。
 const PRICE_URL2BRAIN = process.env.PRICE_URL2BRAIN || "$1.00";
 const BACKGROUND_REMOVAL_SCHEMA = {
@@ -56,7 +56,7 @@ function llmRoute() {
     price: PRICE_LLM,
     network: NETWORK,
     config: {
-      description: "OpenAI-compatible chat completions via Gemma 4 12B (Ollama)",
+      description: "OpenAI-compatible chat completions via DeepSeek (deepseek-v4-flash)",
       discoverable: true,
       inputSchema: {
         bodyType: "json",
@@ -105,7 +105,7 @@ function tradeSizeRoute() {
   };
 }
 
-// Kurage FX Brain (kfxbrain :18326) — FX judgment APIs backed by Gemma 4 12B.
+// Kurage FX Brain (kfxbrain :18326) — FX judgment APIs backed by DeepSeek.
 // Vendored OSS intelligence: TradingAgents (Apache-2.0), FinGPT (MIT), ai-hedge-fund (MIT).
 const FXBRAIN_EVIDENCE_SCHEMA = {
   bodyType: "json",
@@ -145,15 +145,15 @@ const FXBRAIN_MARKET_SCHEMA = {
 // gateway suffix -> [upstream path, price, description, schema]
 const FXBRAIN_ENDPOINTS = {
   "analyze/technical": ["/v1/analyze/technical", PRICE_LLM,
-    "FX technical analysis (trend, levels, momentum) as structured JSON with evidence and invalidation. Gemma 4 12B."],
+    "FX technical analysis (trend, levels, momentum) as structured JSON with evidence and invalidation. DeepSeek."],
   "analyze/macro": ["/v1/analyze/macro", PRICE_LLM,
-    "FX macro analysis: rate differentials, growth, policy divergence as structured JSON. Gemma 4 12B."],
+    "FX macro analysis: rate differentials, growth, policy divergence as structured JSON. DeepSeek."],
   "analyze/sentiment": ["/v1/analyze/sentiment", PRICE_LLM,
-    "FX news and market sentiment analysis as structured JSON. Gemma 4 12B."],
+    "FX news and market sentiment analysis as structured JSON. DeepSeek."],
   "analyze/full": ["/v1/analyze/full", PRICE_LLM,
-    "All FX perspectives (technical, macro, sentiment, decision) in one structured response. Gemma 4 12B."],
+    "All FX perspectives (technical, macro, sentiment, decision) in one structured response. DeepSeek."],
   "debate/bull-bear": ["/v1/debate/bull-bear", PRICE_LLM,
-    "Bull vs bear argument mapping for an FX pair as structured JSON. Gemma 4 12B."],
+    "Bull vs bear argument mapping for an FX pair as structured JSON. DeepSeek."],
   "decide/trade": ["/v1/decide/trade", PRICE_LLM,
     "BUY / SELL / HOLD judgment for an FX pair from supplied evidence. Judgment only — never executes orders."],
   "assess/risk": ["/v1/assess/risk", PRICE_LLM,
@@ -161,21 +161,21 @@ const FXBRAIN_ENDPOINTS = {
   "decide/portfolio": ["/v1/decide/portfolio", PRICE_LLM,
     "Manage open FX positions: hold / close / adjust judgments as structured JSON. Judgment only."],
   "review/trade": ["/v1/review/trade", PRICE_LLM,
-    "Post-trade review: category, verdict, lesson from a closed FX trade. Gemma 4 12B."],
+    "Post-trade review: category, verdict, lesson from a closed FX trade. DeepSeek."],
   "fingpt/sentiment": ["/v1/vendor/fingpt/sentiment", PRICE_LLM,
-    "FinGPT (MIT) financial sentiment classification task executed on Gemma 4 12B."],
+    "FinGPT (MIT) financial sentiment classification task executed on DeepSeek."],
   "fingpt/headline": ["/v1/vendor/fingpt/headline", PRICE_LLM,
-    "FinGPT (MIT) headline classification task executed on Gemma 4 12B."],
+    "FinGPT (MIT) headline classification task executed on DeepSeek."],
   "fingpt/forecast": ["/v1/vendor/fingpt/forecast", PRICE_LLM,
-    "FinGPT (MIT) Forecaster task: evidence-grounded FX outlook on Gemma 4 12B."],
+    "FinGPT (MIT) Forecaster task: evidence-grounded FX outlook on DeepSeek."],
   "fingpt/report": ["/v1/vendor/fingpt/report", PRICE_LLM,
-    "FinGPT (MIT) financial report analysis task executed on Gemma 4 12B."],
+    "FinGPT (MIT) financial report analysis task executed on DeepSeek."],
   "hedge/news-sentiment": ["/v1/vendor/ai-hedge-fund/news-sentiment", PRICE_LLM,
     "ai-hedge-fund (MIT) news sentiment agent: per-headline classification plus aggregate signal for an FX pair."],
   "hedge/portfolio": ["/v1/vendor/ai-hedge-fund/portfolio", PRICE_LLM,
     "ai-hedge-fund (MIT) portfolio manager synthesis over supplied analyst signals. Judgment only."],
   "finrobot/forecast": ["/v1/vendor/finrobot/forecast", PRICE_LLM,
-    "FinRobot (Apache-2.0) Market Forecaster workflow: 2-4 positive developments and concerns, next-week move prediction with % range. Gemma 4 12B."],
+    "FinRobot (Apache-2.0) Market Forecaster workflow: 2-4 positive developments and concerns, next-week move prediction with % range. DeepSeek."],
   ...Object.fromEntries([
     "income_stmt", "balance_sheet", "cash_flow", "segment_stmt",
     "risk_assessment", "competitors", "business_highlights", "company_description",
@@ -186,10 +186,10 @@ const FXBRAIN_ENDPOINTS = {
   "finmem/reflect": ["/v1/vendor/finmem/reflect", PRICE_LLM,
     "FinMem (MIT) reflection loop: extract the lesson from a trade outcome plus supporting memories, ready to store as a reflection memory."],
   "market/opportunity-ranking": ["/v1/market/opportunity-ranking", PRICE_LLM,
-    "Multi-pair FX opportunity ranking (up to 40 pairs in one call): risk-adjusted scores, duplicated-currency exposure conflicts, event risk. Body: {pairs:[{pair, technicals, news, flows, positioning}...], global_context}. Gemma 4 12B.",
+    "Multi-pair FX opportunity ranking (up to 40 pairs in one call): risk-adjusted scores, duplicated-currency exposure conflicts, event risk. Body: {pairs:[{pair, technicals, news, flows, positioning}...], global_context}. DeepSeek.",
     FXBRAIN_MARKET_SCHEMA],
   "market/flow-ranking": ["/v1/market/flow-ranking", PRICE_LLM,
-    "Multi-pair currency-flow strength ranking from supplied COT/positioning, rate differential, carry and liquidity evidence. Same multi-pair body. Gemma 4 12B.",
+    "Multi-pair currency-flow strength ranking from supplied COT/positioning, rate differential, carry and liquidity evidence. Same multi-pair body. DeepSeek.",
     FXBRAIN_MARKET_SCHEMA],
   "market/anomaly": ["/v1/market/anomaly", PRICE_LLM,
     "Cross-pair FX anomaly detection: price/spread/volatility/volume/rates/positioning/correlation/intervention/liquidity, severity low-critical. Ordinary volatility is not flagged. Same multi-pair body.",
@@ -201,9 +201,9 @@ const FXBRAIN_ENDPOINTS = {
     "USD_JPY", "EUR_JPY", "GBP_JPY", "EUR_USD", "GBP_USD", "AUD_USD",
   ].map((p) => [`signal/pair/${p}`, [`/v1/signal/pair/${p}`, PRICE_LLM,
     `Single evidence-bounded FX signal for ${p}: watch_buy_base/watch_sell_base/wait/avoid with invalidation and event risks. Judgment only, never places orders.`]])),
-  "tradingagents/run": ["/v1/vendor/tradingagents/run", PRICE_FXGRAPH,
-    "TradingAgents (Apache-2.0) full multi-agent graph on real FX market data: analyst reports, bull/bear debate, trader plan, risk debate, final decision. Runs ~2.5 min (fast multi-agent profile), not seconds; over the gateway deadline it fails cleanly with no charge. Gemma 4 12B.",
-    FXBRAIN_GRAPH_SCHEMA, 180],
+  // tradingagents/run(フルグラフ)は撤去(2026-07-22)。逐次LLM呼び出しが多くx402の
+  // 180秒上限を常に超過し=実質購入不可(無課金でクリーン失敗)、品質も伴わないため製品から外す。
+  // kfxbrain側のエンドポイントは残るがx402には公開しない。
 };
 
 function fxbrainRoute(price, description, schema, maxTimeoutSeconds) {
@@ -308,7 +308,7 @@ function kcbrainRoute(price, description, schema) {
 }
 
 // Kurage URL2AI Publisher brain (url2brain :18332) — URL解析+告知文+ブログ記事生成。
-// Gemma 4 12B(Ollama、セルフホスト)。/v1/post/*(Kurage自身のSNS/ブログへの投稿)は
+// DeepSeek(deepseek-v4-flash)。/v1/post/*(Kurage自身のSNS/ブログへの投稿)は
 // 第三者が課金だけで投稿できてしまうため、意図的にゲートウェイへ載せない
 // (analyze/generateの読み取り専用スキルのみ公開)。
 const URL2BRAIN_URL_SCHEMA = {
@@ -334,20 +334,71 @@ const URL2BRAIN_ENDPOINTS = {
     "Fetch a URL and extract structured content: title, description, headings, links, body text.",
     URL2BRAIN_URL_SCHEMA],
   "generate/announcement": ["/v1/generate/announcement",
-    "Generate a <=280 char announcement (Japanese by default) grounded only in the supplied extracted content (source from analyze/url). Gemma 4 12B.",
+    "Generate a <=280 char announcement (Japanese by default) grounded only in the supplied extracted content (source from analyze/url). DeepSeek.",
     URL2BRAIN_SOURCE_SCHEMA],
   "generate/blog-article": ["/v1/generate/blog-article",
-    "Generate a 300-600 word blog article (Japanese by default) grounded only in the supplied extracted content (source from analyze/url). Gemma 4 12B.",
+    "Generate a 300-600 word blog article (Japanese by default) grounded only in the supplied extracted content (source from analyze/url). DeepSeek.",
     URL2BRAIN_SOURCE_SCHEMA],
   "generate/from-url": ["/v1/generate/from-url",
-    "Convenience endpoint: fetch a URL, then generate both an announcement and a blog article from it in one call. The recommended single-call skill for 'just paste a URL'. Gemma 4 12B.",
+    "Convenience endpoint: fetch a URL, then generate both an announcement and a blog article from it in one call. The recommended single-call skill for 'just paste a URL'. DeepSeek.",
     URL2BRAIN_URL_SCHEMA],
+};
+
+// 投稿5媒体はKurage/EXBRIDGE自身のアカウント(認証情報はurl2brainサーバー側に保存)に対して
+// 実際に投稿する。x402決済(=第三者による直接の見放題スパムへの経済的な歯止め)を通した
+// 支払いを実投稿の許可として扱う設計(2026-07-21 ユーザー承認)。投稿文はKurage/bittensorman
+// ペルソナで自動的に枠付けされる(persona注入、下記)。生の自由入力テキストをそのまま
+// Kurage名義で投稿させるわけではなく、url2brainが生成した文章(generate/*)を渡す用途を想定。
+const URL2BRAIN_POST_ENDPOINTS = {
+  "post/bluesky": ["/v1/post/bluesky", "kurage", "$1.00", {
+    bodyType: "json",
+    properties: {
+      text: { type: "string", description: "Post text, max 280 chars including the Kurage persona prefix (required)" },
+      url: { type: "string", description: "Optional URL to include" },
+    },
+  }, "Post to Kurage's own Bluesky account (@bittensorman.bsky.social), framed in the Kurage persona. Actually publishes — x402 payment is treated as the posting authorization."],
+  "post/hatena-bookmark": ["/v1/post/hatena-bookmark", "", "$1.00", {
+    bodyType: "json",
+    properties: {
+      url: { type: "string", description: "URL to bookmark (required)" },
+      comment: { type: "string", description: "Bookmark comment, max 100 chars" },
+      tags: { type: "array", description: "Optional tags" },
+    },
+  }, "Post to Kurage's Hatena Bookmark account. No persona framing (short comment only). Actually publishes."],
+  "post/aixsns": ["/v1/post/aixsns", "bittensorman", "$1.00", {
+    bodyType: "json",
+    properties: {
+      content: { type: "string", description: "Post content, max 2000 chars (required)" },
+      author: { type: "string", description: "Display author name" },
+    },
+  }, "Post to AIxSNS (aixec.exbridge.jp) as bittensorman (developer/business persona). Actually publishes."],
+  "post/bludit": ["/v1/post/bludit", "kurage", "$1.00", {
+    bodyType: "json",
+    properties: {
+      title: { type: "string", description: "Article title (required)" },
+      body_markdown: { type: "string", description: "Article body in Markdown (required)" },
+    },
+  }, "Post a full article to Kurage's own Bludit blog (kurage.exbridge.jp/blog, url2pub category), framed in the Kurage persona. Actually publishes."],
+  "post/hatena-blog": ["/v1/post/hatena-blog", "bittensorman", "$1.00", {
+    bodyType: "json",
+    properties: {
+      title: { type: "string", description: "Article title (required)" },
+      body_markdown: { type: "string", description: "Article body in Markdown (required)" },
+    },
+  }, "Post a full article to bittensorman's Hatena Blog, framed in the developer/business persona. Actually publishes."],
 };
 
 function url2brainRoute(description, schema) {
   return {
     price: PRICE_URL2BRAIN, network: NETWORK,
     config: { description, discoverable: true, inputSchema: schema, maxTimeoutSeconds: 100 },
+  };
+}
+
+function url2brainPostRoute(price, description, schema) {
+  return {
+    price, network: NETWORK,
+    config: { description, discoverable: true, inputSchema: schema, maxTimeoutSeconds: 60 },
   };
 }
 
@@ -444,6 +495,9 @@ for (const [suffix, [, price, description, schema]] of Object.entries(KCBRAIN_EN
 for (const [suffix, [, description, schema]] of Object.entries(URL2BRAIN_ENDPOINTS)) {
   routes[`POST /url2brain/${suffix}`] = url2brainRoute(description, schema);
 }
+for (const [suffix, [, , price, schema, description]] of Object.entries(URL2BRAIN_POST_ENDPOINTS)) {
+  routes[`POST /url2brain/${suffix}`] = url2brainPostRoute(price, description, schema);
+}
 
 const app = express();
 app.set("trust proxy", true);
@@ -537,7 +591,7 @@ const X402_WELL_KNOWN = {
       "price": PRICE_LLM,
       "network": NETWORK,
       "pay_to": WALLET,
-      "description": "OpenAI-compatible chat completions via Gemma 4 12B (Ollama)"
+      "description": "OpenAI-compatible chat completions via DeepSeek (deepseek-v4-flash)"
     },
     {
       "path": "/llm2api/v1/chat/completions",
@@ -545,7 +599,7 @@ const X402_WELL_KNOWN = {
       "price": PRICE_LLM,
       "network": NETWORK,
       "pay_to": WALLET,
-      "description": "OpenAI-compatible chat completions via Gemma 4 12B (Ollama)"
+      "description": "OpenAI-compatible chat completions via DeepSeek (deepseek-v4-flash)"
     },
     {
       "path": "/llm2api/trade/risk-check",
@@ -591,6 +645,16 @@ for (const [suffix, [, description]] of Object.entries(URL2BRAIN_ENDPOINTS)) {
     path: `/url2brain/${suffix}`,
     method: "POST",
     price: PRICE_URL2BRAIN,
+    network: NETWORK,
+    pay_to: WALLET,
+    description,
+  });
+}
+for (const [suffix, [, , price, , description]] of Object.entries(URL2BRAIN_POST_ENDPOINTS)) {
+  X402_WELL_KNOWN.endpoints.push({
+    path: `/url2brain/${suffix}`,
+    method: "POST",
+    price,
     network: NETWORK,
     pay_to: WALLET,
     description,
@@ -670,7 +734,7 @@ for (const [suffix, [upstreamPath]] of Object.entries(FXBRAIN_ENDPOINTS)) {
   app.post(`/fxbrain/${suffix}`, (req, res) => proxyToFxbrain(upstreamPath, req, res));
 }
 
-// kcbrain proxy: DeepSeek(hosted API)はkfxbrainのローカルGemma 4より大幅に速い
+// kcbrain proxy: DeepSeek(hosted API)はkfxbrainと同じDeepSeek(hosted)で高速
 // (単発判断は実測2.5秒)。多段連鎖(3-5コール)でも数十秒想定のため締切は60秒で十分。
 // 締切超過は>=400を返しx402-express側でsettleをスキップ(charge-without-delivery防止、
 // PayApi/Chet指摘のfxbrainと同じ構造)。
@@ -722,7 +786,7 @@ for (const [suffix, [upstreamPath]] of Object.entries(KCBRAIN_ENDPOINTS)) {
   app.post(`/kcbrain/${suffix}`, (req, res) => proxyToKcbrain(upstreamPath, req, res));
 }
 
-// url2brain proxy: Gemma 4 12B(Ollama, セルフホスト)はDeepSeekより遅い可能性があるため
+// url2brain proxy: x402課金コールはDeepSeek(deepseek-v4-flash)へ振る
 // 締切を90秒に取る(実測: generate/from-url で約11秒)。fxbrain/kcbrainと同じ
 // charge-without-delivery防止パターン(締切超過は>=400を返しx402側でsettleをスキップ)。
 const URL2BRAIN_DEADLINE_MS = Number(process.env.URL2BRAIN_DEADLINE_MS || 90000);
@@ -779,6 +843,54 @@ function proxyToUrl2brain(upstreamPath, req, res, suffix) {
 
 for (const [suffix, [upstreamPath]] of Object.entries(URL2BRAIN_ENDPOINTS)) {
   app.post(`/url2brain/${suffix}`, (req, res) => proxyToUrl2brain(upstreamPath, req, res, suffix));
+}
+
+// 投稿系: x402決済を実投稿の許可として扱い、confirm_post:trueとペルソナを強制注入する
+// (買い手側はpersonaを知らなくていい。どのURLを叩いたかだけで自動的に決まる)。
+function proxyToUrl2brainPost(upstreamPath, persona, req, res) {
+  const payload = { ...req.body, confirm_post: true };
+  if (persona) payload.persona = persona;
+  const body = JSON.stringify(payload);
+  const url = new URL(`${URL2BRAIN_URL}${upstreamPath}`);
+  const options = {
+    hostname: url.hostname,
+    port: url.port,
+    path: url.pathname,
+    method: "POST",
+    timeout: 60000,
+    headers: {
+      "Content-Type": "application/json",
+      "Content-Length": Buffer.byteLength(body),
+      "X-URL2BRAIN-Token": URL2BRAIN_TOKEN,
+    },
+  };
+  let settled = false;
+  const once = (fn) => { if (!settled) { settled = true; clearTimeout(deadline); fn(); } };
+  const proxyReq = nodeHttp.request(options, (upRes) => {
+    once(() => {
+      res.status(upRes.statusCode || 502);
+      res.set("Content-Type", upRes.headers["content-type"] || "application/json");
+      upRes.pipe(res);
+    });
+  });
+  const deadline = setTimeout(() => {
+    once(() => {
+      proxyReq.destroy(new Error("url2brain post deadline"));
+      if (!res.headersSent) {
+        res.status(504).json({ error: "post exceeded the gateway deadline; no payment was captured. Please retry." });
+      }
+    });
+  }, 50000);
+  proxyReq.on("timeout", () => proxyReq.destroy(new Error("url2brain post upstream timeout")));
+  proxyReq.on("error", (err) => {
+    once(() => { if (!res.headersSent) res.status(502).json({ error: `url2brain unavailable: ${err.message}` }); });
+  });
+  proxyReq.write(body);
+  proxyReq.end();
+}
+
+for (const [suffix, [upstreamPath, persona]] of Object.entries(URL2BRAIN_POST_ENDPOINTS)) {
+  app.post(`/url2brain/${suffix}`, (req, res) => proxyToUrl2brainPost(upstreamPath, persona, req, res));
 }
 
 app.listen(PORT, "0.0.0.0", () => {

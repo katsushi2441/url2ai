@@ -1,4 +1,5 @@
 import http from "node:http";
+import https from "node:https";
 import { Buffer } from "node:buffer";
 
 const HOST          = process.env.HOST         || "0.0.0.0";
@@ -6,6 +7,13 @@ const PORT          = Number.parseInt(process.env.PORT || "8019", 10);
 const OLLAMA_HOST   = process.env.OLLAMA_HOST  || "192.168.0.14";
 const OLLAMA_PORT   = Number.parseInt(process.env.OLLAMA_PORT || "11434", 10);
 const DEFAULT_MODEL = process.env.DEFAULT_MODEL || "gemma4:e4b";
+// LLMプロバイダ: ollama(セルフホストGemma) / deepseek(ホスト型・OpenAI互換)。
+// 2026-07-22: x402の全LLM APIをDeepSeekへ統一(GPU競合/レイテンシ解消)。
+const LLM_PROVIDER    = (process.env.LLM_PROVIDER || "ollama").trim().toLowerCase();
+const DEEPSEEK_HOST   = (process.env.DEEPSEEK_HOST || "api.deepseek.com").replace(/^https?:\/\//, "");
+const DEEPSEEK_KEY    = process.env.DEEPSEEK_API_KEY || "";
+const DEEPSEEK_MODEL  = process.env.DEEPSEEK_MODEL || "deepseek-v4-flash";
+const ACTIVE_MODEL    = LLM_PROVIDER === "deepseek" ? DEEPSEEK_MODEL : DEFAULT_MODEL;
 // kfreqai judgment API (trade pre-checks: risk-check / size-check)
 const JUDGMENT_HOST = process.env.JUDGMENT_HOST || "127.0.0.1";
 const JUDGMENT_PORT = Number.parseInt(process.env.JUDGMENT_PORT || "18321", 10);
@@ -68,6 +76,34 @@ function proxyToOllama(req, res, ollamaPath, bodyStr) {
   proxyReq.end();
 }
 
+function proxyToDeepSeek(res, deepseekPath, bodyStr) {
+  const options = {
+    hostname: DEEPSEEK_HOST,
+    port: 443,
+    path: deepseekPath,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${DEEPSEEK_KEY}`,
+      "Content-Length": Buffer.byteLength(bodyStr),
+    },
+    timeout: 120000,
+  };
+  const proxyReq = https.request(options, (proxyRes) => {
+    res.writeHead(proxyRes.statusCode || 200, {
+      "Content-Type": proxyRes.headers["content-type"] || "application/json",
+      "Cache-Control": "no-store",
+    });
+    proxyRes.pipe(res);
+  });
+  proxyReq.on("timeout", () => proxyReq.destroy(new Error("deepseek timeout")));
+  proxyReq.on("error", (err) => {
+    json(res, 502, { error: `DeepSeek unavailable: ${err.message}` });
+  });
+  proxyReq.write(bodyStr);
+  proxyReq.end();
+}
+
 function proxyToJudgment(res, path, bodyStr) {
   const options = {
     hostname: JUDGMENT_HOST,
@@ -102,14 +138,15 @@ async function handle(req, res) {
 
   // Health
   if (req.method === "GET" && ["/health", "/healthz"].includes(skill)) {
-    return json(res, 200, { ok: true, service: "llm-gateway", model: DEFAULT_MODEL, ollama: `${OLLAMA_HOST}:${OLLAMA_PORT}` });
+    const backend = LLM_PROVIDER === "deepseek" ? DEEPSEEK_HOST : `${OLLAMA_HOST}:${OLLAMA_PORT}`;
+    return json(res, 200, { ok: true, service: "llm-gateway", provider: LLM_PROVIDER, model: ACTIVE_MODEL, backend });
   }
 
   // List models
   if (req.method === "GET" && skill === "/v1/models") {
     return json(res, 200, {
       object: "list",
-      data: [{ id: DEFAULT_MODEL, object: "model", created: 0, owned_by: "ollama" }],
+      data: [{ id: ACTIVE_MODEL, object: "model", created: 0, owned_by: LLM_PROVIDER }],
     });
   }
 
@@ -132,9 +169,16 @@ async function handle(req, res) {
     }
 
     // Force model and cap output tokens
-    body.model = DEFAULT_MODEL;
+    body.model = ACTIVE_MODEL;
     if (!body.max_tokens || body.max_tokens > MAX_OUTPUT_TOKENS) {
       body.max_tokens = MAX_OUTPUT_TOKENS;
+    }
+
+    if (LLM_PROVIDER === "deepseek") {
+      // deepseek-v4-flashは思考型: 明示的にthinkingを無効化(低max_tokensでの空応答回避)。
+      if (body.thinking === undefined) body.thinking = { type: "disabled" };
+      delete body.reasoning_effort;  // ollama/gemma固有フィールドはDeepSeekへ送らない
+      return proxyToDeepSeek(res, "/chat/completions", JSON.stringify(body));
     }
 
     // gemma4は思考型モデル: 既定で思考を無効化しないと、低いmax_tokensで
@@ -160,6 +204,9 @@ async function handle(req, res) {
     const bodyStr = await readBody(req);
     let body;
     try { body = JSON.parse(bodyStr); } catch { return json(res, 400, { error: "Invalid JSON" }); }
+    if (LLM_PROVIDER === "deepseek") {
+      return json(res, 400, { error: "legacy /v1/completions unsupported on deepseek; use /v1/chat/completions" });
+    }
     body.model = DEFAULT_MODEL;
     return proxyToOllama(req, res, "/v1/completions", JSON.stringify(body));
   }

@@ -4,11 +4,12 @@
  * Proxies paid requests to the kfxbrain judgment API (:18326).
  * FX judgment only — no broker credentials, no order execution.
  * Vendored OSS intelligence: TradingAgents (Apache-2.0), FinGPT (MIT),
- * ai-hedge-fund (MIT), running on local Gemma 4 12B.
+ * ai-hedge-fund (MIT), running on DeepSeek (deepseek-v4-flash).
  *
- * NOTE: the TradingAgents full graph (/v1/vendor/tradingagents/run, ~5.5 min)
- * is intentionally NOT exposed on this rail (serverless timeout); it is sold
- * on the direct x402 rail at https://bittensorman.xyz/fxbrain/tradingagents/run
+ * NOTE: the TradingAgents full graph (/v1/vendor/tradingagents/run) is retired
+ * from the x402 product (2026-07-22): its many sequential LLM calls always
+ * exceed the gateway timeout, so it was never reliably purchasable. Only the
+ * fast judgment skills below are offered.
  */
 
 const UPSTREAM = process.env.FXBRAIN_URL || "http://exbridge.ddns.net:18326";
