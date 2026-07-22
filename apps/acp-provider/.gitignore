@@ -1,0 +1,5 @@
+# 実行時生成物(ジョブ内容/ログ/状態。秘密や取引データを含みうる)
+state.json
+state.tmp
+events.jsonl
+provider.log
