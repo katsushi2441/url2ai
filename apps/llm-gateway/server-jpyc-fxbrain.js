@@ -9,8 +9,8 @@
  *   This server : PORT_JPYC_FXBRAIN (default 18327; 8018は既存サービスが使用中)
  *   Upstream    : kfxbrain FXBRAIN_URL (default http://127.0.0.1:18326)
  *
- * 価格: 通常スキル JPYC_AMOUNT (7.5 JPYC ≒ $0.05)
- *       tradingagents/run JPYC_AMOUNT_GRAPH (75 JPYC ≒ $0.50、実測5.5分の計算資源)
+ * 価格: 全判断スキル均一 JPYC_AMOUNT (7.5 JPYC ≒ $0.05)
+ * (tradingagents/runフルグラフは2026-07-22に製品から撤去)
  */
 
 import http from "node:http";
@@ -38,7 +38,6 @@ const MAX_BODY_BYTES = 64 * 1024;
 const JPYC_PAY_TO    = (process.env.JPYC_PAY_TO             || "").trim();
 const JPYC_RELAY_KEY = (process.env.JPYC_RELAY_PRIVATE_KEY  || "").trim();
 const JPYC_AMOUNT    = process.env.JPYC_AMOUNT || "7500000000000000000"; // 7.5 JPYC
-const JPYC_AMOUNT_GRAPH = process.env.JPYC_AMOUNT_GRAPH || "75000000000000000000"; // 75 JPYC
 const JPYC_TOKEN     = process.env.JPYC_TOKEN  || "0x431D5dfF03120AFA4bDf332c61A6e1766eF37BDB";
 const JPYC_RPC       = process.env.JPYC_RPC    || "https://polygon.drpc.org";
 
@@ -79,15 +78,16 @@ const SKILLS = {
   "/fxbrain/finrobot/report/company_description": "/v1/vendor/finrobot/report/company_description",
   "/fxbrain/finmem/decide": "/v1/vendor/finmem/decide",
   "/fxbrain/finmem/reflect": "/v1/vendor/finmem/reflect",
-  "/fxbrain/tradingagents/run": "/v1/vendor/tradingagents/run",
+  // tradingagents/run(フルグラフ)は製品から撤去(2026-07-22)。全レール共通で提供しない。
   "/fxbrain/market/opportunity-ranking": "/v1/market/opportunity-ranking",
   "/fxbrain/market/flow-ranking": "/v1/market/flow-ranking",
   "/fxbrain/market/anomaly": "/v1/market/anomaly",
   "/fxbrain/market/margin-risk": "/v1/market/margin-risk",
 };
 
-function amountFor(pathname) {
-  return pathname === "/fxbrain/tradingagents/run" ? JPYC_AMOUNT_GRAPH : JPYC_AMOUNT;
+function amountFor(_pathname) {
+  // グラフ撤去後は全スキル均一(JPYC_AMOUNT)。
+  return JPYC_AMOUNT;
 }
 
 const JPYC_ABI = [
@@ -142,7 +142,7 @@ const publicClient = createPublicClient({ chain: polygon, transport: viemHttp(JP
 const account      = privateKeyToAccount(JPYC_RELAY_KEY);
 const walletClient = createWalletClient({ account, chain: polygon, transport: viemHttp(JPYC_RPC) });
 
-console.log(`FX Brain JPYC gateway — payTo=${JPYC_PAY_TO} amount=${JPYC_AMOUNT} graph=${JPYC_AMOUNT_GRAPH}`);
+console.log(`FX Brain JPYC gateway — payTo=${JPYC_PAY_TO} amount=${JPYC_AMOUNT}`);
 
 const pendingNonces = new Set();
 
@@ -224,11 +224,13 @@ function proxyToFxbrain(upstreamPath, rawBody) {
       port:     url.port,
       path:     url.pathname,
       method:   "POST",
-      timeout:  30 * 60 * 1000, // tradingagents/runは実測5.5分
+      timeout:  5 * 60 * 1000, // 判断スキルのみ(グラフ撤去済み)。多ペアrankingの余裕で5分
       headers: {
         "Content-Type": "application/json",
         "Content-Length": Buffer.byteLength(rawBody),
         "X-KFXBRAIN-Token": FXBRAIN_TOKEN,
+        // 課金コール(JPYC)はDeepSeek。kfxbrain既定のローカルGemmaを上書きする。
+        "X-KFXBrain-Provider": "deepseek",
       },
     };
     const proxy = http.request(options, (upRes) => {

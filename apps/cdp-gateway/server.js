@@ -700,6 +700,8 @@ function proxyToFxbrain(upstreamPath, req, res) {
       "Content-Type": "application/json",
       "Content-Length": Buffer.byteLength(body),
       "X-KFXBRAIN-Token": FXBRAIN_TOKEN,
+      // 課金コール(x402)はDeepSeekを使う。kfxbrainの既定はローカルGemma(WEB/kfxai直叩き用)。
+      "X-KFXBrain-Provider": "deepseek",
     },
   };
   let settled = false;
