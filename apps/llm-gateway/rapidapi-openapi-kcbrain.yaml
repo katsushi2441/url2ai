@@ -1,0 +1,147 @@
+openapi: 3.0.3
+info:
+  title: Kurage Crypto Brain
+  description: >-
+    Crypto judgment intelligence API. 15 skills (technical / onchain / sentiment analysis,
+    trade / risk / portfolio decisions, market ranking, pair signals) built from vendored
+    open-source trading intelligence (ai-hedge-fund-crypto, crypto-trading-agents, LLM_trader),
+    served by a local Gemma 4 model. Judgment only — no exchange credentials, no order execution.
+    Returns structured JSON with signal / confidence / evidence and upstream attribution.
+  version: 1.0.0
+servers:
+  - url: http://exbridge.ddns.net:8018
+components:
+  schemas:
+    CryptoEvidence:
+      type: object
+      required: [symbol]
+      properties:
+        symbol:
+          type: string
+          example: BTC_USDT
+          description: Crypto pair (required), e.g. BTC_USDT or ETH_USDT
+        timeframe:
+          type: string
+          example: H1
+          description: e.g. H1, H4, D (default H1)
+        technicals:
+          type: object
+          description: Indicator values (rsi, ema20, ema50, macd, ...)
+        onchain:
+          type: object
+        derivatives:
+          type: object
+        news:
+          type: array
+          items:
+            type: string
+        social:
+          type: array
+          items:
+            type: string
+        position:
+          type: object
+        portfolio:
+          type: object
+        question:
+          type: string
+      description: At least one evidence field (technicals / onchain / news / ...) is required.
+    BrainResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        endpoint: { type: string }
+        request_id: { type: string }
+        model: { type: string }
+        latency_ms: { type: integer }
+        result:
+          type: object
+          description: Structured judgment (signal / confidence / evidence / invalidation, skill-dependent)
+paths:
+  /kcbrain/analyze/technical:
+    post:
+      summary: Technical Analysis
+      description: Trend / levels / momentum read as structured JSON with evidence and invalidation.
+      operationId: kcTechnical
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CryptoEvidence' } } }
+      responses: { '200': { description: Structured judgment, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /kcbrain/analyze/onchain:
+    post:
+      summary: On-chain Analysis
+      description: Flows / holders / activity read as structured JSON with evidence.
+      operationId: kcOnchain
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CryptoEvidence' } } }
+      responses: { '200': { description: Structured judgment, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /kcbrain/analyze/sentiment:
+    post:
+      summary: Sentiment Analysis
+      description: News / social sentiment read as structured JSON with evidence.
+      operationId: kcSentiment
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CryptoEvidence' } } }
+      responses: { '200': { description: Structured judgment, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /kcbrain/analyze/full:
+    post:
+      summary: Full Analysis (all perspectives)
+      description: Technical + on-chain + sentiment synthesized in one call.
+      operationId: kcFull
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CryptoEvidence' } } }
+      responses: { '200': { description: Structured judgment, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /kcbrain/decide/trade:
+    post:
+      summary: Trade Decision (BUY/SELL/HOLD)
+      description: Evidence-bounded BUY / SELL / HOLD decision with confidence and rationale.
+      operationId: kcDecideTrade
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CryptoEvidence' } } }
+      responses: { '200': { description: Structured decision, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /kcbrain/assess/risk:
+    post:
+      summary: Risk Assessment (approve/reduce/reject)
+      description: Risk verdict (approve / reduce / reject) with reasoning.
+      operationId: kcAssessRisk
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CryptoEvidence' } } }
+      responses: { '200': { description: Structured verdict, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /kcbrain/decide/portfolio:
+    post:
+      summary: Portfolio Decision
+      description: Portfolio-level allocation / rebalance judgment.
+      operationId: kcDecidePortfolio
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CryptoEvidence' } } }
+      responses: { '200': { description: Structured judgment, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /kcbrain/market/opportunity-ranking:
+    post:
+      summary: Opportunity Ranking
+      description: Rank up to 40 pairs by risk-adjusted opportunity in one call. Body may include pairs[] and global_context.
+      operationId: kcOppRanking
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object } } }
+      responses: { '200': { description: Ranked opportunities, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /kcbrain/signal/pair/{symbol}:
+    post:
+      summary: Pair Signal
+      description: Evidence-bounded watch / wait / avoid signal for a single pair, e.g. /kcbrain/signal/pair/BTC_USDT.
+      operationId: kcPairSignal
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema: { type: string }
+          example: BTC_USDT
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CryptoEvidence' } } }
+      responses: { '200': { description: Structured signal, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }

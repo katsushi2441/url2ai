@@ -1,0 +1,144 @@
+openapi: 3.0.3
+info:
+  title: Kurage FX Brain
+  description: >-
+    FX judgment intelligence API. 15 skills (technical / macro / sentiment analysis,
+    trade / risk / portfolio decisions, FinGPT / FinRobot / FinMem tasks, market ranking,
+    pair signals) built from vendored open-source trading intelligence (TradingAgents, FinGPT,
+    ai-hedge-fund), served by a local Gemma 4 model. Judgment only — no broker credentials,
+    no order execution. Returns structured JSON with signal / confidence / evidence and
+    upstream attribution.
+  version: 1.0.0
+servers:
+  - url: http://exbridge.ddns.net:8018
+components:
+  schemas:
+    FxEvidence:
+      type: object
+      required: [pair]
+      properties:
+        pair:
+          type: string
+          example: USD_JPY
+          description: FX pair (required), e.g. USD_JPY or EUR_USD
+        timeframe:
+          type: string
+          example: H1
+          description: e.g. H1, H4, D (default H1)
+        technicals:
+          type: object
+          description: Indicator values (rsi, ema20, ema50, atr, ...)
+        macro:
+          type: object
+        news:
+          type: array
+          items:
+            type: string
+        position:
+          type: object
+        history:
+          type: array
+          items:
+            type: object
+        question:
+          type: string
+      description: At least one evidence field (technicals / macro / news / ...) is required.
+    BrainResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        endpoint: { type: string }
+        request_id: { type: string }
+        model: { type: string }
+        latency_ms: { type: integer }
+        result:
+          type: object
+          description: Structured judgment (signal / confidence / evidence / invalidation, skill-dependent)
+paths:
+  /fxbrain/analyze/technical:
+    post:
+      summary: Technical Analysis
+      description: Trend / levels / momentum read as structured JSON with evidence and invalidation.
+      operationId: fxTechnical
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/FxEvidence' } } }
+      responses: { '200': { description: Structured judgment, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /fxbrain/analyze/macro:
+    post:
+      summary: Macro Analysis
+      description: Rates / macro backdrop read as structured JSON with evidence.
+      operationId: fxMacro
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/FxEvidence' } } }
+      responses: { '200': { description: Structured judgment, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /fxbrain/analyze/sentiment:
+    post:
+      summary: Sentiment Analysis
+      description: News sentiment read as structured JSON with evidence.
+      operationId: fxSentiment
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/FxEvidence' } } }
+      responses: { '200': { description: Structured judgment, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /fxbrain/analyze/full:
+    post:
+      summary: Full Analysis (all perspectives)
+      description: Technical + macro + sentiment synthesized in one call.
+      operationId: fxFull
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/FxEvidence' } } }
+      responses: { '200': { description: Structured judgment, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /fxbrain/decide/trade:
+    post:
+      summary: Trade Decision (BUY/SELL/HOLD)
+      description: Evidence-bounded BUY / SELL / HOLD decision with confidence and rationale.
+      operationId: fxDecideTrade
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/FxEvidence' } } }
+      responses: { '200': { description: Structured decision, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /fxbrain/assess/risk:
+    post:
+      summary: Risk Assessment (approve/reduce/reject)
+      description: Risk verdict (approve / reduce / reject) with reasoning.
+      operationId: fxAssessRisk
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/FxEvidence' } } }
+      responses: { '200': { description: Structured verdict, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /fxbrain/decide/portfolio:
+    post:
+      summary: Portfolio Decision
+      description: Portfolio-level allocation / rebalance judgment.
+      operationId: fxDecidePortfolio
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/FxEvidence' } } }
+      responses: { '200': { description: Structured judgment, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /fxbrain/market/opportunity-ranking:
+    post:
+      summary: Opportunity Ranking
+      description: Rank multiple FX pairs by risk-adjusted opportunity in one call. Body may include pairs[] and global_context.
+      operationId: fxOppRanking
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object } } }
+      responses: { '200': { description: Ranked opportunities, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /fxbrain/signal/pair/{pair}:
+    post:
+      summary: Pair Signal
+      description: Evidence-bounded watch / wait / avoid signal for a single pair, e.g. /fxbrain/signal/pair/USD_JPY.
+      operationId: fxPairSignal
+      parameters:
+        - name: pair
+          in: path
+          required: true
+          schema: { type: string }
+          example: USD_JPY
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/FxEvidence' } } }
+      responses: { '200': { description: Structured signal, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }

@@ -10,7 +10,20 @@ const RAPIDAPI_SECRET    = process.env.RAPIDAPI_PROXY_SECRET || "";
 // kfreqai judgment API (trade pre-checks)
 const JUDGMENT_HOST      = process.env.JUDGMENT_HOST || "127.0.0.1";
 const JUDGMENT_PORT      = Number.parseInt(process.env.JUDGMENT_PORT || "18321", 10);
-const MAX_BODY_BYTES     = 64 * 1024;
+// Kurage judgment brains (RapidAPI rail = ローカルGemma。x402/JPYCのみDeepSeek、RapidAPIは非課金crypto
+// レールなのでProviderヘッダを付けない=brain既定のローカルGemmaで応答する)。
+const KCBRAIN_HOST       = process.env.KCBRAIN_HOST || "127.0.0.1";
+const KCBRAIN_PORT       = Number.parseInt(process.env.KCBRAIN_PORT || "18328", 10);
+const KCBRAIN_TOKEN      = process.env.KCBRAIN_TOKEN || "";
+const FXBRAIN_HOST       = process.env.FXBRAIN_HOST || "127.0.0.1";
+const FXBRAIN_PORT       = Number.parseInt(process.env.FXBRAIN_PORT || "18326", 10);
+const FXBRAIN_TOKEN      = process.env.FXBRAIN_TOKEN || "";
+const BRAIN_ROUTES = {
+  "/kcbrain/": { host: KCBRAIN_HOST, port: KCBRAIN_PORT, tokenHeader: "X-KCBRAIN-Token", token: KCBRAIN_TOKEN },
+  "/fxbrain/": { host: FXBRAIN_HOST, port: FXBRAIN_PORT, tokenHeader: "X-KFXBRAIN-Token", token: FXBRAIN_TOKEN },
+};
+const BRAIN_TIMEOUT_MS   = Number.parseInt(process.env.BRAIN_TIMEOUT_MS || "180000", 10);
+const MAX_BODY_BYTES     = 256 * 1024;
 const MAX_INPUT_CHARS    = Number.parseInt(process.env.MAX_INPUT_CHARS   || "4000", 10);
 const MAX_MESSAGES       = Number.parseInt(process.env.MAX_MESSAGES      || "20",   10);
 const MAX_OUTPUT_TOKENS  = Number.parseInt(process.env.MAX_OUTPUT_TOKENS || "2048", 10);
@@ -61,6 +74,31 @@ function proxyToOllama(req, res, ollamaPath, bodyStr) {
     json(res, 502, { error: `Ollama unavailable: ${err.message}` });
   });
 
+  proxyReq.write(bodyStr);
+  proxyReq.end();
+}
+
+// Kurage brain (kcbrain/kfxbrain) へ内部プロキシ。Providerヘッダは付けない=ローカルGemma。
+function proxyToBrain(route, upstreamPath, res, bodyStr) {
+  const headers = {
+    "Content-Type": "application/json",
+    "Content-Length": Buffer.byteLength(bodyStr),
+  };
+  if (route.token) {
+    headers[route.tokenHeader] = route.token;
+    headers["Authorization"] = `Bearer ${route.token}`;
+  }
+  const options = { hostname: route.host, port: route.port, path: upstreamPath,
+    method: "POST", headers, timeout: BRAIN_TIMEOUT_MS };
+  const proxyReq = http.request(options, (proxyRes) => {
+    res.writeHead(proxyRes.statusCode || 200, {
+      "Content-Type": proxyRes.headers["content-type"] || "application/json",
+      "Cache-Control": "no-store",
+    });
+    proxyRes.pipe(res);
+  });
+  proxyReq.on("timeout", () => proxyReq.destroy(new Error("brain upstream timeout")));
+  proxyReq.on("error", (err) => json(res, 502, { error: `brain unavailable: ${err.message}` }));
   proxyReq.write(bodyStr);
   proxyReq.end();
 }
@@ -141,6 +179,20 @@ async function handle(req, res) {
     proxyReq.write(bodyStr);
     proxyReq.end();
     return;
+  }
+
+  // Kurage judgment brains: /kcbrain/<skill> と /fxbrain/<skill> を内部brainの /v1/<skill> へ中継。
+  // 例) POST /kcbrain/analyze/technical, /fxbrain/decide/trade, /kcbrain/signal/pair/BTC_USDT
+  if (req.method === "POST") {
+    for (const [prefix, route] of Object.entries(BRAIN_ROUTES)) {
+      if (path.startsWith(prefix)) {
+        const skill = path.slice(prefix.length).replace(/^\/+/, "");
+        if (!skill) return json(res, 400, { error: "skill path required", hint: `POST ${prefix}analyze/technical` });
+        const bodyStr = await readBody(req);
+        try { JSON.parse(bodyStr); } catch { return json(res, 400, { error: "Invalid JSON" }); }
+        return proxyToBrain(route, `/v1/${skill}`, res, bodyStr);
+      }
+    }
   }
 
   return json(res, 404, { error: "Not found", hint: "POST /v1/chat/completions" });
