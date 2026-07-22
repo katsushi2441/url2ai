@@ -755,6 +755,8 @@ function proxyToKcbrain(upstreamPath, req, res) {
       "Content-Type": "application/json",
       "Content-Length": Buffer.byteLength(body),
       "X-KCBRAIN-Token": KCBRAIN_TOKEN,
+      // 課金コール(x402)はDeepSeek。kcbrain既定のローカルGemma(kfreqai毎時ジョブ等の直叩き用)を上書き。
+      "X-KCBRAIN-Provider": "deepseek",
     },
   };
   let settled = false;

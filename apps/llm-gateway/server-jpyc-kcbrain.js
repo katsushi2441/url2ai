@@ -221,6 +221,8 @@ function proxyToKcbrain(upstreamPath, rawBody) {
         "Content-Type": "application/json",
         "Content-Length": Buffer.byteLength(rawBody),
         "X-KCBRAIN-Token": KCBRAIN_TOKEN,
+        // 課金コール(JPYC)はDeepSeek。kcbrain既定のローカルGemmaを上書きする。
+        "X-KCBRAIN-Provider": "deepseek",
       },
     };
     const proxy = http.request(options, (upRes) => {
