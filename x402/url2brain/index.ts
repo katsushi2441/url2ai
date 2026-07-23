@@ -6,10 +6,11 @@
  * on Gemma 4 12B (Ollama) or DeepSeek. Same brain that powers the url2pub web app
  * (Kurage URL2AI Publisher, https://url2ai.exbridge.jp/).
  *
- * NOTE: only read/generate endpoints are exposed here. The /v1/post/* endpoints
- * (Bluesky, Hatena, AIxSNS, Bludit, Hatena Blog) are intentionally NOT exposed —
- * those post under Kurage/EXBRIDGE's own accounts and must never be reachable by
- * a third party who simply pays the x402 fee.
+ * The /post/* skills actually publish to Kurage/EXBRIDGE's own accounts (Bluesky,
+ * Hatena Bookmark, AIxSNS, Bludit, Hatena Blog) — x402 payment is treated as the
+ * posting authorization (2026-07-21, explicit product decision). Posted text is
+ * automatically framed in the Kurage or bittensorman persona server-side; callers
+ * do not choose or control the persona.
  */
 
 const UPSTREAM = process.env.URL2BRAIN_URL || "http://127.0.0.1:18332";
@@ -28,6 +29,15 @@ const SKILLS: Record<string, string> = {
 // 本番系を競合させない)。
 const LLM_SKILLS = new Set(["/generate/announcement", "/generate/blog-article", "/generate/from-url"]);
 
+// 投稿5媒体: upstream path + 強制するペルソナ("" = 枠付けなし)。
+const POST_SKILLS: Record<string, { path: string; persona: string }> = {
+  "/post/bluesky": { path: "/v1/post/bluesky", persona: "kurage" },
+  "/post/hatena-bookmark": { path: "/v1/post/hatena-bookmark", persona: "" },
+  "/post/aixsns": { path: "/v1/post/aixsns", persona: "bittensorman" },
+  "/post/bludit": { path: "/v1/post/bludit", persona: "kurage" },
+  "/post/hatena-blog": { path: "/v1/post/hatena-blog", persona: "bittensorman" },
+};
+
 function json(data: unknown, init?: ResponseInit): Response {
   return Response.json(data, init);
 }
@@ -45,23 +55,40 @@ export default async function handler(req: Request): Promise<Response> {
     return json({ error: "POST required" }, { status: 405 });
   }
 
-  const upstreamPath = SKILLS[path];
-  if (!upstreamPath) {
-    return json(
-      {
-        error: "Unknown endpoint",
-        skills: Object.keys(SKILLS).map((s) => `POST /url2brain${s}`),
-      },
-      { status: 404 },
-    );
-  }
-
   let body: unknown;
   try {
     body = await req.json();
   } catch {
     return json({ error: "Invalid JSON body" }, { status: 400 });
   }
+
+  const postSkill = POST_SKILLS[path];
+  if (postSkill) {
+    const payload = { ...(body && typeof body === "object" ? (body as Record<string, unknown>) : {}), confirm_post: true };
+    if (postSkill.persona) payload.persona = postSkill.persona;
+    const upstream = await fetch(`${UPSTREAM}${postSkill.path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-URL2BRAIN-Token": TOKEN },
+      body: JSON.stringify(payload),
+    });
+    const bytes = await upstream.arrayBuffer();
+    return new Response(bytes, {
+      status: upstream.status,
+      headers: { "Content-Type": upstream.headers.get("content-type") || "application/json" },
+    });
+  }
+
+  const upstreamPath = SKILLS[path];
+  if (!upstreamPath) {
+    return json(
+      {
+        error: "Unknown endpoint",
+        skills: [...Object.keys(SKILLS), ...Object.keys(POST_SKILLS)].map((s) => `POST /url2brain${s}`),
+      },
+      { status: 404 },
+    );
+  }
+
   if (LLM_SKILLS.has(path) && body && typeof body === "object") {
     body = { ...(body as Record<string, unknown>), provider: "deepseek" };
   }
