@@ -485,145 +485,46 @@ h1 {
     </div>
 
     <div class="section">
-        <h3>🤖 AI Agent / x402 Paid Endpoints</h3>
-        <div class="intro-box" style="margin-bottom:18px;">
-            AI エージェントが直接呼び出せる x402 paid API です。PayAPI Market で公開中の OSS2API / URL2AI / LLM2API に加え、FX判断API「Kurage FX Brain」を提供。Bankr x402（USDC on Base）、JPYC x402（JPYC on Polygon）、Coinbase CDP Bazaar に対応しています。
-        </div>
-        <div class="system-list" style="margin-bottom:24px;">
-            <div class="system-row"><div class="system-file">OSS2API</div><div class="system-kind">Bankr x402</div><div class="system-desc">OSSをラップした multi-skill ゲートウェイ。0.01 USDC/リクエスト（USDC on Base）。<br>・<code>POST …/oss2api/image/remove-background</code> — 背景除去・置換・ぼかし（imgly AGPL-3.0）<br>・<code>POST …/oss2api/url/analyze</code> — URL 構造抽出（title / headings / links / entities）<br>・<code>POST …/oss2api/url/browse</code> — Playwright スクリーンショット / 動的抽出<br>・<code>POST …/oss2api/url/scan</code> — Shannon-like 3フェーズ セキュリティスキャン（HTTP headers + static HTML + Ollama AI）<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api</span></div></div>
-            <div class="system-row"><div class="system-file">OSS2API</div><div class="system-kind">JPYC x402</div><div class="system-desc">同スキルを JPYC（日本円ステーブルコイン）で利用可能。1.5 JPYC（≈¥1）/リクエスト（JPYC on Polygon）。EIP-3009 transferWithAuthorization によるオンチェーン決済。<br>・<code>POST https://exbridge.ddns.net:8017/oss2api/image/remove-background</code><br>・<code>POST https://exbridge.ddns.net:8017/oss2api/url/analyze</code><br>・<code>POST https://exbridge.ddns.net:8017/oss2api/url/browse</code><br>・<code>POST https://exbridge.ddns.net:8017/oss2api/url/scan</code></div></div>
-            <div class="system-row"><div class="system-file">LLM2API</div><div class="system-kind">Bankr x402</div><div class="system-desc">OSS2API の LLM 推論基盤として URL2AI プロジェクト内で開発した Gemma 4 12B 推論 API。OpenAI 互換の chat/completions エンドポイントを x402 で提供。0.05 USDC/リクエスト（USDC on Base）。<br>・<code>POST …/llm2api/v1/chat/completions</code> — Gemma 4 12B による日本語対応テキスト生成（入力上限 4,000 文字 / 出力上限 2,048 トークン）<br>・<code>POST …/llm2api/trade/risk-check</code> — 銘柄リスク検査（hack/exploit/delisting/rug_pull/lawsuit をニュースから分類、実運用中のKurage FreqAI Tradeと同じパイプライン）<br>・<code>POST …/llm2api/trade/size-check</code> — 注文サイズ・流動性診断（24h出来高0.1%ルール、1秒未満）<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api</span></div></div>
-            <div class="system-row"><div class="system-file">LLM2API</div><div class="system-kind">JPYC x402</div><div class="system-desc">同 Gemma 4 12B 推論を JPYC（日本円ステーブルコイン）で利用可能。7.5 JPYC（≈¥7.5）/リクエスト（JPYC on Polygon）。<br>・<code>POST https://exbridge.ddns.net:8020/v1/chat/completions</code></div></div>
-            <div class="system-row"><div class="system-file">LLM2API</div><div class="system-kind">RapidAPI</div><div class="system-desc">同 Gemma 4 12B 推論を RapidAPI マーケットプレイスから利用可能。クレジットカード決済対応。$0.05/リクエスト。<br>・<code>POST https://llm2api.p.rapidapi.com/v1/chat/completions</code><br>・<code>POST https://llm2api.p.rapidapi.com/trade/risk-check</code><br>・<code>POST https://llm2api.p.rapidapi.com/trade/size-check</code><br><span style="font-size:12px;color:#6B7280;">https://rapidapi.com/katsushi2441/api/llm2api</span></div></div>
-            <div class="system-row"><div class="system-file">OSS2API + LLM2API</div><div class="system-kind">PayAPI / CDP x402</div><div class="system-desc">PayAPI Market 公開済みの Coinbase CDP ファシリテーター対応ゲートウェイ。OSS2API系 0.01 / LLM2API系 0.05 USDC/リクエスト（USDC on Base）。<br>・<code>POST https://bittensorman.xyz/background-removal</code> — 背景除去・置換・ぼかし<br>・<code>POST https://bittensorman.xyz/oss2api/image/remove-background</code><br>・<code>POST https://bittensorman.xyz/oss2api/url/analyze</code><br>・<code>POST https://bittensorman.xyz/oss2api/url/browse</code><br>・<code>POST https://bittensorman.xyz/oss2api/url/scan</code><br>・<code>POST https://bittensorman.xyz/llm/v1/chat/completions</code><br>・<code>POST https://bittensorman.xyz/llm2api/trade/risk-check</code> — 銘柄リスク検査<br>・<code>POST https://bittensorman.xyz/llm2api/trade/size-check</code> — 注文サイズ・流動性診断<br><span style="font-size:12px;color:#6B7280;">PayAPI: https://payapi.market/provider/bittensorman<br>Discovery: https://bittensorman.xyz/.well-known/x402.json</span></div></div>
-            <div class="system-row"><div class="system-file">Kurage FX Brain</div><div class="system-kind">CDP x402 / PayAPI</div><div class="system-desc">GitHubで人気のFX/トレーディングOSS（TradingAgents Apache-2.0 / FinGPT MIT / ai-hedge-fund MIT、コミット固定でvendor化）のLLM知能をGemma 4 12BでFX向け判断APIにしたもの。判断のみを返し、ブローカー認証情報・注文実行権限は持ちません。34スキル(37パス)、$0.05 USDC/リクエスト（USDC on Base）。<br>・<code>POST https://bittensorman.xyz/fxbrain/analyze/technical</code> — テクニカル分析（他 macro / sentiment / full）<br>・<code>POST https://bittensorman.xyz/fxbrain/decide/trade</code> — BUY / SELL / HOLD 判断<br>・<code>POST https://bittensorman.xyz/fxbrain/assess/risk</code> — リスクゲート（許可/縮小/拒否）<br>・<code>POST https://bittensorman.xyz/fxbrain/debate/bull-bear</code> ほか fingpt / hedge 系スキル<br>・<code>POST https://bittensorman.xyz/fxbrain/tradingagents/run</code> — <strong>TradingAgentsマルチエージェント討論グラフ完全実行（実測約5.5分、$0.50）</strong>: アナリストレポート→強弱討論→トレーダー計画→リスク討論→最終判断<br><span style="font-size:12px;color:#6B7280;">製品サイト: <a href="https://kfxbrain.exbridge.jp/kfxbrain.html">kfxbrain.exbridge.jp</a>（英日2言語）<br>無料テスト: <a href="https://kurage.exbridge.jp/kfxbrain.php">FX Intelligence Workbench</a>（本番APIをブラウザから実行・x402の402チャレンジも支払いなしで検証可）<br>Discovery: https://bittensorman.xyz/.well-known/x402.json（/fxbrain/ 配下37本。FinRobot/FinMem/マーケットインテリジェンス追加済み）</span></div></div>
-            <div class="system-row"><div class="system-file">Kurage FX Brain</div><div class="system-kind">Bankr x402</div><div class="system-desc">同FX判断スキル15本をBankrから利用可能。0.05 USDC/リクエスト（USDC on Base）。パスでスキルを選択（…/fxbrain/analyze/technical 等）。フルグラフ実行はCDP直販のみ。<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/fxbrain</span></div></div>
-            <div class="system-row"><div class="system-file">Kurage FX Brain</div><div class="system-kind">JPYC x402</div><div class="system-desc">同FX判断APIを JPYC（日本円ステーブルコイン）で利用可能。通常スキル 7.5 JPYC（≈¥7.5）、TradingAgentsフルグラフ 75 JPYC（JPYC on Polygon）。EIP-3009 transferWithAuthorization によるオンチェーン決済。<br>・<code>POST https://exbridge.ddns.net:18327/fxbrain/analyze/technical</code>（他スキルも同パス形式）<br>・<code>POST https://exbridge.ddns.net:18327/fxbrain/tradingagents/run</code></div></div>
-            <div class="system-row"><div class="system-file">url2brain</div><div class="system-kind">CDP x402 / PayAPI</div><div class="system-desc">URLを渡すと解析→告知文→ブログ記事を生成し、Bluesky/はてなブックマーク/AIxSNS/Bludit/はてなブログへ<strong>実際に投稿</strong>できるパブリッシングAPI。生成はDeepSeek稼働、投稿はKurage/bittensormanペルソナで自動枠付け。x402決済そのものが投稿の許可になる設計で、認証情報は不要。$1.00 USDC/リクエスト(全スキル共通)。<br>・<code>POST https://bittensorman.xyz/url2brain/generate/from-url</code> — URL解析+告知文+ブログ記事を1コールで生成<br>・<code>POST https://bittensorman.xyz/url2brain/post/bluesky</code> ほか post/hatena-bookmark・post/aixsns・post/bludit・post/hatena-blog<br><span style="font-size:12px;color:#6B7280;">製品サイト: <a href="https://url2ai.exbridge.jp/">url2ai.exbridge.jp</a>（英日2言語、無料Webアプリ版はXログインで利用可）<br>OSS: <a href="https://github.com/katsushi2441/url2brain">github.com/katsushi2441/url2brain</a>（自前運用は無料）<br>Discovery: https://bittensorman.xyz/.well-known/x402.json</span></div></div>
-            <div class="system-row"><div class="system-file">url2brain</div><div class="system-kind">Bankr x402</div><div class="system-desc">同url2brainスキルをBankrから利用可能。$1.00 USDC/リクエスト。パスでスキルを選択（…/url2brain/generate/from-url 等）。<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/url2brain</span></div></div>
-            <div class="system-row"><div class="system-file">UPDF2MD</div><div class="system-kind">Bankr x402</div><div class="system-desc">PDF URL や企業名・銘柄名から agent-ready Markdown を返す universal Markdown conversion endpoint。0.001 USDC/リクエスト。<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md</span></div></div>
-            <div class="system-row"><div class="system-file">UImage</div><div class="system-kind">Bankr x402</div><div class="system-desc">プロンプト・テキスト・URL・X投稿から画像を生成する ERNIE Image API。0.01 USDC/リクエスト。<br><span style="font-size:12px;color:#6B7280;">https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage</span></div></div>
+        <h3>🤖 Kurage Products / API Access</h3>
+        <div class="intro-box" style="margin-bottom:20px;">
+            詳細な機能・価格・利用方法は各製品LPを正本とし、このページはKurage製品群への入口として案内します。
+            x402の公開済み経路と、RapidAPI・Virtualsの準備状況を分けて表示しています。
         </div>
         <div class="card-grid">
             <div class="card">
-                <div class="card-visual" style="--card-accent:#0D9488;">
-                    <div class="card-visual-badge">⚙️ OSS2API <span class="card-visual-id">BANKR</span></div>
-                    <img src="./images/oss2api.png" alt="OSS2API Gateway" onerror="this.parentNode.className+=' is-fallback';">
-                </div>
-                <div class="card-body">
-                    <div class="pill">PAID AGENT · USDC</div>
-                    <h4>OSS2API — Bankr x402</h4>
-                    <p>背景除去 / URL解析 / Playwright ブラウズ / セキュリティスキャンを提供するマルチスキルゲートウェイ。0.01 USDC/リクエスト。</p>
-                    <a href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/oss2api" class="button" target="_blank" rel="noopener">View Bankr Endpoint</a>
-                </div>
+                <div class="card-visual" style="--card-accent:#087F78;"><div class="card-visual-badge">📈 kfreqai <span class="card-visual-id">CRYPTO BODY</span></div><img src="./images/llm2api.png" alt="Kurage Freq AI Trade" onerror="this.parentNode.className+=' is-fallback';"></div>
+                <div class="card-body"><div class="pill">OSS TRADING BODY</div><h4>Kurage Freq AI Trade</h4><p>Freqtrade/FreqAIの暗号資産自動取引本体。執行と固定リスク管理はOSS側に残し、必要な判断APIだけを従量課金で利用できます。</p><a href="https://kfreqai.exbridge.jp/kfreqai.html" class="button" target="_blank" rel="noopener">製品LPを開く</a></div>
             </div>
-
             <div class="card">
-                <div class="card-visual" style="--card-accent:#7C3AED;">
-                    <div class="card-visual-badge">🪙 OSS2API <span class="card-visual-id">JPYC</span></div>
-                    <img src="./images/oss2api.png" alt="OSS2API JPYC x402" onerror="this.parentNode.className+=' is-fallback';">
-                </div>
-                <div class="card-body">
-                    <div class="pill">PAID AGENT · JPYC</div>
-                    <h4>OSS2API — JPYC x402</h4>
-                    <p>同スキルを JPYC（日本円ステーブルコイン）で利用可能。1.5 JPYC（≈¥1）/リクエスト。Polygon チェーン上の EIP-3009 によるオンチェーン決済。</p>
-                    <a href="https://exbridge.ddns.net:8017/health" class="button" target="_blank" rel="noopener">View JPYC Endpoint</a>
-                </div>
+                <div class="card-visual" style="--card-accent:#2563EB;"><div class="card-visual-badge">💹 kfxai <span class="card-visual-id">FX BODY</span></div><img src="./images/llm2api.png" alt="Kurage FX AI Trade" onerror="this.parentNode.className+=' is-fallback';"></div>
+                <div class="card-body"><div class="pill">OSS TRADING BODY</div><h4>Kurage FX AI Trade</h4><p>OANDA対応のFX自動取引本体。ブローカー認証、注文数量、執行はkfxai側に保持し、Kurage FX Brainは判断だけを返します。</p><a href="https://kfxai.exbridge.jp/kfxai.html" class="button" target="_blank" rel="noopener">製品LPを開く</a></div>
             </div>
-
             <div class="card">
-                <div class="card-visual" style="--card-accent:#059669;">
-                    <div class="card-visual-badge">🧠 LLM2API <span class="card-visual-id">BANKR</span></div>
-                    <img src="./images/llm2api.png" alt="LLM2API" onerror="this.parentNode.className+=' is-fallback';">
-                </div>
-                <div class="card-body">
-                    <div class="pill">PAID AGENT · USDC</div>
-                    <h4>LLM2API — Bankr x402</h4>
-                    <p>URL2AI プロジェクトが OSS2API の LLM 基盤として開発した Gemma 4 12B 推論 API。OpenAI 互換エンドポイントを x402 で提供。0.05 USDC/リクエスト。<br><small style="color:#6B7280;">入力上限 4,000 文字 / 出力上限 2,048 トークン</small></p>
-                    <a href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api" class="button" target="_blank" rel="noopener">View Bankr Endpoint</a>
-                </div>
+                <div class="card-visual" style="--card-accent:#0F766E;"><div class="card-visual-badge">🧠 kcbrain <span class="card-visual-id">CRYPTO BRAIN</span></div><img src="./images/llm2api.png" alt="Kurage Crypto Brain" onerror="this.parentNode.className+=' is-fallback';"></div>
+                <div class="card-body"><div class="pill">24 X402 PATHS</div><h4>Kurage Crypto Brain</h4><p>人気OSSの暗号資産判断知能をDeepSeekで提供。直接CDP x402、Bankr、JPYC、自前運用、NOFX連携の詳細を掲載しています。</p><a href="https://kcbrain.exbridge.jp/kcbrain.html" class="button" target="_blank" rel="noopener">機能・価格を見る</a></div>
             </div>
-
             <div class="card">
-                <div class="card-visual" style="--card-accent:#2563EB;">
-                    <div class="card-visual-badge">⚡ PayAPI <span class="card-visual-id">LIVE</span></div>
-                    <img src="./images/oss2api.png" alt="PayAPI Market provider listing" onerror="this.parentNode.className+=' is-fallback';">
-                </div>
-                <div class="card-body">
-                    <div class="pill">PAYAPI MARKET · USDC</div>
-                    <h4>OSS2API / URL2AI — PayAPI Market</h4>
-                    <p>PayAPI Market で公開中の buyer-facing provider profile。OSS2API と URL2AI の listing detail page へまとめてアクセスできます。</p>
-                    <a href="https://payapi.market/provider/bittensorman" class="button" target="_blank" rel="noopener">View PayAPI Provider</a>
-                </div>
+                <div class="card-visual" style="--card-accent:#1D4ED8;"><div class="card-visual-badge">🧠 kfxbrain <span class="card-visual-id">FX BRAIN</span></div><img src="./images/llm2api.png" alt="Kurage FX Brain" onerror="this.parentNode.className+=' is-fallback';"></div>
+                <div class="card-body"><div class="pill">36 X402 PATHS</div><h4>Kurage FX Brain</h4><p>TradingAgents、FinGPT、FinRobot、FinMemなどのFX判断知能。通常スキルと完全マルチエージェントグラフの価格を公開しています。</p><a href="https://kfxbrain.exbridge.jp/kfxbrain.html" class="button" target="_blank" rel="noopener">機能・価格を見る</a></div>
             </div>
-
             <div class="card">
-                <div class="card-visual" style="--card-accent:#0F766E;">
-                    <div class="card-visual-badge">🧠 LLM2API <span class="card-visual-id">JPYC</span></div>
-                    <img src="./images/llm2api.png" alt="LLM2API JPYC" onerror="this.parentNode.className+=' is-fallback';">
-                </div>
-                <div class="card-body">
-                    <div class="pill">PAID AGENT · JPYC</div>
-                    <h4>LLM2API — JPYC x402</h4>
-                    <p>同 Gemma 4 12B 推論を JPYC（日本円ステーブルコイン）で利用可能。7.5 JPYC（≈¥7.5）/リクエスト。OSS2API の LLM 基盤として URL2AI が提供。<br><small style="color:#6B7280;">入力上限 4,000 文字 / 出力上限 2,048 トークン</small></p>
-                    <a href="https://exbridge.ddns.net:8020/health" class="button" target="_blank" rel="noopener">View JPYC Endpoint</a>
-                </div>
+                <div class="card-visual" style="--card-accent:#6D28D9;"><div class="card-visual-badge">📰 url2brain <span class="card-visual-id">URL BRAIN</span></div><img src="./images/oss2api.png" alt="Kurage URL2AI Brain" onerror="this.parentNode.className+=' is-fallback';"></div>
+                <div class="card-body"><div class="pill">9 X402 PATHS</div><h4>Kurage URL2AI Brain</h4><p>URL解析、告知文・記事生成、Bluesky/はてな/AIxSNS/Bludit/はてなブログへの実投稿を提供する共有ブレイン。</p><a href="https://url2brain.exbridge.jp/url2brain.html" class="button" target="_blank" rel="noopener">専用LPを開く</a></div>
             </div>
-
             <div class="card">
-                <div class="card-visual" style="--card-accent:#0D6EFD;">
-                    <div class="card-visual-badge">🧠 LLM2API <span class="card-visual-id">RAPIDAPI</span></div>
-                    <img src="./images/llm2api.png" alt="LLM2API RapidAPI" onerror="this.parentNode.className+=' is-fallback';">
-                </div>
-                <div class="card-body">
-                    <div class="pill">PAID AGENT · CARD</div>
-                    <h4>LLM2API — RapidAPI</h4>
-                    <p>同 Gemma 4 12B 推論を RapidAPI マーケットプレイスから利用可能。クレジットカード決済対応。$0.05/リクエスト。<br><small style="color:#6B7280;">入力上限 4,000 文字 / 出力上限 2,048 トークン</small></p>
-                    <a href="https://rapidapi.com/katsushi2441/api/llm2api" class="button" target="_blank" rel="noopener">View on RapidAPI</a>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-visual" style="--card-accent:#6D28D9;">
-                    <div class="card-visual-badge">📰 url2brain <span class="card-visual-id">X402</span></div>
-                    <img src="./images/oss2api.png" alt="url2brain" onerror="this.parentNode.className+=' is-fallback';">
-                </div>
-                <div class="card-body">
-                    <div class="pill">PAID AGENT · USDC</div>
-                    <h4>url2brain x402</h4>
-                    <p>URLを解析して告知文・ブログ記事を生成し、Bluesky/はてな/AIxSNS/Bludit/はてなブログへ実際に投稿できるパブリッシングAPI。$1.00 USDC/リクエスト。</p>
-                    <a href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/url2brain" class="button" target="_blank" rel="noopener">View Bankr Endpoint</a>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-visual" style="--card-accent:#1D4ED8;">
-                    <div class="card-visual-badge">📄 UPDF2MD <span class="card-visual-id">X402</span></div>
-                    <img src="./images/updf2md.png" alt="UPDF2MD" onerror="this.parentNode.className+=' is-fallback';">
-                </div>
-                <div class="card-body">
-                    <div class="pill">PAID AGENT · USDC</div>
-                    <h4>UPDF2MD x402</h4>
-                    <p>PDF URL や企業名・銘柄名から agent-ready Markdown を返す universal Markdown conversion endpoint。0.001 USDC/リクエスト。</p>
-                    <a href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/updf2md" class="button" target="_blank" rel="noopener">View x402 Endpoint</a>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-visual" style="--card-accent:#DB2777;">
-                    <div class="card-visual-badge">🎨 UImage <span class="card-visual-id">X402</span></div>
-                    <img src="./images/uimage.png" alt="UImage" onerror="this.parentNode.className+=' is-fallback';">
-                </div>
-                <div class="card-body">
-                    <div class="pill">PAID AGENT · USDC</div>
-                    <h4>UImage x402</h4>
-                    <p>プロンプト・テキスト・URL・X投稿から画像を生成する ERNIE Image API。AI エージェントから直接呼び出せます。0.01 USDC/リクエスト。</p>
-                    <a href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage" class="button" target="_blank" rel="noopener">View x402 Endpoint</a>
-                </div>
+                <div class="card-visual" style="--card-accent:#DB2777;"><div class="card-visual-badge">🪼 URL2Pub <span class="card-visual-id">WEB + URLAI</span></div><img src="./images/oss2api.png" alt="Kurage URL2AI Publisher" onerror="this.parentNode.className+=' is-fallback';"></div>
+                <div class="card-body"><div class="pill">FREE WEB APP</div><h4>Kurage URL2AI Publisher</h4><p>Xログインで利用できる無料Web版。先着1,000人へのURLAI配布実験と、将来のVirtuals上KURAGE構想もこのLPで説明しています。</p><a href="https://url2ai.exbridge.jp/url2pub.html" class="button" target="_blank" rel="noopener">URL2Pub LPを開く</a></div>
             </div>
         </div>
+        <div class="system-list" style="margin-top:24px;">
+            <div class="system-row"><div class="system-file">Direct x402</div><div class="system-kind">LIVE</div><div class="system-desc">Coinbase CDP対応。公開ディスカバリ: <a href="https://bittensorman.xyz/.well-known/x402.json" target="_blank" rel="noopener">bittensorman.xyz/.well-known/x402.json</a></div></div>
+            <div class="system-row"><div class="system-file">Bankr</div><div class="system-kind">LIVE</div><div class="system-desc">USDC on BaseでOSS2API、LLM2API、kcbrain、kfxbrain、url2brainなどを1回単位で利用。</div></div>
+            <div class="system-row"><div class="system-file">PayAPI</div><div class="system-kind">LIVE / OSS2API</div><div class="system-desc"><a href="https://payapi.market/provider/bittensorman" target="_blank" rel="noopener">公開プロバイダーページ</a>では現在OSS2APIの4エンドポイントをx402 verifiedとして掲載。</div></div>
+            <div class="system-row"><div class="system-file">Agent402</div><div class="system-kind">LIVE / OSS2API</div><div class="system-desc"><a href="https://agent402.app/agents/42d997f9-a6ee-4a91-8e51-454d0a66dae0" target="_blank" rel="noopener">OSS2APIエージェントページ</a>で背景除去APIを公開中。</div></div>
+            <div class="system-row"><div class="system-file">RapidAPI</div><div class="system-kind">STUDIO / PENDING</div><div class="system-desc">複数製品をStudioへ登録済みですが、<a href="https://rapidapi.com/user/katsushi2441" target="_blank" rel="noopener">公開プロフィール</a>は現在Published APIs 0件。一般公開後に各LPへ利用URLを追加します。</div></div>
+            <div class="system-row"><div class="system-file">Virtuals</div><div class="system-kind">FUTURE / NOT ISSUED</div><div class="system-desc">URLAIでトークノミクスを実証した後、KurageプロジェクトのKURAGEトークン発行候補として検討中。現在KURAGEは未発行です。</div></div>
+        </div>
     </div>
-
     <div class="section">
         <h3>🌐 Web Demo</h3>
         <div class="intro-box" style="margin-bottom:20px;">
