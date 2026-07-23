@@ -1,0 +1,159 @@
+openapi: 3.0.3
+info:
+  title: URL2Brain
+  description: >-
+    Turn any URL or raw text into ready-to-publish content — announcements and blog articles —
+    and auto-post to Bluesky / AIxSNS / Bludit / Hatena Blog / Hatena Bookmark with persona
+    framing (Kurage / bittensorman). Powered by DeepSeek (deepseek-v4-flash). Payment is treated
+    as the posting authorization; persona framing is applied server-side by endpoint.
+  version: 1.0.0
+servers:
+  - url: http://exbridge.ddns.net:8018
+components:
+  schemas:
+    BrainResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        result:
+          type: object
+          description: Generated text, or post confirmation (URL of the published post)
+paths:
+  /url2brain/generate/from-url:
+    post:
+      summary: Generate from URL
+      description: Fetch and analyze a URL, then generate ready-to-publish content. DeepSeek.
+      operationId: u2bGenerateFromUrl
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: { type: string, example: https://example.com/post }
+      responses: { '200': { description: Generated content, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /url2brain/generate/announcement:
+    post:
+      summary: Generate Announcement
+      description: Turn a URL or raw text into a short announcement. DeepSeek.
+      operationId: u2bGenerateAnnouncement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url: { type: string }
+                content: { type: string, description: Raw text (alternative to url) }
+      responses: { '200': { description: Announcement text, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /url2brain/generate/blog-article:
+    post:
+      summary: Generate Blog Article
+      description: Turn a URL or raw text into a full blog article. DeepSeek.
+      operationId: u2bGenerateBlogArticle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url: { type: string }
+                content: { type: string, description: Raw text (alternative to url) }
+      responses: { '200': { description: Article text, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /url2brain/analyze/url:
+    post:
+      summary: Analyze URL
+      description: Extract structured content from a URL.
+      operationId: u2bAnalyzeUrl
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: { type: string }
+      responses: { '200': { description: Structured extraction, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /url2brain/post/bluesky:
+    post:
+      summary: Post to Bluesky
+      description: Publish to Kurage's own Bluesky account (@bittensorman.bsky.social), framed in the Kurage persona. Actually publishes.
+      operationId: u2bPostBluesky
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string, description: Post text (max 280 chars incl. persona prefix) }
+      responses: { '200': { description: Post confirmation (published URL), content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /url2brain/post/aixsns:
+    post:
+      summary: Post to AIxSNS
+      description: Publish to AIxSNS (aixec.exbridge.jp) as bittensorman (developer/business persona). Actually publishes.
+      operationId: u2bPostAixsns
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string }
+      responses: { '200': { description: Post confirmation (published URL), content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /url2brain/post/bludit:
+    post:
+      summary: Post to Bludit blog
+      description: Publish a full article to Kurage's own Bludit blog (kurage.exbridge.jp/blog), framed in the Kurage persona. Actually publishes.
+      operationId: u2bPostBludit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string, description: Article body }
+                title: { type: string }
+      responses: { '200': { description: Post confirmation (published URL), content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /url2brain/post/hatena-blog:
+    post:
+      summary: Post to Hatena Blog
+      description: Publish a full article to bittensorman's Hatena Blog, framed in the developer/business persona. Actually publishes.
+      operationId: u2bPostHatenaBlog
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string, description: Article body }
+                title: { type: string }
+      responses: { '200': { description: Post confirmation (published URL), content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }
+  /url2brain/post/hatena-bookmark:
+    post:
+      summary: Post to Hatena Bookmark
+      description: Bookmark a URL on Kurage's Hatena Bookmark account with a short comment. Actually publishes.
+      operationId: u2bPostHatenaBookmark
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: { type: string }
+                comment: { type: string }
+      responses: { '200': { description: Post confirmation, content: { application/json: { schema: { $ref: '#/components/schemas/BrainResponse' } } } } }

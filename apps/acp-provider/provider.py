@@ -70,7 +70,14 @@ BRAINS = {
         "token_header": "X-URL2BRAIN-Token",
         "provider_header": None,
         "price_usdc": "1",
-        "auto": False,  # 投稿系はKurage自身のSNSへ実publishするため自動納品しない
+        "auto": True,
+        # Bankr/cdp-gatewayと同一のbody注入: LLM生成系は provider:deepseek、投稿系は
+        # confirm_post:true + persona(空はpersona無し)。決済=投稿許可(2026-07-21ユーザー承認)。
+        "llm_suffixes": ["generate/announcement", "generate/blog-article", "generate/from-url"],
+        "post_persona": {
+            "post/bluesky": "kurage", "post/hatena-bookmark": "", "post/aixsns": "bittensorman",
+            "post/bludit": "kurage", "post/hatena-blog": "bittensorman",
+        },
     },
 }
 
@@ -188,6 +195,14 @@ def call_brain(brain: dict, skill_path: str, body: dict):
     sp = skill_path.strip("/")
     if sp.startswith("v1/"):
         sp = sp[3:]
+    # url2brain は Bankr と同一の body 注入(LLM生成系=provider:deepseek、投稿系=confirm_post+persona)。
+    if sp in (brain.get("llm_suffixes") or []):
+        body = {**body, "provider": "deepseek"}
+    persona_map = brain.get("post_persona")
+    if persona_map is not None and sp in persona_map:
+        body = {**body, "confirm_post": True}
+        if persona_map[sp]:
+            body["persona"] = persona_map[sp]
     url = f"{brain['base']}/v1/{sp}"
     headers = ["-H", "content-type: application/json"]
     if brain["token"]:

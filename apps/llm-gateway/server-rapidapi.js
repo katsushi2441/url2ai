@@ -23,6 +23,16 @@ const BRAIN_ROUTES = {
   "/kcbrain/": { host: KCBRAIN_HOST, port: KCBRAIN_PORT, tokenHeader: "X-KCBRAIN-Token", token: KCBRAIN_TOKEN, providerHeader: "X-KCBRAIN-Provider" },
   "/fxbrain/": { host: FXBRAIN_HOST, port: FXBRAIN_PORT, tokenHeader: "X-KFXBRAIN-Token", token: FXBRAIN_TOKEN, providerHeader: "X-KFXBrain-Provider" },
 };
+// URL2Brain(コンテンツ生成+Kurage自身のSNS/ブログへの投稿)。Bankr/cdp-gatewayと同一挙動:
+// LLM生成系は body に provider:"deepseek" を注入、投稿系は confirm_post:true + persona を注入。
+const URL2BRAIN_HOST     = process.env.URL2BRAIN_HOST || "127.0.0.1";
+const URL2BRAIN_PORT     = Number.parseInt(process.env.URL2BRAIN_PORT || "18332", 10);
+const URL2BRAIN_TOKEN    = process.env.URL2BRAIN_TOKEN || "";
+const URL2BRAIN_LLM_SUFFIXES = new Set(["generate/announcement", "generate/blog-article", "generate/from-url"]);
+const URL2BRAIN_POST_PERSONA = {
+  "post/bluesky": "kurage", "post/hatena-bookmark": "", "post/aixsns": "bittensorman",
+  "post/bludit": "kurage", "post/hatena-blog": "bittensorman",
+};
 const BRAIN_TIMEOUT_MS   = Number.parseInt(process.env.BRAIN_TIMEOUT_MS || "180000", 10);
 const MAX_BODY_BYTES     = 256 * 1024;
 const MAX_INPUT_CHARS    = Number.parseInt(process.env.MAX_INPUT_CHARS   || "4000", 10);
@@ -196,6 +206,24 @@ async function handle(req, res) {
         return proxyToBrain(route, `/v1/${skill}`, res, bodyStr);
       }
     }
+  }
+
+  // URL2Brain: /url2brain/<skill> を url2brain の /v1/<skill> へ中継(Bankrと同一のbody注入)。
+  // 例) POST /url2brain/generate/from-url, /url2brain/post/bluesky
+  if (req.method === "POST" && path.startsWith("/url2brain/")) {
+    const suffix = path.slice("/url2brain/".length).replace(/^\/+/, "");
+    if (!suffix) return json(res, 400, { error: "skill path required", hint: "POST /url2brain/generate/from-url" });
+    const bodyStr = await readBody(req);
+    let body;
+    try { body = JSON.parse(bodyStr); } catch { return json(res, 400, { error: "Invalid JSON" }); }
+    if (URL2BRAIN_LLM_SUFFIXES.has(suffix)) body.provider = "deepseek";
+    if (Object.prototype.hasOwnProperty.call(URL2BRAIN_POST_PERSONA, suffix)) {
+      body.confirm_post = true;
+      const persona = URL2BRAIN_POST_PERSONA[suffix];
+      if (persona) body.persona = persona;
+    }
+    const route = { host: URL2BRAIN_HOST, port: URL2BRAIN_PORT, tokenHeader: "X-URL2BRAIN-Token", token: URL2BRAIN_TOKEN };
+    return proxyToBrain(route, `/v1/${suffix}`, res, JSON.stringify(body));
   }
 
   return json(res, 404, { error: "Not found", hint: "POST /v1/chat/completions" });
