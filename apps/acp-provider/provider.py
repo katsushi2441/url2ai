@@ -63,8 +63,7 @@ BRAINS = {
         "auto": True,
     },
     "ksbrain": {
-        # offering未登録(acpセッション失効のため登録待ち。登録後にmatch_idsへIDを追記)
-        "match_ids": set(),
+        "match_ids": {"019fb2a7-653d-7b74-89a4-b50885fab8a7"},
         "match_kw": ["stock brain", "equity judgment", "ksbrain", "stock judgment"],
         "base": os.environ.get("KSBRAIN_URL", "http://127.0.0.1:18338"),
         "token": os.environ.get("KSBRAIN_TOKEN", ""),

@@ -33,7 +33,14 @@ const PORT          = Number.parseInt(process.env.PORT_JPYC_KSBRAIN || "18349", 
 const TLS_CERT      = process.env.TLS_CERT || "/etc/letsencrypt/live/exbridge.ddns.net/fullchain.pem";
 const TLS_KEY       = process.env.TLS_KEY  || "/etc/letsencrypt/live/exbridge.ddns.net/privkey.pem";
 const KSBRAIN_URL   = process.env.KSBRAIN_URL || "http://127.0.0.1:18338";
-const KSBRAIN_TOKEN = (process.env.KSBRAIN_API_TOKEN || process.env.KSBRAIN_TOKEN || "").trim();
+// トークン: env優先、無ければTradingAgents-JPの.env(単一の真実源)から読む
+const KSBRAIN_TOKEN = ((process.env.KSBRAIN_API_TOKEN || process.env.KSBRAIN_TOKEN || "").trim()) || (() => {
+  try {
+    const text = fs.readFileSync("/home/kojima/work/TradingAgents-JP/.env", "utf8");
+    const m = text.match(/^TRADINGAGENTS_JP_LLM_API_KEY=([^\n,]+)/m);
+    return m ? m[1].trim() : "";
+  } catch { return ""; }
+})();
 const MAX_BODY_BYTES = 64 * 1024;
 
 const JPYC_PAY_TO    = (process.env.JPYC_PAY_TO             || "").trim();
