@@ -1,0 +1,209 @@
+openapi: 3.0.3
+info:
+  title: Kurage Stock Brain
+  description: >-
+    Evidence-based equity judgment API for Japanese and US stocks, powered by DeepSeek
+    (deepseek-v4-flash). Judgment only — no broker credentials, no order execution, no
+    invented facts: every judgment cites the evidence IDs it used, lists counter-evidence,
+    and reports missing data explicitly. Send a stock symbol (JP code like 7203 or US ticker
+    like AAPL) with your own evidence objects, or use the one-shot US endpoint where the
+    brain auto-fetches SEC EDGAR company facts, recent filings and daily quotes, then runs
+    a 7-perspective analysis (technical, fundamentals, disclosure, market context,
+    bull-bear, risk, final).
+  version: 1.0.0
+servers:
+  - url: http://exbridge.ddns.net:8018
+components:
+  schemas:
+    EvidenceItem:
+      type: object
+      required: [symbol, kind, title, facts, source_name, observed_at]
+      properties:
+        symbol:
+          type: string
+          example: AAPL
+        market:
+          type: string
+          enum: [jp, us]
+          example: us
+        kind:
+          type: string
+          enum: [price, technical, financial, disclosure, news, market, user]
+          example: news
+        title:
+          type: string
+          example: Q3 earnings beat consensus
+        facts:
+          type: object
+          description: Free-form structured facts (numbers, quotes, table rows)
+        source_name:
+          type: string
+          example: Company IR
+        source_url:
+          type: string
+        observed_at:
+          type: string
+          format: date-time
+          example: "2026-07-30T00:00:00Z"
+    AnalyzeRequest:
+      type: object
+      required: [symbol]
+      properties:
+        symbol:
+          type: string
+          example: "7203"
+          description: JP stock code like 7203 or US ticker like AAPL
+        market:
+          type: string
+          enum: [jp, us]
+          description: jp (default) or us — controls the analysis framing
+        evidence:
+          type: array
+          items: { $ref: '#/components/schemas/EvidenceItem' }
+          description: >-
+            Evidence the judgment may cite. Stateless: only what you send here is used.
+        as_of:
+          type: string
+          format: date-time
+          description: Optional ISO timestamp for the analysis
+      description: For all skills except /ksbrain/us/analyze/full, supply evidence to analyze.
+    USAnalyzeRequest:
+      type: object
+      required: [symbol]
+      properties:
+        symbol:
+          type: string
+          example: AAPL
+          description: US ticker. SEC EDGAR facts/filings and daily quotes are fetched automatically.
+        evidence:
+          type: array
+          items: { $ref: '#/components/schemas/EvidenceItem' }
+          description: Optional extra evidence merged with the auto-fetched data
+    Judgment:
+      type: object
+      properties:
+        analysis_type: { type: string }
+        symbol: { type: string }
+        signal:
+          type: string
+          enum: [bullish, neutral, bearish]
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        summary:
+          type: string
+          description: Concise Japanese rationale citing the evidence
+        evidence_ids:
+          type: array
+          items: { type: string }
+        counter_evidence_ids:
+          type: array
+          items: { type: string }
+        risks:
+          type: array
+          items: { type: string }
+        missing_data:
+          type: array
+          items: { type: string }
+        data_quality:
+          type: string
+          enum: [high, medium, low, insufficient]
+        model: { type: string }
+    FullAnalysis:
+      type: object
+      description: All 7 perspectives in one response
+      properties:
+        symbol: { type: string }
+        technical: { $ref: '#/components/schemas/Judgment' }
+        fundamentals: { $ref: '#/components/schemas/Judgment' }
+        disclosure: { $ref: '#/components/schemas/Judgment' }
+        market_context: { $ref: '#/components/schemas/Judgment' }
+        bull_bear: { $ref: '#/components/schemas/Judgment' }
+        risk: { $ref: '#/components/schemas/Judgment' }
+        final: { $ref: '#/components/schemas/Judgment' }
+paths:
+  /ksbrain/us/analyze/full:
+    post:
+      summary: US One-Shot Full Analysis
+      description: >-
+        Recommended entry point for US stocks. Auto-fetches SEC EDGAR company facts,
+        recent filings and daily quotes for the ticker, then runs the full 7-perspective
+        analysis. Just send {"symbol":"AAPL"}.
+      operationId: ksUsFull
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/USAnalyzeRequest' } } }
+      responses: { '200': { description: Full analysis, content: { application/json: { schema: { $ref: '#/components/schemas/FullAnalysis' } } } } }
+  /ksbrain/analyze/full:
+    post:
+      summary: Full Analysis (7 Perspectives)
+      description: Technical, fundamentals, disclosure, market context, bull-bear, risk and final judgment from your supplied evidence.
+      operationId: ksFull
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AnalyzeRequest' } } }
+      responses: { '200': { description: Full analysis, content: { application/json: { schema: { $ref: '#/components/schemas/FullAnalysis' } } } } }
+  /ksbrain/analyze/technical:
+    post:
+      summary: Technical Analysis
+      description: Trend / levels / momentum judgment from supplied price and technical evidence.
+      operationId: ksTechnical
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AnalyzeRequest' } } }
+      responses: { '200': { description: Structured judgment, content: { application/json: { schema: { $ref: '#/components/schemas/Judgment' } } } } }
+  /ksbrain/analyze/fundamentals:
+    post:
+      summary: Fundamentals Analysis
+      description: Financial-statement judgment from supplied financial evidence.
+      operationId: ksFundamentals
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AnalyzeRequest' } } }
+      responses: { '200': { description: Structured judgment, content: { application/json: { schema: { $ref: '#/components/schemas/Judgment' } } } } }
+  /ksbrain/analyze/disclosure:
+    post:
+      summary: Disclosure Analysis
+      description: Corporate filings / disclosure judgment from supplied disclosure evidence.
+      operationId: ksDisclosure
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AnalyzeRequest' } } }
+      responses: { '200': { description: Structured judgment, content: { application/json: { schema: { $ref: '#/components/schemas/Judgment' } } } } }
+  /ksbrain/analyze/news:
+    post:
+      summary: News Analysis
+      description: News impact judgment from supplied headlines.
+      operationId: ksNews
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AnalyzeRequest' } } }
+      responses: { '200': { description: Structured judgment, content: { application/json: { schema: { $ref: '#/components/schemas/Judgment' } } } } }
+  /ksbrain/analyze/market-context:
+    post:
+      summary: Market Context Analysis
+      description: Market environment judgment from supplied market/news evidence.
+      operationId: ksMarketContext
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AnalyzeRequest' } } }
+      responses: { '200': { description: Structured judgment, content: { application/json: { schema: { $ref: '#/components/schemas/Judgment' } } } } }
+  /ksbrain/debate/bull-bear:
+    post:
+      summary: Bull vs Bear Debate
+      description: Bull and bear argument mapping with a balance judgment.
+      operationId: ksBullBear
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AnalyzeRequest' } } }
+      responses: { '200': { description: Structured judgment, content: { application/json: { schema: { $ref: '#/components/schemas/Judgment' } } } } }
+  /ksbrain/assess/risk:
+    post:
+      summary: Risk Assessment
+      description: Risk gate judgment — hazards, counter-evidence and missing data are made explicit.
+      operationId: ksRisk
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AnalyzeRequest' } } }
+      responses: { '200': { description: Structured judgment, content: { application/json: { schema: { $ref: '#/components/schemas/Judgment' } } } } }
