@@ -62,6 +62,17 @@ BRAINS = {
         "price_usdc": "0.001",
         "auto": True,
     },
+    "ksbrain": {
+        # offering未登録(acpセッション失効のため登録待ち。登録後にmatch_idsへIDを追記)
+        "match_ids": set(),
+        "match_kw": ["stock brain", "equity judgment", "ksbrain", "stock judgment"],
+        "base": os.environ.get("KSBRAIN_URL", "http://127.0.0.1:18338"),
+        "token": os.environ.get("KSBRAIN_TOKEN", ""),
+        "token_header": "X-API-Key",
+        "provider_header": "X-KSBRAIN-Provider",
+        "price_usdc": "0.001",
+        "auto": True,
+    },
     "url2brain": {
         "match_ids": {"019f85e6-703a-72f3-b1cf-ecaa3748dc96"},
         "match_kw": ["url2brain", "content generation", "auto-posting"],

@@ -618,6 +618,40 @@
           }
         }
       }
+    },
+    "ksbrain": {
+      "price": "0.001",
+      "description": "Kurage Stock Brain — evidence-based equity judgment API for Japanese and US stocks, on DeepSeek (deepseek-v4-flash). Judgment only: no broker credentials, no order execution, every judgment cites the evidence IDs it used. Stateless: send your evidence in the request body (kind: price|technical|financial|disclosure|news|market|user), or use the one-shot US skill which auto-fetches SEC EDGAR company facts + filings + daily quotes. Select a skill by path after the service URL. Skills: POST .../ksbrain/analyze/technical | /analyze/fundamentals | /analyze/disclosure | /analyze/news | /analyze/market-context | /debate/bull-bear | /assess/risk | /analyze/full (7 perspectives: technical, fundamentals, disclosure, market, bull-bear, risk, final) | /us/analyze/full (one-shot US equity: just {symbol:\"AAPL\"}, ksbrain fetches SEC EDGAR + quotes then runs the full analysis). Body: {symbol (required; JP code like 7203 or US ticker like AAPL), market: jp|us (default jp), evidence: [{symbol, market, kind, title, facts, source_name, source_url, observed_at}], as_of}. Returns structured JSON: signal (bullish|neutral|bearish), confidence, summary (Japanese), evidence_ids, counter_evidence_ids, risks, missing_data, data_quality.",
+      "methods": [
+        "POST"
+      ],
+      "upstream_endpoint": "http://exbridge.ddns.net:18338",
+      "schema": {
+        "input": {
+          "type": "object",
+          "required": [
+            "symbol"
+          ],
+          "properties": {
+            "symbol": {
+              "type": "string",
+              "description": "JP stock code like 7203 or US ticker like AAPL"
+            },
+            "market": {
+              "type": "string",
+              "description": "jp (default) or us"
+            },
+            "evidence": {
+              "type": "array",
+              "description": "Evidence objects: {symbol, market, kind, title, facts, source_name, source_url, observed_at}"
+            },
+            "as_of": {
+              "type": "string",
+              "description": "Optional ISO timestamp"
+            }
+          }
+        }
+      }
     }
   }
 }

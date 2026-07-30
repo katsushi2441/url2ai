@@ -1,5 +1,6 @@
 import express from "express";
 import nodeHttp from "node:http";
+import { readFileSync } from "node:fs";
 import { paymentMiddleware } from "x402-express";
 import { createFacilitatorConfig } from "@coinbase/x402";
 
@@ -22,6 +23,19 @@ const PRICE_KC_SINGLE = process.env.PRICE_KC_SINGLE || "$0.001";
 // bull/bear/manager等、generate_jsonを複数回連鎖する多段エンドポイント用。単発と同額だと
 // 原価率60%超になるため、claw402上のDeepSeek Chat/Reasoner相場($0.003-0.005)に合わせる。
 const PRICE_KC_CHAIN  = process.env.PRICE_KC_CHAIN  || "$0.003";
+const KSBRAIN_URL = process.env.KSBRAIN_URL || "http://127.0.0.1:18338";
+// ksbrainのAPIキー。unit環境変数が無い場合はTradingAgents-JPの.envから読む
+// (cdp-gateway.serviceの更新はsudoが要るため、コード側フォールバックで賄う)
+const KSBRAIN_TOKEN = process.env.KSBRAIN_TOKEN || (() => {
+  try {
+    const text = readFileSync("/home/kojima/work/TradingAgents-JP/.env", "utf8");
+    const m = text.match(/^TRADINGAGENTS_JP_LLM_API_KEY=([^\n,]+)/m);
+    return m ? m[1].trim() : "";
+  } catch { return ""; }
+})();
+// 価格はkcbrainと同一(claw402水準・2026-07-21ユーザー承認方針を踏襲)
+const PRICE_KS_SINGLE = process.env.PRICE_KS_SINGLE || "$0.001";
+const PRICE_KS_CHAIN  = process.env.PRICE_KS_CHAIN  || "$0.003";
 const URL2BRAIN_URL   = process.env.URL2BRAIN_URL   || "http://127.0.0.1:18332";
 const URL2BRAIN_TOKEN = process.env.URL2BRAIN_TOKEN || "";
 // URL解析+告知文+ブログ記事生成(DeepSeek/deepseek-v4-flash。x402課金コールはDeepSeekへ)。
@@ -307,6 +321,57 @@ function kcbrainRoute(price, description, schema) {
   };
 }
 
+// ---- Kurage Stock Brain (ksbrain :18338) — 日本株+米国株の証拠ベース判断API ----
+// ステートレス設計: 課金コールは共有証拠ストアを使わず、リクエストbodyの
+// evidence配列(または米株ワンショットの自動取得)だけで判断する。
+const KSBRAIN_EVIDENCE_SCHEMA = {
+  bodyType: "json",
+  properties: {
+    symbol: { type: "string", description: "Stock symbol: JP code like 7203 or US ticker like AAPL (required)" },
+    market: { type: "string", description: "jp (default) or us" },
+    evidence: { type: "array", description: "Evidence objects you supply: {symbol, market, kind: price|technical|financial|disclosure|news|market|user, title, facts, source_name, source_url, observed_at}. Judgments cite only these." },
+    as_of: { type: "string", description: "Optional ISO timestamp for the analysis" },
+  },
+};
+const KSBRAIN_US_SCHEMA = {
+  bodyType: "json",
+  properties: {
+    symbol: { type: "string", description: "US ticker like AAPL (required). ksbrain fetches SEC EDGAR facts/filings and daily quotes automatically." },
+    evidence: { type: "array", description: "Optional extra evidence objects merged with the auto-fetched data" },
+  },
+};
+
+// gateway suffix -> [upstream path, price, description, schema]
+const KSBRAIN_ENDPOINTS = {
+  "analyze/technical": ["/v1/analyze/technical", PRICE_KS_SINGLE,
+    "Equity technical analysis (JP/US) from supplied price/technical evidence, as structured JSON citing evidence IDs. DeepSeek."],
+  "analyze/fundamentals": ["/v1/analyze/fundamentals", PRICE_KS_SINGLE,
+    "Equity fundamentals judgment (JP/US) from supplied financial evidence. Structured JSON, evidence-cited. DeepSeek."],
+  "analyze/disclosure": ["/v1/analyze/disclosure", PRICE_KS_SINGLE,
+    "Corporate disclosure/filings analysis (JP/US) from supplied disclosure evidence. DeepSeek."],
+  "analyze/news": ["/v1/analyze/news", PRICE_KS_SINGLE,
+    "Equity news impact analysis (JP/US) from supplied headlines. DeepSeek."],
+  "analyze/market-context": ["/v1/analyze/market-context", PRICE_KS_SINGLE,
+    "Market context judgment (JP/US) from supplied market/news evidence. DeepSeek."],
+  "debate/bull-bear": ["/v1/debate/bull-bear", PRICE_KS_SINGLE,
+    "Bull vs bear argument mapping for a stock from supplied evidence. DeepSeek."],
+  "assess/risk": ["/v1/assess/risk", PRICE_KS_SINGLE,
+    "Risk assessment for a stock from supplied evidence: hazards, missing data, counter-evidence. Judgment only."],
+  "analyze/full": ["/v1/analyze/full", PRICE_KS_CHAIN,
+    "Full 7-perspective equity analysis (technical, fundamentals, disclosure, market, bull-bear, risk, final) from supplied evidence. 7 sequential DeepSeek calls."],
+  "us/analyze/full": ["/v1/us/analyze/full", PRICE_KS_CHAIN,
+    "One-shot US equity analysis: ksbrain fetches SEC EDGAR company facts + filings + daily quotes for the ticker, then runs the full 7-perspective analysis. Just send {symbol:\"AAPL\"}.",
+    KSBRAIN_US_SCHEMA],
+};
+
+function ksbrainRoute(price, description, schema) {
+  return {
+    price, network: NETWORK,
+    config: { description, discoverable: true, inputSchema: schema || KSBRAIN_EVIDENCE_SCHEMA, maxTimeoutSeconds: 100 },
+  };
+}
+
+
 // Kurage URL2AI Publisher brain (url2brain :18332) — URL解析+告知文+ブログ記事生成。
 // DeepSeek(deepseek-v4-flash)。/v1/post/*(Kurage自身のSNS/ブログへの投稿)は
 // 第三者が課金だけで投稿できてしまうため、意図的にゲートウェイへ載せない
@@ -492,6 +557,9 @@ for (const [suffix, [, price, description, schema, maxTimeoutSeconds]] of Object
 for (const [suffix, [, price, description, schema]] of Object.entries(KCBRAIN_ENDPOINTS)) {
   routes[`POST /kcbrain/${suffix}`] = kcbrainRoute(price, description, schema);
 }
+for (const [suffix, [, price, description, schema]] of Object.entries(KSBRAIN_ENDPOINTS)) {
+  routes[`POST /ksbrain/${suffix}`] = ksbrainRoute(price, description, schema);
+}
 for (const [suffix, [, description, schema]] of Object.entries(URL2BRAIN_ENDPOINTS)) {
   routes[`POST /url2brain/${suffix}`] = url2brainRoute(description, schema);
 }
@@ -633,6 +701,16 @@ for (const [suffix, [, price, description]] of Object.entries(FXBRAIN_ENDPOINTS)
 for (const [suffix, [, price, description]] of Object.entries(KCBRAIN_ENDPOINTS)) {
   X402_WELL_KNOWN.endpoints.push({
     path: `/kcbrain/${suffix}`,
+    method: "POST",
+    price,
+    network: NETWORK,
+    pay_to: WALLET,
+    description,
+  });
+}
+for (const [suffix, [, price, description]] of Object.entries(KSBRAIN_ENDPOINTS)) {
+  X402_WELL_KNOWN.endpoints.push({
+    path: `/ksbrain/${suffix}`,
     method: "POST",
     price,
     network: NETWORK,
@@ -788,6 +866,57 @@ function proxyToKcbrain(upstreamPath, req, res) {
 
 for (const [suffix, [upstreamPath]] of Object.entries(KCBRAIN_ENDPOINTS)) {
   app.post(`/kcbrain/${suffix}`, (req, res) => proxyToKcbrain(upstreamPath, req, res));
+}
+
+// ksbrain proxy: 課金コールはDeepSeekに振る(直叩き・内部利用はローカルGemmaのまま)。
+// フル分析は7段連鎖(DeepSeek実測~2.5秒/段)+米株はEDGAR取得を含むため締切90秒。
+const KSBRAIN_DEADLINE_MS = Number(process.env.KSBRAIN_DEADLINE_MS || 90000);
+
+function proxyToKsbrain(upstreamPath, req, res) {
+  const body = JSON.stringify(req.body);
+  const url = new URL(`${KSBRAIN_URL}${upstreamPath}`);
+  const options = {
+    hostname: url.hostname,
+    port: url.port,
+    path: url.pathname,
+    method: "POST",
+    timeout: KSBRAIN_DEADLINE_MS + 10000,
+    headers: {
+      "Content-Type": "application/json",
+      "Content-Length": Buffer.byteLength(body),
+      "X-API-Key": KSBRAIN_TOKEN,
+      "X-KSBRAIN-Provider": "deepseek",
+    },
+  };
+  let settled = false;
+  const once = (fn) => { if (!settled) { settled = true; clearTimeout(deadline); fn(); } };
+  const proxyReq = nodeHttp.request(options, (upRes) => {
+    once(() => {
+      res.status(upRes.statusCode || 502);
+      res.set("Content-Type", upRes.headers["content-type"] || "application/json");
+      upRes.pipe(res);
+    });
+  });
+  const deadline = setTimeout(() => {
+    once(() => {
+      proxyReq.destroy(new Error("ksbrain deadline"));
+      if (!res.headersSent) {
+        res.status(504).json({
+          error: "workflow exceeded the gateway deadline; no payment was captured. Please retry.",
+        });
+      }
+    });
+  }, KSBRAIN_DEADLINE_MS);
+  proxyReq.on("timeout", () => proxyReq.destroy(new Error("ksbrain upstream timeout")));
+  proxyReq.on("error", (err) => {
+    once(() => { if (!res.headersSent) res.status(502).json({ error: `ksbrain unavailable: ${err.message}` }); });
+  });
+  proxyReq.write(body);
+  proxyReq.end();
+}
+
+for (const [suffix, [upstreamPath]] of Object.entries(KSBRAIN_ENDPOINTS)) {
+  app.post(`/ksbrain/${suffix}`, (req, res) => proxyToKsbrain(upstreamPath, req, res));
 }
 
 // url2brain proxy: x402課金コールはDeepSeek(deepseek-v4-flash)へ振る

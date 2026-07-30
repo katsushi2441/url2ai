@@ -15,6 +15,9 @@ export URL2BRAIN_TOKEN="$(get URL2BRAIN_TOKEN)"
 export FXBRAIN_URL="${FXBRAIN_URL:-$(get FXBRAIN_URL)}"; export FXBRAIN_URL="${FXBRAIN_URL:-http://127.0.0.1:18326}"
 export KCBRAIN_URL="${KCBRAIN_URL:-$(get KCBRAIN_URL)}"; export KCBRAIN_URL="${KCBRAIN_URL:-http://127.0.0.1:18328}"
 export URL2BRAIN_URL="${URL2BRAIN_URL:-$(get URL2BRAIN_URL)}"; export URL2BRAIN_URL="${URL2BRAIN_URL:-http://127.0.0.1:18332}"
+# ksbrainのAPIキーはTradingAgents-JPの.envが単一の真実源(cdp-gateway側にも未登録のため)
+export KSBRAIN_TOKEN="${KSBRAIN_TOKEN:-$(grep -E '^TRADINGAGENTS_JP_LLM_API_KEY=' /home/kojima/work/TradingAgents-JP/.env | head -1 | cut -d= -f2 | cut -d, -f1)}"
+export KSBRAIN_URL="${KSBRAIN_URL:-http://127.0.0.1:18338}"
 export ACP_BIN="/home/kojima/.nvm/versions/node/v20.20.2/bin/acp"
 
 exec python3 provider.py

@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import http from "node:http";
 import { Buffer } from "node:buffer";
 
@@ -19,9 +20,20 @@ const KCBRAIN_TOKEN      = process.env.KCBRAIN_TOKEN || "";
 const FXBRAIN_HOST       = process.env.FXBRAIN_HOST || "127.0.0.1";
 const FXBRAIN_PORT       = Number.parseInt(process.env.FXBRAIN_PORT || "18326", 10);
 const FXBRAIN_TOKEN      = process.env.FXBRAIN_TOKEN || "";
+const KSBRAIN_HOST       = process.env.KSBRAIN_HOST || "127.0.0.1";
+const KSBRAIN_PORT       = Number.parseInt(process.env.KSBRAIN_PORT || "18338", 10);
+// ksbrainトークン: unit環境に無ければTradingAgents-JPの.envから読む(単一の真実源)
+const KSBRAIN_TOKEN      = process.env.KSBRAIN_TOKEN || (() => {
+  try {
+    const text = fs.readFileSync("/home/kojima/work/TradingAgents-JP/.env", "utf8");
+    const m = text.match(/^TRADINGAGENTS_JP_LLM_API_KEY=([^\n,]+)/m);
+    return m ? m[1].trim() : "";
+  } catch { return ""; }
+})();
 const BRAIN_ROUTES = {
   "/kcbrain/": { host: KCBRAIN_HOST, port: KCBRAIN_PORT, tokenHeader: "X-KCBRAIN-Token", token: KCBRAIN_TOKEN, providerHeader: "X-KCBRAIN-Provider" },
   "/fxbrain/": { host: FXBRAIN_HOST, port: FXBRAIN_PORT, tokenHeader: "X-KFXBRAIN-Token", token: FXBRAIN_TOKEN, providerHeader: "X-KFXBrain-Provider" },
+  "/ksbrain/": { host: KSBRAIN_HOST, port: KSBRAIN_PORT, tokenHeader: "X-API-Key", token: KSBRAIN_TOKEN, providerHeader: "X-KSBRAIN-Provider" },
 };
 // URL2Brain(コンテンツ生成+Kurage自身のSNS/ブログへの投稿)。Bankr/cdp-gatewayと同一挙動:
 // LLM生成系は body に provider:"deepseek" を注入、投稿系は confirm_post:true + persona を注入。
