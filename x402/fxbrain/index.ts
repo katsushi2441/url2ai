@@ -55,7 +55,13 @@ function json(data: unknown, init?: ResponseInit): Response {
 
 export default async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url);
-  const path = url.pathname.replace(/^\/fxbrain/, "") || "/";
+  // Bankrはウォレットプレフィックス付きパス(/0x.../fxbrain/...)でハンドラを呼ぶことが
+  // あるため、先頭一致でなく "/fxbrain/" の出現位置からスキルパスを切り出す
+  const marker = "/fxbrain";
+  const mi = url.pathname.indexOf(marker + "/");
+  const path = mi >= 0 ? url.pathname.slice(mi + marker.length)
+    : url.pathname.endsWith(marker) ? "/"
+    : url.pathname.replace(/^\/fxbrain/, "") || "/";
 
   if (req.method === "GET" && ["/health", "/healthz"].includes(path)) {
     const upstream = await fetch(`${UPSTREAM}/health`);
@@ -93,6 +99,8 @@ export default async function handler(req: Request): Promise<Response> {
     headers: {
       "Content-Type": "application/json",
       "X-KFXBRAIN-Token": TOKEN,
+      // 有料レール(Bankr)はDeepSeek。ローカルGemmaは無料・内部の直叩き専用
+      "X-KFXBrain-Provider": "deepseek",
     },
     body: JSON.stringify(body),
   });

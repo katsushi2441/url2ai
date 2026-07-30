@@ -32,7 +32,13 @@ function json(data: unknown, init?: ResponseInit): Response {
 
 export default async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url);
-  const path = url.pathname.replace(/^\/ksbrain/, "") || "/";
+  // Bankrはウォレットプレフィックス付きパス(/0x.../ksbrain/...)でハンドラを呼ぶことが
+  // あるため、先頭一致でなく "/ksbrain/" の出現位置からスキルパスを切り出す
+  const marker = "/ksbrain";
+  const mi = url.pathname.indexOf(marker + "/");
+  const path = mi >= 0 ? url.pathname.slice(mi + marker.length)
+    : url.pathname.endsWith(marker) ? "/"
+    : url.pathname.replace(/^\/ksbrain/, "") || "/";
 
   if (req.method === "GET" && ["/health", "/healthz"].includes(path)) {
     const upstream = await fetch(`${UPSTREAM}/health`);

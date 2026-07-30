@@ -44,7 +44,13 @@ function json(data: unknown, init?: ResponseInit): Response {
 
 export default async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url);
-  const path = url.pathname.replace(/^\/url2brain/, "") || "/";
+  // Bankrはウォレットプレフィックス付きパス(/0x.../url2brain/...)でハンドラを呼ぶことが
+  // あるため、先頭一致でなく "/url2brain/" の出現位置からスキルパスを切り出す
+  const marker = "/url2brain";
+  const mi = url.pathname.indexOf(marker + "/");
+  const path = mi >= 0 ? url.pathname.slice(mi + marker.length)
+    : url.pathname.endsWith(marker) ? "/"
+    : url.pathname.replace(/^\/url2brain/, "") || "/";
 
   if (req.method === "GET" && ["/health", "/healthz"].includes(path)) {
     const upstream = await fetch(`${UPSTREAM}/health`);

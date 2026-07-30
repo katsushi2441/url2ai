@@ -42,7 +42,13 @@ function json(data: unknown, init?: ResponseInit): Response {
 
 export default async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url);
-  const path = url.pathname.replace(/^\/kcbrain/, "") || "/";
+  // Bankrはウォレットプレフィックス付きパス(/0x.../kcbrain/...)でハンドラを呼ぶことが
+  // あるため、先頭一致でなく "/kcbrain/" の出現位置からスキルパスを切り出す
+  const marker = "/kcbrain";
+  const mi = url.pathname.indexOf(marker + "/");
+  const path = mi >= 0 ? url.pathname.slice(mi + marker.length)
+    : url.pathname.endsWith(marker) ? "/"
+    : url.pathname.replace(/^\/kcbrain/, "") || "/";
 
   if (req.method === "GET" && ["/health", "/healthz"].includes(path)) {
     const upstream = await fetch(`${UPSTREAM}/health`);
@@ -80,6 +86,8 @@ export default async function handler(req: Request): Promise<Response> {
     headers: {
       "Content-Type": "application/json",
       "X-KCBRAIN-Token": TOKEN,
+      // 有料レール(Bankr)はDeepSeek。ローカルGemmaは無料・内部の直叩き専用
+      "X-KCBRAIN-Provider": "deepseek",
     },
     body: JSON.stringify(body),
   });

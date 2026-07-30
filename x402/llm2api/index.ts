@@ -15,7 +15,13 @@ function json(data: unknown, init?: ResponseInit): Response {
 export default async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url);
   // strip leading /llm2api prefix if present
-  const path = url.pathname.replace(/^\/llm2api/, "") || "/";
+  // Bankrはウォレットプレフィックス付きパス(/0x.../llm2api/...)でハンドラを呼ぶことが
+  // あるため、先頭一致でなく "/llm2api/" の出現位置からスキルパスを切り出す
+  const marker = "/llm2api";
+  const mi = url.pathname.indexOf(marker + "/");
+  const path = mi >= 0 ? url.pathname.slice(mi + marker.length)
+    : url.pathname.endsWith(marker) ? "/"
+    : url.pathname.replace(/^\/llm2api/, "") || "/";
 
   if (req.method === "GET" && ["/health", "/healthz"].includes(path)) {
     const upstream = await fetch(`${UPSTREAM}/health`);
