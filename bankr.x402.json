@@ -718,6 +718,56 @@
           }
         }
       }
+    },
+    "ktajp": {
+      "price": "0.05",
+      "description": "Kurage TradingAgents — multi-agent analysis of Japanese equities (Tokyo Stock Exchange), running on DeepSeek (deepseek-v4-flash). Specialist analysts (technicals, fundamentals, flows) evaluate independently, then a bull/bear debate and a risk review produce an evidence-backed judgment. One skill: POST .../ktajp/analyze. Body: {symbol (required; 4-digit TSE code, e.g. 7203 for Toyota), username (optional: your Kurage TradingAgents X username — when given, the run is also stored in that account's history at https://kurage.exbridge.jp/ktajp.php)}. Live market data is fetched per request; the response contains the market snapshot, each analyst's opinion, the debate, the risk review and the final decision as structured JSON (Japanese text). Same engine as the Kurage TradingAgents web app (https://tajp.exbridge.jp/). Analysis only: no broker credentials, no order execution. Informational only — not investment advice.",
+      "methods": [
+        "POST"
+      ],
+      "upstream_endpoint": "http://exbridge.ddns.net:18337",
+      "schema": {
+        "input": {
+          "type": "object",
+          "required": [
+            "symbol"
+          ],
+          "properties": {
+            "symbol": {
+              "type": "string",
+              "description": "4-digit Tokyo Stock Exchange code, e.g. 7203."
+            },
+            "username": {
+              "type": "string",
+              "description": "Optional Kurage TradingAgents X username; stores the run in that account's history."
+            }
+          }
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean"
+            },
+            "symbol": {
+              "type": "string"
+            },
+            "run_id": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "analysis": {
+              "type": "object",
+              "description": "Market snapshot, analyst opinions, debate, risk review and final decision."
+            },
+            "disclaimer": {
+              "type": "string"
+            }
+          }
+        }
+      }
     }
   }
 }
