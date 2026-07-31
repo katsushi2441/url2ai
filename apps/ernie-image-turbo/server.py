@@ -16,6 +16,8 @@ DEVICE = os.getenv("DEVICE", "cuda")
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8011"))
 ENABLE_CPU_OFFLOAD = os.getenv("ENABLE_CPU_OFFLOAD", "1") == "1"
+# 後方互換: OFFLOAD_MODE未指定なら従来のENABLE_CPU_OFFLOADに従う
+OFFLOAD_MODE = os.getenv("OFFLOAD_MODE", "sequential" if ENABLE_CPU_OFFLOAD else "none")
 
 _pipeline = None
 _pipeline_lock = Lock()
@@ -61,8 +63,17 @@ def get_pipeline() -> ErnieImagePipeline:
             if hasattr(pipe, "enable_vae_tiling"):
                 pipe.enable_vae_tiling()
 
-            if DEVICE == "cuda" and torch.cuda.is_available() and ENABLE_CPU_OFFLOAD:
+            # OFFLOAD_MODE:
+            #   sequential(既定) … VRAM~1.2GB。常駐他サービス(Ollama/Audio8等)と安全に同居
+            #                      できるが、CPU/PCIe往復が支配的で高負荷時は1枚10分超を実測。
+            #   model            … VRAM~10.5GB常駐で大幅高速。ただしgemma4(8.7GB)が同時に
+            #                      載っているとOOMする(2026-07-31実測)ので、呼び出し側が
+            #                      keep_alive=0等でVRAMを空けられる場合のみ使う。
+            #   none             … フルGPU。単独占有できる環境向け。
+            if DEVICE == "cuda" and torch.cuda.is_available() and OFFLOAD_MODE == "sequential":
                 pipe.enable_sequential_cpu_offload()
+            elif DEVICE == "cuda" and torch.cuda.is_available() and OFFLOAD_MODE == "model":
+                pipe.enable_model_cpu_offload()
             else:
                 pipe = pipe.to(DEVICE)
 
@@ -108,16 +119,28 @@ def generate(req: GenerateRequest) -> dict:
         # Diffusers pipelines are not thread-safe. FastAPI runs sync handlers
         # in a thread pool, so concurrent requests must be serialized here.
         with _generate_lock:
-            result = pipe(
-                prompt=req.prompt,
-                negative_prompt=req.negative_prompt,
-                width=req.width,
-                height=req.height,
-                num_inference_steps=req.num_inference_steps,
-                guidance_scale=req.guidance_scale,
-                use_pe=req.use_pe,
-                generator=generator,
-            )
+            def _run():
+                return pipe(
+                    prompt=req.prompt,
+                    negative_prompt=req.negative_prompt,
+                    width=req.width,
+                    height=req.height,
+                    num_inference_steps=req.num_inference_steps,
+                    guidance_scale=req.guidance_scale,
+                    use_pe=req.use_pe,
+                    generator=generator,
+                )
+            try:
+                result = _run()
+            except torch.cuda.OutOfMemoryError:
+                # 他プロセス(Ollama等)との一時的なVRAM競合。キャッシュを捨てて1回だけ
+                # やり直す。それでも駄目なら503で返し、呼び出し側にリトライさせる。
+                torch.cuda.empty_cache()
+                try:
+                    result = _run()
+                except torch.cuda.OutOfMemoryError as oom:
+                    torch.cuda.empty_cache()
+                    raise HTTPException(status_code=503, detail=f"GPU busy (OOM): {oom}") from oom
         image = result.images[0]
         return {
             "ok": True,
