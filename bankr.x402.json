@@ -652,6 +652,72 @@
           }
         }
       }
+    },
+    "kfinanalyst": {
+      "price": "0.05",
+      "description": "Kurage Finanalyst — AI analyst reports in Japanese for stock / crypto / FX symbols, generated on DeepSeek (deepseek-v4-flash). Built on FinRobot (Apache 2.0); \"FinRobot\" is a trademark of AI4Finance Foundation — this service is an independent derivative, not the official FinRobot product. One skill: POST .../kfinanalyst/report. Body: {symbol (required; e.g. 7203.T for Japanese stocks, AAPL for US stocks, BTC-USD for crypto, USDJPY=X for FX), market: stock|crypto|fx (default stock), username (optional: your Kurage Finanalyst X username — when given, the generated report is also stored in that account's history at https://kurage.exbridge.jp/kfinanalyst.php)}. Fetches ~3 months of market data and returns a structured Japanese analyst report as Markdown: summary, price action, technical notes, risk factors and conclusion. Same engine as the Kurage Finanalyst web app (https://kfina.exbridge.jp/). Informational only — not investment advice.",
+      "methods": [
+        "POST"
+      ],
+      "upstream_endpoint": "http://exbridge.ddns.net:18351",
+      "schema": {
+        "input": {
+          "type": "object",
+          "required": [
+            "symbol"
+          ],
+          "properties": {
+            "symbol": {
+              "type": "string",
+              "description": "Ticker symbol: 7203.T (JP stock), AAPL (US stock), BTC-USD (crypto), USDJPY=X (FX). Max 20 chars."
+            },
+            "market": {
+              "type": "string",
+              "enum": [
+                "stock",
+                "crypto",
+                "fx"
+              ],
+              "description": "Market type. Default stock."
+            },
+            "username": {
+              "type": "string",
+              "description": "Optional Kurage Finanalyst X username; stores the report in that account's history."
+            }
+          }
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean"
+            },
+            "symbol": {
+              "type": "string"
+            },
+            "market": {
+              "type": "string"
+            },
+            "report_id": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "History id when username was given."
+            },
+            "report_markdown": {
+              "type": "string",
+              "description": "Japanese analyst report (Markdown)."
+            },
+            "language": {
+              "type": "string"
+            },
+            "disclaimer": {
+              "type": "string"
+            }
+          }
+        }
+      }
     }
   }
 }
