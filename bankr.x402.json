@@ -462,7 +462,7 @@
       }
     },
     "kcbrain": {
-      "price": "0.001",
+      "price": "0.05",
       "description": "Kurage Crypto Brain — 15 crypto judgment skills on DeepSeek (deepseek-v4-flash), built from vendored open-source trading intelligence: ai-hedge-fund-crypto (MIT), crypto-trading-agents from TradingAgents (Apache-2.0), LLM_trader, pinned commits with full attribution. Judgment only: no exchange credentials, no order execution. Select a skill by path after the service URL. Skills: POST .../kcbrain/analyze/technical | /analyze/onchain | /analyze/sentiment | /analyze/full (all perspectives in one call) | /debate/bull-bear | /decide/trade (BUY/SELL/HOLD) | /assess/risk (approve/reduce/reject) | /decide/portfolio | /review/trade | /market/opportunity-ranking (rank up to 40 pairs by risk-adjusted opportunity in one call; body {pairs:[{symbol,technicals,derivatives,onchain,news}...],global_context}) | /market/flow-ranking | /market/anomaly | /market/liquidation-risk | /vendor/ai-hedge-fund-crypto/portfolio (ai-hedge-fund-crypto MIT portfolio manager synthesis) | /vendor/llm-trader/analyze (LLM_trader decision-gated analysis) | /signal/pair/{SYMBOL} (e.g. /signal/pair/BTC_USDT: evidence-bounded watch/wait/avoid signal). Body: {symbol (required, e.g. BTC_USDT), timeframe, technicals{}, derivatives{}, onchain{}, defi{}, news[], social[], position{}, portfolio{}, history[], question} — at least one evidence field required. Returns structured JSON with signal/confidence/evidence and upstream attribution. Multi-agent chained debates (bull/bear researcher, multi-analyst desks — 3-5 sequential LLM calls) are sold separately on the direct x402 rail: POST https://bittensorman.xyz/kcbrain/vendor/crypto-trading-agents/debate | /vendor/vibe-trading/research | /vendor/helm-agents/consensus ($0.003 each).",
       "methods": [
         "POST"
@@ -620,8 +620,8 @@
       }
     },
     "ksbrain": {
-      "price": "0.001",
-      "description": "Kurage Stock Brain — evidence-based equity judgment API for Japanese and US stocks, on DeepSeek (deepseek-v4-flash). Judgment only: no broker credentials, no order execution, every judgment cites the evidence IDs it used. Stateless: send your evidence in the request body (kind: price|technical|financial|disclosure|news|market|user), or use the one-shot US skill which auto-fetches SEC EDGAR company facts + filings + daily quotes. Select a skill by path after the service URL. Skills: POST .../ksbrain/analyze/technical | /analyze/fundamentals | /analyze/disclosure | /analyze/news | /analyze/market-context | /debate/bull-bear | /assess/risk | /analyze/full (7 perspectives: technical, fundamentals, disclosure, market, bull-bear, risk, final) | /us/analyze/full (one-shot US equity: just {symbol:\"AAPL\"}, ksbrain fetches SEC EDGAR + quotes then runs the full analysis). Body: {symbol (required; JP code like 7203 or US ticker like AAPL), market: jp|us (default jp), evidence: [{symbol, market, kind, title, facts, source_name, source_url, observed_at}], as_of}. Returns structured JSON: signal (bullish|neutral|bearish), confidence, summary (Japanese), evidence_ids, counter_evidence_ids, risks, missing_data, data_quality.",
+      "price": "0.05",
+      "description": "Kurage Stock Brain — evidence-based equity judgment API for Japanese and US stocks, on DeepSeek (deepseek-v4-flash). Judgment only: no broker credentials, no order execution, every judgment cites the evidence IDs it used. Stateless: send your evidence in the request body (kind: price|technical|financial|disclosure|news|market|user), or use the one-shot US skill which auto-fetches SEC EDGAR company facts + filings + daily quotes. Select a skill by path after the service URL. Skills: POST .../ksbrain/agents/analyze (multi-agent committee: specialist analysts evaluate independently, then a bull/bear debate and a risk review produce a final judgment — body {symbol (4-digit TSE code, e.g. 7203), username (optional)}) | /analyze/technical | /analyze/fundamentals | /analyze/disclosure | /analyze/news | /analyze/market-context | /debate/bull-bear | /assess/risk | /analyze/full (7 perspectives: technical, fundamentals, disclosure, market, bull-bear, risk, final) | /us/analyze/full (one-shot US equity: just {symbol:\"AAPL\"}, ksbrain fetches SEC EDGAR + quotes then runs the full analysis). Body: {symbol (required; JP code like 7203 or US ticker like AAPL), market: jp|us (default jp), evidence: [{symbol, market, kind, title, facts, source_name, source_url, observed_at}], as_of}. Returns structured JSON: signal (bullish|neutral|bearish), confidence, summary (Japanese), evidence_ids, counter_evidence_ids, risks, missing_data, data_quality.",
       "methods": [
         "POST"
       ],
@@ -711,56 +711,6 @@
             },
             "language": {
               "type": "string"
-            },
-            "disclaimer": {
-              "type": "string"
-            }
-          }
-        }
-      }
-    },
-    "ktajp": {
-      "price": "0.05",
-      "description": "Kurage TradingAgents — multi-agent analysis of Japanese equities (Tokyo Stock Exchange), running on DeepSeek (deepseek-v4-flash). Specialist analysts (technicals, fundamentals, flows) evaluate independently, then a bull/bear debate and a risk review produce an evidence-backed judgment. One skill: POST .../ktajp/analyze. Body: {symbol (required; 4-digit TSE code, e.g. 7203 for Toyota), username (optional: your Kurage TradingAgents X username — when given, the run is also stored in that account's history at https://kurage.exbridge.jp/ktajp.php)}. Live market data is fetched per request; the response contains the market snapshot, each analyst's opinion, the debate, the risk review and the final decision as structured JSON (Japanese text). Same engine as the Kurage TradingAgents web app (https://tajp.exbridge.jp/). Analysis only: no broker credentials, no order execution. Informational only — not investment advice.",
-      "methods": [
-        "POST"
-      ],
-      "upstream_endpoint": "http://exbridge.ddns.net:18337",
-      "schema": {
-        "input": {
-          "type": "object",
-          "required": [
-            "symbol"
-          ],
-          "properties": {
-            "symbol": {
-              "type": "string",
-              "description": "4-digit Tokyo Stock Exchange code, e.g. 7203."
-            },
-            "username": {
-              "type": "string",
-              "description": "Optional Kurage TradingAgents X username; stores the run in that account's history."
-            }
-          }
-        },
-        "output": {
-          "type": "object",
-          "properties": {
-            "ok": {
-              "type": "boolean"
-            },
-            "symbol": {
-              "type": "string"
-            },
-            "run_id": {
-              "type": [
-                "integer",
-                "null"
-              ]
-            },
-            "analysis": {
-              "type": "object",
-              "description": "Market snapshot, analyst opinions, debate, risk review and final decision."
             },
             "disclaimer": {
               "type": "string"

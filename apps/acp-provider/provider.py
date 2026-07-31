@@ -59,7 +59,7 @@ BRAINS = {
         "token": os.environ.get("KCBRAIN_TOKEN", ""),
         "token_header": "X-KCBRAIN-Token",
         "provider_header": "X-KCBRAIN-Provider",
-        "price_usdc": "0.001",
+        "price_usdc": "0.05",
         "auto": True,
     },
     "ksbrain": {
@@ -69,7 +69,7 @@ BRAINS = {
         "token": os.environ.get("KSBRAIN_TOKEN", ""),
         "token_header": "X-API-Key",
         "provider_header": "X-KSBRAIN-Provider",
-        "price_usdc": "0.001",
+        "price_usdc": "0.05",
         "auto": True,
     },
     "url2brain": {

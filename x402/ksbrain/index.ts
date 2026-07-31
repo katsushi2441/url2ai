@@ -12,9 +12,14 @@
 
 const UPSTREAM = process.env.KSBRAIN_URL || "http://exbridge.ddns.net:18338";
 const TOKEN = process.env.KSBRAIN_TOKEN || "";
+// マルチエージェント委員会分析(Kurage TradingAgentsのエンジン)は別プロセスにあるため、
+// このスキルだけ専用の上流とトークンを使う。販売面はksbrainに一本化する。
+const AGENTS_UPSTREAM = process.env.KTAJP_URL || "http://exbridge.ddns.net:18337";
+const AGENTS_TOKEN = process.env.KTAJP_TOKEN || "";
 
 // gateway path (after /ksbrain) -> ksbrain upstream path
 const SKILLS: Record<string, string> = {
+  "/agents/analyze": "/v1/analyze",
   "/analyze/technical": "/v1/analyze/technical",
   "/analyze/fundamentals": "/v1/analyze/fundamentals",
   "/analyze/disclosure": "/v1/analyze/disclosure",
@@ -67,16 +72,22 @@ export default async function handler(req: Request): Promise<Response> {
     return json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const upstream = await fetch(`${UPSTREAM}${upstreamPath}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-API-Key": TOKEN,
-      // 課金レールはDeepSeek(直叩き・内部利用はローカルGemmaのまま)
-      "X-KSBRAIN-Provider": "deepseek",
+  const isAgents = path === "/agents/analyze";
+  const upstream = await fetch(
+    `${isAgents ? AGENTS_UPSTREAM : UPSTREAM}${upstreamPath}`,
+    {
+      method: "POST",
+      headers: isAgents
+        ? { "Content-Type": "application/json", "X-API-Key": AGENTS_TOKEN }
+        : {
+            "Content-Type": "application/json",
+            "X-API-Key": TOKEN,
+            // 課金レールはDeepSeek(直叩き・内部利用はローカルのまま)
+            "X-KSBRAIN-Provider": "deepseek",
+          },
+      body: JSON.stringify(body),
     },
-    body: JSON.stringify(body),
-  });
+  );
   const bytes = await upstream.arrayBuffer();
   return new Response(bytes, {
     status: upstream.status,

@@ -9,7 +9,7 @@
  *   This server : PORT_JPYC_KCBRAIN (default 18331; 18300番台の空き最若番号で確保)
  *   Upstream    : kcbrain KCBRAIN_URL (default http://127.0.0.1:18328)
  *
- * 価格: 単発判断スキル JPYC_AMOUNT (0.15 JPYC ≒ $0.001)
+ * 価格: 全スキル JPYC_AMOUNT (7.5 JPYC ≒ $0.05。Bankrと同額に統一)
  *       多段連鎖vendor(debate/研究/合議) JPYC_AMOUNT_CHAIN (0.45 JPYC ≒ $0.003、
  *       直接x402レール・Bankrレールと同じ2段価格。150 JPYC/USD換算はfxbrain-jpycと同じ比率)
  */
@@ -38,8 +38,8 @@ const MAX_BODY_BYTES = 64 * 1024;
 
 const JPYC_PAY_TO    = (process.env.JPYC_PAY_TO             || "").trim();
 const JPYC_RELAY_KEY = (process.env.JPYC_RELAY_PRIVATE_KEY  || "").trim();
-const JPYC_AMOUNT       = process.env.JPYC_AMOUNT_KCBRAIN       || "150000000000000000";  // 0.15 JPYC
-const JPYC_AMOUNT_CHAIN = process.env.JPYC_AMOUNT_KCBRAIN_CHAIN || "450000000000000000";  // 0.45 JPYC
+const JPYC_AMOUNT       = process.env.JPYC_AMOUNT_KCBRAIN       || "7500000000000000000";  // 7.5 JPYC ≒ $0.05
+const JPYC_AMOUNT_CHAIN = process.env.JPYC_AMOUNT_KCBRAIN_CHAIN || "7500000000000000000";  // 7.5 JPYC ≒ $0.05(全スキル統一)
 const JPYC_TOKEN     = process.env.JPYC_TOKEN  || "0x431D5dfF03120AFA4bDf332c61A6e1766eF37BDB";
 const JPYC_RPC       = process.env.JPYC_RPC    || "https://polygon.drpc.org";
 
