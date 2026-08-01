@@ -10,6 +10,8 @@ HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8010"))
 ERNIE_BASE_URL = os.getenv("ERNIE_BASE_URL", "http://127.0.0.1:8011").rstrip("/")
 ERNIE_REQUEST_TIMEOUT = float(os.getenv("ERNIE_REQUEST_TIMEOUT", "900"))
+PDF_BASE_URL = os.getenv("PDF_BASE_URL", "").rstrip("/")
+PDF_REQUEST_TIMEOUT = float(os.getenv("PDF_REQUEST_TIMEOUT", "900"))
 BASE_DIR = Path(__file__).resolve().parent
 
 
@@ -23,17 +25,17 @@ def load_module(name: str, relative_path: str):
     return module
 
 
-updf2md_module = load_module("updf2md_server", "updf2md/server.py")
-
-
 app = FastAPI(title="url2ai API Gateway", version="0.1.0")
-app.include_router(updf2md_module.router, prefix="/pdf", tags=["pdf"])
 
 
-@app.api_route("/image/{path:path}", methods=["GET", "POST"])
-async def proxy_ernie_image(path: str, request: Request) -> Response:
-    """Preserve the gateway API while keeping one ERNIE model owner on port 8011."""
-    target_url = f"{ERNIE_BASE_URL}/{path}"
+async def proxy_request(
+    base_url: str,
+    path: str,
+    request: Request,
+    timeout_seconds: float,
+    service_name: str,
+) -> Response:
+    target_url = f"{base_url}/{path}"
     if request.url.query:
         target_url = f"{target_url}?{request.url.query}"
 
@@ -42,7 +44,7 @@ async def proxy_ernie_image(path: str, request: Request) -> Response:
         if header_name in request.headers:
             headers[header_name] = request.headers[header_name]
 
-    timeout = httpx.Timeout(ERNIE_REQUEST_TIMEOUT, connect=10.0)
+    timeout = httpx.Timeout(timeout_seconds, connect=10.0)
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
             upstream = await client.request(
@@ -54,7 +56,7 @@ async def proxy_ernie_image(path: str, request: Request) -> Response:
     except httpx.RequestError as exc:
         raise HTTPException(
             status_code=502,
-            detail=f"ERNIE image service is unavailable: {exc}",
+            detail=f"{service_name} is unavailable: {exc}",
         ) from exc
 
     response_headers = {}
@@ -64,6 +66,33 @@ async def proxy_ernie_image(path: str, request: Request) -> Response:
         content=upstream.content,
         status_code=upstream.status_code,
         headers=response_headers,
+    )
+
+
+if PDF_BASE_URL:
+    @app.api_route("/pdf/{path:path}", methods=["GET", "POST"])
+    async def proxy_pdf(path: str, request: Request) -> Response:
+        return await proxy_request(
+            PDF_BASE_URL,
+            path,
+            request,
+            PDF_REQUEST_TIMEOUT,
+            "PDF service",
+        )
+else:
+    updf2md_module = load_module("updf2md_server", "updf2md/server.py")
+    app.include_router(updf2md_module.router, prefix="/pdf", tags=["pdf"])
+
+
+@app.api_route("/image/{path:path}", methods=["GET", "POST"])
+async def proxy_ernie_image(path: str, request: Request) -> Response:
+    """Preserve the public image API while allowing a remote ERNIE worker."""
+    return await proxy_request(
+        ERNIE_BASE_URL,
+        path,
+        request,
+        ERNIE_REQUEST_TIMEOUT,
+        "ERNIE image service",
     )
 
 
@@ -77,6 +106,7 @@ def healthz() -> dict:
             "pdf": "/pdf",
         },
         "ernie_base_url": ERNIE_BASE_URL,
+        "pdf_base_url": PDF_BASE_URL or "local",
     }
 
 
