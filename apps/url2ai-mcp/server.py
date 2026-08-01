@@ -9,7 +9,7 @@ from fastmcp import FastMCP
 
 
 DEFAULT_UPDF2MD_API_URL = "http://exbridge.ddns.net:8010/pdf/convert"
-DEFAULT_IMAGE_API_URL = "http://exbridge.ddns.net:8011/generate"
+DEFAULT_IMAGE_API_URL = "http://exbridge.ddns.net:8010/image/generate"
 DEFAULT_TEXT_API_URL = "https://exbridge.ddns.net/api/generate"
 DEFAULT_TEXT_MODEL = "gemma4:e4b"
 DEFAULT_HOST = "0.0.0.0"

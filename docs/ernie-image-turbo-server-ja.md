@@ -2,9 +2,10 @@
 
 ## 現在の本番構成（2026-08-01）
 
-- APIゲートウェイ: `192.168.0.3:8010`
+- 公開APIゲートウェイ: `192.168.0.11:8010`
 - ERNIE推論サーバー: `192.168.0.11:18300`（RTX 3080 10GB）
-- ゲートウェイの転送先: `ERNIE_BASE_URL=http://192.168.0.11:18300`
+- 画像転送先: `ERNIE_BASE_URL=http://192.168.0.11:18300`
+- PDF転送先: `PDF_BASE_URL=http://192.168.0.3:8010/pdf`
 - 実行方式: `OFFLOAD_MODE=sequential`
 
 RTX 3080で848×1264・8ステップを2回連続生成し、HTTP 200、初回49秒、2回目39秒、ピークVRAM約2.1GBを確認した。通常の384×384・4ステップはゲートウェイ経由で約21.8秒だった。
@@ -111,10 +112,10 @@ systemctl --user status ernie-image-turbo.service
 利用側は推論ホストを直接参照せず、従来どおりゲートウェイを使います。
 
 ```text
-http://192.168.0.3:8010/image/generate
+http://192.168.0.11:8010/image/generate
 ```
 
-`apps/.env.api-gateway` の `ERNIE_BASE_URL` がRTX 3080ホストを指します。
+公開ルーターの外部8010はRTX 3080ホストの`192.168.0.11:8010`へ転送します。外部8011は使用しません。x402 UImageと一般クライアントは、公開URL `http://exbridge.ddns.net:8010/image/generate` を共有します。
 
 ## 動画生成に進むなら
 

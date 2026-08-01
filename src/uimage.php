@@ -23,7 +23,7 @@ $THIS_FILE = 'uimage.php';
 $VIEW_FILE = 'uimagev.php';
 $SITE_NAME = 'UImage';
 $ADMIN = AIGM_ADMIN;
-$API_URL = getenv('UIMAGE_API_URL') ?: 'http://exbridge.ddns.net:8011/generate';
+$API_URL = getenv('UIMAGE_API_URL') ?: 'http://exbridge.ddns.net:8010/image/generate';
 $UIMAGE_X402_URL = 'https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/uimage';
 
 $x_keys_file = __DIR__ . '/x_api_keys.sh';

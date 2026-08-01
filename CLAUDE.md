@@ -51,8 +51,8 @@ cd src && python3 ftpphp.py
 
 | Port | Service | Stack | Notes |
 |------|---------|-------|-------|
-| 8010 | **api_gateway** | Python (ernie venv) | Unified gateway: `/image/*` is proxied to 8011, `/pdf/*` runs in the gateway. user systemd: `url2ai-api-gateway.service` |
-| 8011 | **ernie-image-turbo** | Python | The only ERNIE model owner. system systemd: `ernie-image-turbo.service` |
+| 8010 | **api_gateway** | Python (ernie venv) | Public gateway on `192.168.0.11`: `/image/*` → local `:18300`, `/pdf/*` → `192.168.0.3:8010/pdf`. user systemd: `url2ai-api-gateway.service` |
+| 8011 | **retired public ERNIE port** | — | Do not forward publicly. Clients use `:8010/image/generate`. The old 3090 worker may remain localhost-only until its root unit is disabled. |
 | 8012 | **Smithery / nginx SSL proxy** | nginx | Smithery MCP用。`/mcp` → 127.0.0.1:8013 など |
 | 8013 | **url2ai-mcp** | Python (FastMCP) | MCP server, localhost only。`apps/url2ai-mcp/`。systemd: `url2ai-mcp.service` |
 | 8014 | **finreport** | Python (FastAPI) | 投資レポート生成。`apps/finreport/`。systemd: なし |
@@ -67,15 +67,16 @@ cd src && python3 ftpphp.py
 
 ※ 8000番台は満杯。以降の新規サービスはワークスペース規約どおり**18300番台の空き最若番号**を使う（例: fxbrain-jpyc=18327、`apps/llm-gateway/server-jpyc-fxbrain.js`、systemd: `fxbrain-jpyc.service`）。
 
-### ERNIE / api_gateway (ports 8011 / 8010) の再起動方法
+### ERNIE / api_gateway (RTX 3080 host) の再起動方法
 
-ERNIE本体は8011だけで起動する。8010は既存の`/image/*` URLを8011へ中継し、モデルを読み込まない。
+ERNIE本体は`192.168.0.11:18300`、公開ゲートウェイは同ホストの`:8010`で起動する。外部8010を`192.168.0.11:8010`へ転送し、外部8011は閉じる。
 
 ```bash
-sudo systemctl is-active ernie-image-turbo.service
-systemctl --user restart url2ai-api-gateway.service
-curl -fsS http://127.0.0.1:8011/healthz
-curl -fsS http://127.0.0.1:8010/image/healthz
+ssh -p 2222 192.168.0.11
+systemctl --user restart ernie-image-turbo.service url2ai-api-gateway.service
+curl -fsS http://192.168.0.11:18300/healthz
+curl -fsS http://192.168.0.11:8010/image/healthz
+curl -fsS http://192.168.0.11:8010/pdf/healthz
 ```
 
-ernie venv に必要なパッケージ: `PyMuPDF`, `pytesseract`, `Pillow`, `yfinance` (updf2md/finreportの依存を同じvenvで動かすため)
+0.11のゲートウェイはPDF処理を0.3へ転送するため、ERNIE venvへPDF/OCR依存を重複導入しない。

@@ -144,7 +144,7 @@ URL2AI is an AI engine that transforms X (Twitter) post URLs and web URLs into m
 | ⚙️ OSS2API | Multi-skill gateway | Wraps OSS into paid AI agent endpoints: background removal, URL analysis, Playwright browse, security scan |
 | 🧠 LLM2API | LLM inference API | Gemma 4 E4B inference via OpenAI-compatible API. OSS2API の LLM 基盤として URL2AI プロジェクト内で開発。Bankr x402 (USDC) と JPYC x402 に対応 |
 
-UImage is the web interface for the URL2AI ERNIE Image API, powered by ERNIE-Image-Turbo (Apache 2.0). The production gateway stays on `192.168.0.3:8010`, while image inference runs on the RTX 3080 host at `192.168.0.11:18300`. It is built for URL-to-image workflows from X posts, with a public viewer, RSS distribution, reusable social posting assets, and a live Bankr x402 endpoint for AI agents.
+UImage is the web interface for the URL2AI ERNIE Image API, powered by ERNIE-Image-Turbo (Apache 2.0). The public API gateway and image inference run on the RTX 3080 host at `192.168.0.11:8010` and `:18300`; `/pdf/*` is forwarded internally to the existing PDF backend on `192.168.0.3`. It is built for URL-to-image workflows from X posts, with a public viewer, RSS distribution, reusable social posting assets, and a live Bankr x402 endpoint for AI agents.
 
 ## Architecture
 
