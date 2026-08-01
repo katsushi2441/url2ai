@@ -4,6 +4,14 @@ import os
 from threading import Lock
 from typing import Optional
 
+# Image generation must not starve SSH and the other production services on
+# this shared 16-thread host.  Keep BLAS/OpenMP bounded before importing torch.
+CPU_THREADS = max(1, int(os.getenv("ERNIE_CPU_THREADS", "4")))
+CPU_INTEROP_THREADS = max(1, int(os.getenv("ERNIE_CPU_INTEROP_THREADS", "1")))
+CPU_NICE = max(0, min(19, int(os.getenv("ERNIE_CPU_NICE", "10"))))
+os.environ.setdefault("OMP_NUM_THREADS", str(CPU_THREADS))
+os.environ.setdefault("MKL_NUM_THREADS", str(CPU_THREADS))
+
 import torch
 from fastapi import APIRouter, FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -22,6 +30,15 @@ OFFLOAD_MODE = os.getenv("OFFLOAD_MODE", "sequential" if ENABLE_CPU_OFFLOAD else
 _pipeline = None
 _pipeline_lock = Lock()
 _generate_lock = Lock()
+
+torch.set_num_threads(CPU_THREADS)
+try:
+    torch.set_num_interop_threads(CPU_INTEROP_THREADS)
+except RuntimeError:
+    # A hosting process may already have initialized the interop pool.
+    pass
+if CPU_NICE:
+    os.nice(CPU_NICE)
 
 
 class GenerateRequest(BaseModel):
@@ -101,6 +118,10 @@ def healthz() -> dict:
         "device": DEVICE,
         "cuda_available": torch.cuda.is_available(),
         "gpu_name": gpu_name,
+        "cpu_threads": torch.get_num_threads(),
+        "cpu_interop_threads": torch.get_num_interop_threads(),
+        "cpu_nice": os.getpriority(os.PRIO_PROCESS, 0),
+        "offload_mode": OFFLOAD_MODE,
     }
 
 
