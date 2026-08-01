@@ -5,11 +5,14 @@ APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_VENV_DIR="$APP_DIR/.venv"
 if [ -d "$APP_DIR/.venv-cu128" ]; then
   DEFAULT_VENV_DIR="$APP_DIR/.venv-cu128"
+elif [ -d "$APP_DIR/.venv-cu124" ]; then
+  DEFAULT_VENV_DIR="$APP_DIR/.venv-cu124"
 fi
 VENV_DIR="${VENV_DIR:-$DEFAULT_VENV_DIR}"
 ENV_FILE="${ENV_FILE:-$APP_DIR/.env}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 FORCE_DEVICE="${FORCE_DEVICE:-}"
+TORCH_INDEX_URL="${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cu128}"
 
 detect_device() {
   python - <<'PY'
@@ -30,7 +33,7 @@ python -m pip install --upgrade pip
 python -m pip install -r "$APP_DIR/requirements.txt"
 if ! python -c "import torch" >/dev/null 2>&1; then
   if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
-    python -m pip install torch --index-url https://download.pytorch.org/whl/cu128
+    python -m pip install torch --index-url "$TORCH_INDEX_URL"
   else
     python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
   fi
