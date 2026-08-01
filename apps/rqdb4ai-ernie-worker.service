@@ -1,0 +1,13 @@
+[Unit]
+Description=RQDB4AI single ERNIE image worker for RTX 3080
+After=default.target rqdb4ai-api.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/kojima/work/rqdb4ai
+ExecStart=/home/kojima/work/rqdb4ai/run_worker_with_aixec_env.sh ernie-192-168-0-11-web ernie-192-168-0-11-worker
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
