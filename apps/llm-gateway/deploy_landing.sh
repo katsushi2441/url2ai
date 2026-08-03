@@ -12,6 +12,7 @@ files=(
   "landing/llm2api.html:llm2api.html"      # 日本語版
   "landing/assets/style.css:assets/style.css"
   "landing/assets/ogp.png:assets/ogp.png"
+  "landing/assets/kurage_avatar.webp:assets/kurage_avatar.webp"
   "landing/robots.txt:robots.txt"
   "landing/sitemap.xml:sitemap.xml"
   "landing/usage.php:usage.php"            # 運営用の利用状況ページ

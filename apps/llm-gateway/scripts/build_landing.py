@@ -316,7 +316,7 @@ def page(lang: str) -> str:
 
 <header>
   <div class="brand">
-    <img src="https://kurage.exbridge.jp/blog/kurage_avatar_face.webp" alt="Kurage">
+    <img src="assets/kurage_avatar.webp" alt="Kurage">
     <span>LLM<em>2</em>API</span>
   </div>
   <div class="userbar"><a href="{other[0]}">{other[1]}</a></div>
