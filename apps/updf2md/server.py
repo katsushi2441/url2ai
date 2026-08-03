@@ -24,6 +24,12 @@ OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", "./outputs")).expanduser()
 SAVE_BY_DEFAULT = os.getenv("SAVE_BY_DEFAULT", "false").lower() == "true"
 OCR_LANG = os.getenv("OCR_LANG", "jpn+eng")
 OCR_DPI = int(os.getenv("OCR_DPI", "200"))
+# 横向き(90/270度)のページを検出して立て直してからOCRする。
+# 用紙は縦なのに中身だけ回転しているPDF(パワポの横スライドをA4縦に出力したもの等)は
+# そのままOCRすると全ページ判読不能な文字列になる。2026-08-03に実測で確認。
+OCR_AUTO_ROTATE = os.getenv("OCR_AUTO_ROTATE", "true").lower() == "true"
+# OSDの確信度がこれ未満なら回転させない。誤検出で正しい向きを崩さないため。
+OCR_ROTATE_MIN_CONFIDENCE = float(os.getenv("OCR_ROTATE_MIN_CONFIDENCE", "1.5"))
 
 
 class ConvertResponse(BaseModel):
@@ -44,6 +50,7 @@ class ConvertResponse(BaseModel):
     saved_metadata_path: str | None = None
     markdown: str | None = None
     ocr_applied: bool = False
+    ocr_rotated_pages: dict[str, int] = {}
 
 
 class ReportRequest(BaseModel):
@@ -82,9 +89,32 @@ def parse_pages(value: str | None) -> list[int] | None:
     return sorted(pages)
 
 
-def ocr_pdf_bytes(data: bytes, selected_pages: list[int] | None = None) -> str:
+def detect_rotation(img: "Image.Image") -> int:
+    """このページを正しい向きにするために必要な時計回りの角度を返す。
+
+    tesseract の OSD は文字が少ないページで例外を投げるため、失敗は 0 度として
+    扱う（回転させないほうが安全側）。
+    """
+    if not OCR_AUTO_ROTATE:
+        return 0
+    try:
+        osd = pytesseract.image_to_osd(img, output_type=pytesseract.Output.DICT)
+    except Exception:
+        return 0
+    try:
+        confidence = float(osd.get("orientation_conf", 0) or 0)
+        rotate = int(osd.get("rotate", 0) or 0) % 360
+    except (TypeError, ValueError):
+        return 0
+    if rotate == 0 or confidence < OCR_ROTATE_MIN_CONFIDENCE:
+        return 0
+    return rotate
+
+
+def ocr_pdf_bytes(data: bytes, selected_pages: list[int] | None = None) -> tuple[str, dict[int, int]]:
     doc = fitz.open(stream=data, filetype="pdf")
     texts = []
+    rotations: dict[int, int] = {}
     total = doc.page_count
     page_indices = [p - 1 for p in selected_pages if 1 <= p <= total] if selected_pages else list(range(total))
     mat = fitz.Matrix(OCR_DPI / 72, OCR_DPI / 72)
@@ -92,10 +122,15 @@ def ocr_pdf_bytes(data: bytes, selected_pages: list[int] | None = None) -> str:
         page = doc.load_page(i)
         pix = page.get_pixmap(matrix=mat)
         img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        rotate = detect_rotation(img)
+        if rotate:
+            # PIL の rotate は反時計回りなので符号を反転する
+            img = img.rotate(-rotate, expand=True)
+            rotations[i + 1] = rotate
         text = pytesseract.image_to_string(img, lang=OCR_LANG)
         texts.append(f"## Page {i + 1}\n\n{text.strip()}")
     doc.close()
-    return "\n\n".join(texts)
+    return "\n\n".join(texts), rotations
 
 
 def build_metadata(result, filename: str, request_id: str) -> dict:
@@ -143,11 +178,12 @@ def process_and_respond(
 
     markdown = result.markdown
     ocr_applied = False
+    ocr_rotated_pages: dict[int, int] = {}
     needs_ocr = (markdown is None or markdown.strip() == "") and bool(result.pages_needing_ocr)
 
     if force_ocr or needs_ocr:
         try:
-            markdown = ocr_pdf_bytes(data, selected_pages)
+            markdown, ocr_rotated_pages = ocr_pdf_bytes(data, selected_pages)
             ocr_applied = True
         except Exception as exc:
             raise HTTPException(status_code=500, detail=f"OCR failed: {exc}") from exc
@@ -176,6 +212,7 @@ def process_and_respond(
         "saved_metadata_path": saved_metadata_path,
         "markdown": markdown if include_markdown else None,
         "ocr_applied": ocr_applied,
+        "ocr_rotated_pages": {str(page): deg for page, deg in sorted(ocr_rotated_pages.items())},
     }
 
 
