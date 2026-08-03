@@ -11,6 +11,16 @@ It accepts uploaded PDFs, classifies them (`text_based`, `mixed`, `scanned`, `im
 - Optional saving of `.md` and `.json` metadata files
 - Returns `pages_needing_ocr`, `confidence`, table/column hints, and extracted Markdown
 
+## Rotated pages
+
+Pages whose content is rotated 90/270 degrees (for example a landscape slide
+exported onto A4 portrait) are detected with tesseract OSD and rotated upright
+before OCR. Without this the OCR output is unreadable for the whole document.
+
+The applied angles are returned in `ocr_rotated_pages` (`{"1": 90, ...}`).
+Set `OCR_AUTO_ROTATE=false` to disable, or raise `OCR_ROTATE_MIN_CONFIDENCE`
+(default `1.5`) if a correctly oriented document is being rotated by mistake.
+
 ## What this MVP does not do yet
 
 - OCR fallback for scanned pages
