@@ -25,7 +25,7 @@ URL2AI プロジェクトの一部で、対外的な製品名は **LLM2API** で
 |---|---|---|
 | `server.js` | LLM2API 本体（OpenAI互換・計測込み） | 8019 |
 | `server-jpyc.js` | JPYC x402 課金ラッパー | 8020 |
-| `server-rapidapi.js` | RapidAPI 窓口 | 8018 |
+| `server-rapidapi.js` | RapidAPI 窓口。LLM生成は本体(8019)へ中継 | 8018 |
 | `server-jpyc-*.js` | kcbrain / ksbrain / fxbrain / url2brain の JPYC ラッパー | 個別 |
 | `usage.js` | 使用量計測（依存パッケージなし） | — |
 
@@ -61,6 +61,26 @@ URL2AI プロジェクトの一部で、対外的な製品名は **LLM2API** で
 ```bash
 node --test test_usage.mjs      # 9件
 ```
+
+## 有料レールはすべて DeepSeek
+
+方針: **有料レール(Bankr x402 / JPYC / ACP / RapidAPI)は全部 DeepSeek**、
+無料・内部用途のみセルフホストGemma。
+
+2026-08-04 時点で **RapidAPI(8018)だけが Gemma のまま**で、レール間で品質が
+食い違っていた。`server-rapidapi.js` が直接 Ollama を叩いていたのが原因。
+LLM生成を本体(8019)へ中継する形に変え、プロバイダの決定を本体1か所に集約した。
+
+| ポート | レール | プロバイダ |
+|---|---|---|
+| 8019 | Bankr x402 | DeepSeek |
+| 8020 | JPYC x402 (→8019) | DeepSeek |
+| 8018 | RapidAPI (→8019) | DeepSeek |
+
+副次的に、RapidAPI経由の呼び出しも使用量計測に載るようになった
+(`rail=rapidapi`, `caller=<X-RapidAPI-User>`)。
+`/health` と `/v1/models` も本体へ中継するので、8018 が Gemma だと
+誤って案内することはない。
 
 ## 無課金の直叩き対策
 

@@ -71,6 +71,40 @@ function readBody(req) {
   });
 }
 
+// LLM生成はLLM2API本体(8019)へ中継する。有料レール(Bankr/JPYC/ACP/RapidAPI)は
+// すべてDeepSeekで揃える方針で、本体は既にDeepSeek。ここで直接Ollamaを叩くと
+// RapidAPIだけGemmaになり、レール間で品質が食い違う(2026-08-04に発覚)。
+// 本体経由にすることで使用量計測(usage.js)にも同じ経路で載る。
+const LLM2API_HOST = process.env.LLM2API_HOST || "127.0.0.1";
+const LLM2API_PORT = Number.parseInt(process.env.LLM2API_PORT || "8019", 10);
+
+function proxyToLlm2api(req, res, upstreamPath, bodyStr, method = "POST") {
+  const options = {
+    hostname: LLM2API_HOST,
+    port: LLM2API_PORT,
+    path: upstreamPath,
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "Content-Length": method === "GET" ? 0 : Buffer.byteLength(bodyStr),
+      // 計測で「RapidAPI利用者」として集計されるよう素性を渡す
+      "X-RapidAPI-User": req.headers["x-rapidapi-user"] || "rapidapi",
+    },
+    timeout: 180000,
+  };
+  const proxyReq = http.request(options, (proxyRes) => {
+    res.writeHead(proxyRes.statusCode || 200, {
+      "Content-Type": proxyRes.headers["content-type"] || "application/json",
+      "Cache-Control": "no-store",
+    });
+    proxyRes.pipe(res);
+  });
+  proxyReq.on("timeout", () => proxyReq.destroy(new Error("llm2api timeout")));
+  proxyReq.on("error", (err) => json(res, 502, { error: `LLM2API unavailable: ${err.message}` }));
+  if (method !== "GET") proxyReq.write(bodyStr);
+  proxyReq.end();
+}
+
 function proxyToOllama(req, res, ollamaPath, bodyStr) {
   const options = {
     hostname: OLLAMA_HOST,
@@ -133,7 +167,9 @@ async function handle(req, res) {
   const path = url.pathname;
 
   if (req.method === "GET" && ["/health", "/healthz"].includes(path)) {
-    return json(res, 200, { ok: true, service: "llm-gateway-rapidapi", model: DEFAULT_MODEL });
+    // 実際に応答するのは本体(8019)なので、モデル名も本体に合わせる。
+    // ここでDEFAULT_MODELを返すと、Gemmaだと誤って案内してしまう。
+    return proxyToLlm2api(req, res, "/health", "", "GET");
   }
 
   // Validate RapidAPI proxy secret (skip check if secret not configured)
@@ -146,10 +182,8 @@ async function handle(req, res) {
   }
 
   if (req.method === "GET" && path === "/v1/models") {
-    return json(res, 200, {
-      object: "list",
-      data: [{ id: DEFAULT_MODEL, object: "model", created: 0, owned_by: "ollama" }],
-    });
+    // 本体(8019)の実枠をそのまま返す
+    return proxyToLlm2api(req, res, "/v1/models", "", "GET");
   }
 
   if (req.method === "POST" && path === "/v1/chat/completions") {
@@ -168,19 +202,14 @@ async function handle(req, res) {
       return json(res, 400, { error: `Input too long (${totalChars} chars, max ${MAX_INPUT_CHARS})` });
     }
 
-    body.model = DEFAULT_MODEL;
     if (!body.max_tokens || body.max_tokens > MAX_OUTPUT_TOKENS) {
       body.max_tokens = MAX_OUTPUT_TOKENS;
     }
+    // モデルの強制と思考型モデルの扱いは本体(8019)側が行う。
+    // ここで model を固定すると、本体のプロバイダ切替と食い違う。
+    delete body.model;
 
-    // gemma4は思考型モデル: 既定で思考を無効化しないと、低いmax_tokensで
-    // 思考トークンがcontentを食い潰し空応答になる(PayAPI検証で実証)。
-    // 呼び出し側が明示的にreasoning_effortを渡した場合のみ尊重する。
-    if (body.reasoning_effort === undefined) {
-      body.reasoning_effort = "none";
-    }
-
-    return proxyToOllama(req, res, "/v1/chat/completions", JSON.stringify(body));
+    return proxyToLlm2api(req, res, "/v1/chat/completions", JSON.stringify(body));
   }
 
   // Trade pre-checks (kfreqai judgment API)
