@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://llm2api.exbridge.jp/sitemap.xml

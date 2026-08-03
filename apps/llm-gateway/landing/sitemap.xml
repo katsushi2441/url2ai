@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://llm2api.exbridge.jp/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://llm2api.exbridge.jp/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://llm2api.exbridge.jp/llm2api.html"/>
+    <lastmod>2026-08-04</lastmod>
+  </url>
+  <url>
+    <loc>https://llm2api.exbridge.jp/llm2api.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://llm2api.exbridge.jp/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://llm2api.exbridge.jp/llm2api.html"/>
+    <lastmod>2026-08-04</lastmod>
+  </url>
+</urlset>

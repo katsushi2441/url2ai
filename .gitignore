@@ -29,3 +29,7 @@ tools/browser-use/.browser-profile/
 !*.env.sample
 ppt-master/
 test_pptx_design.mjs
+apps/llm-gateway/landing/usage_config.php
+apps/llm-gateway/.env.llm2api-usage
+apps/llm-gateway/data/
+apps/llm-gateway/landing/_screenshots/

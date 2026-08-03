@@ -1,6 +1,8 @@
 import http from "node:http";
 import https from "node:https";
 import { Buffer } from "node:buffer";
+import crypto from "node:crypto";
+import { identify, meter, record, summary } from "./usage.js";
 
 const HOST          = process.env.HOST         || "0.0.0.0";
 const PORT          = Number.parseInt(process.env.PORT || "8019", 10);
@@ -21,6 +23,8 @@ const MAX_BODY_BYTES   = 64 * 1024;                                      // 64KB
 const MAX_INPUT_CHARS  = Number.parseInt(process.env.MAX_INPUT_CHARS  || "4000",  10); // total message chars
 const MAX_MESSAGES     = Number.parseInt(process.env.MAX_MESSAGES     || "20",    10); // message count
 const MAX_OUTPUT_TOKENS = Number.parseInt(process.env.MAX_OUTPUT_TOKENS || "2048", 10); // forced cap
+// 使用量サマリ(GET /usage)の閲覧トークン。未設定なら /usage は 404 で塞ぐ。
+const USAGE_TOKEN = (process.env.LLM2API_USAGE_TOKEN || "").trim();
 
 function json(res, status, data) {
   const body = JSON.stringify(data);
@@ -46,7 +50,7 @@ function normalizeSkill(pathname) {
   return pathname.startsWith("/llm/") ? pathname.slice("/llm".length) : pathname;
 }
 
-function proxyToOllama(req, res, ollamaPath, bodyStr) {
+function proxyToOllama(req, res, ollamaPath, bodyStr, meta) {
   const options = {
     hostname: OLLAMA_HOST,
     port: OLLAMA_PORT,
@@ -65,10 +69,12 @@ function proxyToOllama(req, res, ollamaPath, bodyStr) {
       "Content-Type": proxyRes.headers["content-type"] || "application/json",
       "Cache-Control": "no-store",
     });
+    if (meta) return meter(proxyRes, res, meta);
     proxyRes.pipe(res);
   });
 
   proxyReq.on("error", (err) => {
+    if (meta) record({ ...meta, status: 502, error: err.message });
     json(res, 502, { error: `Ollama unavailable: ${err.message}` });
   });
 
@@ -76,7 +82,7 @@ function proxyToOllama(req, res, ollamaPath, bodyStr) {
   proxyReq.end();
 }
 
-function proxyToDeepSeek(res, deepseekPath, bodyStr) {
+function proxyToDeepSeek(res, deepseekPath, bodyStr, meta) {
   const options = {
     hostname: DEEPSEEK_HOST,
     port: 443,
@@ -94,10 +100,12 @@ function proxyToDeepSeek(res, deepseekPath, bodyStr) {
       "Content-Type": proxyRes.headers["content-type"] || "application/json",
       "Cache-Control": "no-store",
     });
+    if (meta) return meter(proxyRes, res, meta);
     proxyRes.pipe(res);
   });
   proxyReq.on("timeout", () => proxyReq.destroy(new Error("deepseek timeout")));
   proxyReq.on("error", (err) => {
+    if (meta) record({ ...meta, status: 502, error: err.message });
     json(res, 502, { error: `DeepSeek unavailable: ${err.message}` });
   });
   proxyReq.write(bodyStr);
@@ -143,11 +151,33 @@ async function handle(req, res) {
   }
 
   // List models
+  // 実際に応答するのは ACTIVE_MODEL 1本だが、それがどの枠(ホスト型DeepSeek /
+  // セルフホストGemma)なのかを呼び出し側が判別できるようにする。
   if (req.method === "GET" && skill === "/v1/models") {
     return json(res, 200, {
       object: "list",
-      data: [{ id: ACTIVE_MODEL, object: "model", created: 0, owned_by: LLM_PROVIDER }],
+      data: [{
+        id: ACTIVE_MODEL,
+        object: "model",
+        created: 0,
+        owned_by: LLM_PROVIDER,
+        tier: LLM_PROVIDER === "deepseek" ? "hosted" : "self-hosted",
+        max_input_chars: MAX_INPUT_CHARS,
+        max_output_tokens: MAX_OUTPUT_TOKENS,
+      }],
     });
+  }
+
+  // 使用量サマリ。読み取り専用だがトークンで保護する(利用者の内訳は非公開情報)。
+  if (req.method === "GET" && skill === "/usage") {
+    if (!USAGE_TOKEN) return json(res, 404, { error: "usage reporting is disabled" });
+    const provided = String(req.headers["x-usage-token"] || url.searchParams.get("token") || "");
+    if (provided.length !== USAGE_TOKEN.length
+        || !crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(USAGE_TOKEN))) {
+      return json(res, 401, { error: "invalid usage token" });
+    }
+    const months = Math.min(12, Math.max(1, Number.parseInt(url.searchParams.get("months") || "3", 10) || 3));
+    return json(res, 200, { ok: true, service: "llm2api", months, ...summary(months) });
   }
 
   // Chat completions (OpenAI-compatible)
@@ -174,11 +204,14 @@ async function handle(req, res) {
       body.max_tokens = MAX_OUTPUT_TOKENS;
     }
 
+    // 誰がどれだけ使ったかを残す。課金レールは既にあるが内訳が無かった。
+    const meta = { ...identify(req), endpoint: "/v1/chat/completions", model: ACTIVE_MODEL, provider: LLM_PROVIDER };
+
     if (LLM_PROVIDER === "deepseek") {
       // deepseek-v4-flashは思考型: 明示的にthinkingを無効化(低max_tokensでの空応答回避)。
       if (body.thinking === undefined) body.thinking = { type: "disabled" };
       delete body.reasoning_effort;  // ollama/gemma固有フィールドはDeepSeekへ送らない
-      return proxyToDeepSeek(res, "/chat/completions", JSON.stringify(body));
+      return proxyToDeepSeek(res, "/chat/completions", JSON.stringify(body), meta);
     }
 
     // gemma4は思考型モデル: 既定で思考を無効化しないと、低いmax_tokensで
@@ -188,7 +221,7 @@ async function handle(req, res) {
       body.reasoning_effort = "none";
     }
 
-    return proxyToOllama(req, res, "/v1/chat/completions", JSON.stringify(body));
+    return proxyToOllama(req, res, "/v1/chat/completions", JSON.stringify(body), meta);
   }
 
   // Trade pre-checks (kfreqai judgment API)

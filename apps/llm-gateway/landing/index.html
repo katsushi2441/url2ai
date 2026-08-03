@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM2API | Pay-per-call LLM inference for AI agents — no signup, no API key</title>
+<meta name="description" content="OpenAI-compatible chat completions billed per request in USDC (Base) or JPYC (Polygon) via the x402 protocol. Built for autonomous agents that cannot sign up for a subscription.">
+<link rel="canonical" href="https://llm2api.exbridge.jp/">
+<link rel="alternate" hreflang="en" href="https://llm2api.exbridge.jp/">
+<link rel="alternate" hreflang="ja" href="https://llm2api.exbridge.jp/llm2api.html">
+<link rel="alternate" hreflang="x-default" href="https://llm2api.exbridge.jp/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="LLM2API — Pay-per-call LLM inference for AI agents">
+<meta property="og:description" content="OpenAI-compatible chat completions billed per request in USDC or JPYC via x402. No signup, no API key.">
+<meta property="og:url" content="https://llm2api.exbridge.jp/">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">LLM<span>2</span>API</div>
+    <div class="spacer"></div>
+    <a class="lang" href="llm2api.html">日本語</a>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <h1>LLM inference your agent can buy<br>one request at a time.</h1>
+    <p class="lead">
+      An OpenAI-compatible chat completions endpoint billed per call in stablecoins over the
+      x402 protocol. No account, no dashboard, no API key to provision — the payment
+      <em>is</em> the authorization.
+    </p>
+    <div class="badges">
+      <span class="badge on">OpenAI-compatible</span>
+      <span class="badge">x402 · USDC on Base</span>
+      <span class="badge">x402 · JPYC on Polygon</span>
+      <span class="badge">RapidAPI</span>
+    </div>
+    <div class="cta">
+      <a class="btn" href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api">Call the endpoint</a>
+      <a class="btn ghost" href="#quickstart">Quickstart</a>
+    </div>
+  </div>
+
+  <section>
+    <h2>Why this exists</h2>
+    <p class="sub">Every hosted LLM API assumes a human signs up first.</p>
+    <p>
+      An autonomous agent that needs one completion cannot create an account, confirm an email,
+      enter a card and provision a key. That signup flow is a structural barrier, not a
+      technical one. LLM2API removes it: send the request with an x402 payment header and you
+      get the completion back. There is nothing to register.
+    </p>
+  </section>
+
+  <section id="quickstart">
+    <h2>Quickstart</h2>
+    <p class="sub">If your code already calls OpenAI, change the base URL.</p>
+
+<pre><code>curl -X POST https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "messages": [
+      { "role": "system", "content": "You are a helpful assistant." },
+      { "role": "user", "content": "Summarise this in one sentence." }
+    ]
+  }'</code></pre>
+
+    <h3>Using the Bankr CLI</h3>
+<pre><code>bankr x402 call \
+  https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api \
+  -X POST -H 'content-type: application/json' \
+  -d '{"messages":[{"role":"user","content":"Hello"}]}'</code></pre>
+
+    <p class="note">
+      The response is the standard OpenAI chat completion object, including a
+      <code>usage</code> block with token counts.
+    </p>
+  </section>
+
+  <section>
+    <h2>Pricing</h2>
+    <p class="sub">Flat per request. No subscription, no minimum, no expiry.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="price"><span class="n">$0.05</span><span class="u">/ request</span></div>
+        <h3>Bankr x402 — USDC on Base</h3>
+        <p>The default rail. Recommended for agents and MCP workflows.</p>
+      </div>
+      <div class="card">
+        <div class="price"><span class="n">7.5</span><span class="u">JPYC / request</span></div>
+        <h3>JPYC x402 — Polygon</h3>
+        <p>For yen-denominated settlement.</p>
+      </div>
+      <div class="card">
+        <div class="price"><span class="n">RapidAPI</span></div>
+        <h3>Conventional key-based access</h3>
+        <p>If you would rather use a normal API key and monthly plan.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>API</h2>
+    <p class="sub"><code>POST {base}/v1/chat/completions</code></p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr>
+        <tr><td><code>messages</code></td><td>array</td><td>Yes</td><td><code>{role, content}</code> objects. Roles: <code>system</code>, <code>user</code>, <code>assistant</code>.</td></tr>
+        <tr><td><code>stream</code></td><td>boolean</td><td>No</td><td>SSE streaming. Default <code>false</code>.</td></tr>
+        <tr><td><code>temperature</code></td><td>number</td><td>No</td><td>0.0–2.0. Default <code>0.7</code>.</td></tr>
+        <tr><td><code>max_tokens</code></td><td>integer</td><td>No</td><td>Hard cap of 2,048 applies regardless of this value.</td></tr>
+      </table>
+    </div>
+
+    <h3>Limits</h3>
+    <ul>
+      <li><strong>Input</strong> — 4,000 characters total across all messages, 20 messages maximum</li>
+      <li><strong>Output</strong> — hard cap of 2,048 tokens per request</li>
+    </ul>
+    <p class="note">
+      These caps are deliberate. They keep a single request from monopolising the backend and
+      keep the flat per-call price honest.
+    </p>
+
+    <h3>Other endpoints</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Endpoint</th><th>Description</th></tr>
+        <tr><td><code>GET /health</code></td><td>Liveness, active provider and model.</td></tr>
+        <tr><td><code>GET /v1/models</code></td><td>Active model, its tier (hosted or self-hosted) and the request limits.</td></tr>
+        <tr><td><code>POST /trade/risk-check</code></td><td>Scans recent news for hack, exploit, delisting, rug-pull and lawsuit events for a crypto symbol.</td></tr>
+        <tr><td><code>POST /trade/size-check</code></td><td>Liquidity and order-size diagnosis.</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>What backs it</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>DeepSeek v4 Flash</h3>
+        <p>Paid x402 traffic is served by hosted <code>deepseek-v4-flash</code> for predictable latency.</p>
+      </div>
+      <div class="card">
+        <h3>Self-hosted Gemma</h3>
+        <p>A self-hosted Gemma 4 tier runs on our own GPUs. <code>/v1/models</code> reports which tier is active.</p>
+      </div>
+      <div class="card">
+        <h3>Per-call metering</h3>
+        <p>Token usage is recorded per caller, so pricing is grounded in measured consumption rather than guesswork.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Honest limitations</h2>
+    <ul>
+      <li>This is a small, self-operated service. It is not a hyperscaler and makes no uptime guarantee.</li>
+      <li>The input and output caps above are hard limits. Long-document workloads are not a fit.</li>
+      <li>Requests are proxied to an upstream provider. Do not send data you would not send to a third-party LLM API.</li>
+    </ul>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>
+      LLM2API is part of the <a href="https://github.com/katsushi2441/url2ai">URL2AI</a> project by EXBRIDGE.
+      Unrelated to any similarly named third-party product.
+    </p>
+    <p><a href="llm2api.html">日本語版</a></p>
+  </div>
+</footer>
+
+</body>
+</html>

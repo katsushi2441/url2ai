@@ -1,0 +1,5 @@
+<?php
+// usage_config.php にコピーして値を差し替える。usage_config.php はgit管理しない。
+define('LLM2API_API_BASE',      'http://exbridge.ddns.net:8019');
+define('LLM2API_USAGE_TOKEN',   'CHANGE_ME');   // server.js の LLM2API_USAGE_TOKEN と同じ値
+define('LLM2API_USAGE_PASSWORD','CHANGE_ME');   // 閲覧パスワード

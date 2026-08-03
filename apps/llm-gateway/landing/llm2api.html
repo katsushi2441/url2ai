@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM2API | AIエージェントのための1コール課金LLM推論 — 登録不要・APIキー不要</title>
+<meta name="description" content="OpenAI互換のchat completionsを、x402プロトコルでUSDC(Base)またはJPYC(Polygon)の従量課金で提供します。サブスク登録ができない自律エージェントのためのLLM APIです。">
+<link rel="canonical" href="https://llm2api.exbridge.jp/llm2api.html">
+<link rel="alternate" hreflang="en" href="https://llm2api.exbridge.jp/">
+<link rel="alternate" hreflang="ja" href="https://llm2api.exbridge.jp/llm2api.html">
+<link rel="alternate" hreflang="x-default" href="https://llm2api.exbridge.jp/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="LLM2API — AIエージェントのための1コール課金LLM推論">
+<meta property="og:description" content="OpenAI互換のchat completionsをx402で従量課金。登録不要・APIキー不要。">
+<meta property="og:url" content="https://llm2api.exbridge.jp/llm2api.html">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">LLM<span>2</span>API</div>
+    <div class="spacer"></div>
+    <a class="lang" href="./">English</a>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <h1>エージェントが1回ずつ<br>買えるLLM推論。</h1>
+    <p class="lead">
+      OpenAI互換のchat completionsを、x402プロトコルでステーブルコイン従量課金で提供します。
+      アカウントもダッシュボードもAPIキーの発行も要りません。<em>支払いそのものが認可</em>です。
+    </p>
+    <div class="badges">
+      <span class="badge on">OpenAI互換</span>
+      <span class="badge">x402 · USDC(Base)</span>
+      <span class="badge">x402 · JPYC(Polygon)</span>
+      <span class="badge">RapidAPI</span>
+    </div>
+    <div class="cta">
+      <a class="btn" href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api">エンドポイントを叩く</a>
+      <a class="btn ghost" href="#quickstart">クイックスタート</a>
+    </div>
+  </div>
+
+  <section>
+    <h2>なぜ作ったか</h2>
+    <p class="sub">ホスト型のLLM APIは、どれも「まず人間が登録すること」を前提にしています。</p>
+    <p>
+      1回だけ推論を必要とする自律エージェントは、アカウントを作り、メールを確認し、
+      カードを登録してキーを発行する、という手順を踏めません。これは技術的な制約ではなく
+      <strong>手続き上の構造的な障壁</strong>です。LLM2APIはそこを外しました。
+      x402の支払いヘッダを付けてリクエストすれば、そのまま推論結果が返ります。登録するものはありません。
+    </p>
+  </section>
+
+  <section id="quickstart">
+    <h2>クイックスタート</h2>
+    <p class="sub">既存のOpenAI呼び出しがあるなら、ベースURLを差し替えるだけです。</p>
+
+<pre><code>curl -X POST https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "messages": [
+      { "role": "system", "content": "あなたは有能なアシスタントです。" },
+      { "role": "user", "content": "この内容を一文で要約して" }
+    ]
+  }'</code></pre>
+
+    <h3>Bankr CLI から</h3>
+<pre><code>bankr x402 call \
+  https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api \
+  -X POST -H 'content-type: application/json' \
+  -d '{"messages":[{"role":"user","content":"こんにちは"}]}'</code></pre>
+
+    <p class="note">
+      応答はOpenAI標準のchat completionオブジェクトで、トークン数を含む
+      <code>usage</code> がそのまま入っています。
+    </p>
+  </section>
+
+  <section>
+    <h2>料金</h2>
+    <p class="sub">1リクエストあたりの定額です。サブスクリプション・最低利用額・有効期限はありません。</p>
+    <div class="grid">
+      <div class="card">
+        <div class="price"><span class="n">$0.05</span><span class="u">/ リクエスト</span></div>
+        <h3>Bankr x402 — USDC(Base)</h3>
+        <p>既定のレールです。エージェントやMCPワークフローはこちらを推奨します。</p>
+      </div>
+      <div class="card">
+        <div class="price"><span class="n">7.5</span><span class="u">JPYC / リクエスト</span></div>
+        <h3>JPYC x402 — Polygon</h3>
+        <p>円建てで決済したい場合に使います。</p>
+      </div>
+      <div class="card">
+        <div class="price"><span class="n">RapidAPI</span></div>
+        <h3>通常のAPIキー方式</h3>
+        <p>従来どおりキーと月額プランで使いたい場合の窓口です。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>API仕様</h2>
+    <p class="sub"><code>POST {base}/v1/chat/completions</code></p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>項目</th><th>型</th><th>必須</th><th>説明</th></tr>
+        <tr><td><code>messages</code></td><td>配列</td><td>必須</td><td><code>{role, content}</code> の配列。roleは <code>system</code> / <code>user</code> / <code>assistant</code>。</td></tr>
+        <tr><td><code>stream</code></td><td>真偽値</td><td>任意</td><td>SSEストリーミング。既定は <code>false</code>。</td></tr>
+        <tr><td><code>temperature</code></td><td>数値</td><td>任意</td><td>0.0〜2.0。既定は <code>0.7</code>。</td></tr>
+        <tr><td><code>max_tokens</code></td><td>整数</td><td>任意</td><td>指定値によらず2,048の上限が適用されます。</td></tr>
+      </table>
+    </div>
+
+    <h3>制限</h3>
+    <ul>
+      <li><strong>入力</strong> — 全メッセージ合計で4,000文字まで、メッセージ数は20件まで</li>
+      <li><strong>出力</strong> — 1リクエストあたり2,048トークンの固定上限</li>
+    </ul>
+    <p class="note">
+      この上限は意図的なものです。1件のリクエストがバックエンドを占有するのを防ぎ、
+      1コール定額という価格を成立させるために置いています。
+    </p>
+
+    <h3>その他のエンドポイント</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>エンドポイント</th><th>内容</th></tr>
+        <tr><td><code>GET /health</code></td><td>稼働確認。現在のプロバイダとモデルを返します。</td></tr>
+        <tr><td><code>GET /v1/models</code></td><td>稼働中のモデル、その枠(ホスト型/セルフホスト)、各種上限。</td></tr>
+        <tr><td><code>POST /trade/risk-check</code></td><td>暗号資産銘柄のハッキング・上場廃止・訴訟などの直近ネガティブイベント検査。</td></tr>
+        <tr><td><code>POST /trade/size-check</code></td><td>流動性と注文サイズの診断。</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>裏側の構成</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>DeepSeek v4 Flash</h3>
+        <p>x402の有償トラフィックは、レイテンシを安定させるためホスト型の <code>deepseek-v4-flash</code> が処理します。</p>
+      </div>
+      <div class="card">
+        <h3>セルフホストGemma</h3>
+        <p>自社GPU上のGemma 4枠も用意しています。どちらが稼働中かは <code>/v1/models</code> が返します。</p>
+      </div>
+      <div class="card">
+        <h3>コール単位の計測</h3>
+        <p>トークン使用量を呼び出し元ごとに記録しています。価格は推測ではなく実測に基づいて調整します。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>正直な制約</h2>
+    <ul>
+      <li>個人が運用する小規模サービスです。大手クラウドのような稼働率保証はありません。</li>
+      <li>上記の入出力上限は固定です。長文ドキュメントを扱う用途には向きません。</li>
+      <li>リクエストは上流プロバイダへ中継されます。第三者のLLM APIに送れないデータは送らないでください。</li>
+    </ul>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>
+      LLM2API は EXBRIDGE の <a href="https://github.com/katsushi2441/url2ai">URL2AI</a> プロジェクトの一部です。
+      同名の第三者製品とは無関係です。
+    </p>
+    <p><a href="./">English</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
