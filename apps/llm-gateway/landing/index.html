@@ -1,182 +1,224 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LLM2API | Pay-per-call LLM inference for AI agents — no signup, no API key</title>
-<meta name="description" content="OpenAI-compatible chat completions billed per request in USDC (Base) or JPYC (Polygon) via the x402 protocol. Built for autonomous agents that cannot sign up for a subscription.">
+<title>LLM2API — Pay-per-call LLM inference for AI agents (no signup, no API key)</title>
+<meta name="description" content="OpenAI-compatible chat completions billed per request in USDC (Base) or JPYC (Polygon) over x402. $0.05 per request. Built for autonomous agents that cannot sign up for a subscription.">
+<meta name="robots" content="index, follow">
 <link rel="canonical" href="https://llm2api.exbridge.jp/">
-<link rel="alternate" hreflang="en" href="https://llm2api.exbridge.jp/">
 <link rel="alternate" hreflang="ja" href="https://llm2api.exbridge.jp/llm2api.html">
+<link rel="alternate" hreflang="en" href="https://llm2api.exbridge.jp/">
 <link rel="alternate" hreflang="x-default" href="https://llm2api.exbridge.jp/">
+<meta property="og:title" content="LLM2API — Pay-per-call LLM inference for AI agents (no signup, no API key)">
+<meta property="og:description" content="OpenAI-compatible chat completions billed per request in USDC (Base) or JPYC (Polygon) over x402. $0.05 per request. Built for autonomous agents that cannot sign up for a subscription.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="LLM2API — Pay-per-call LLM inference for AI agents">
-<meta property="og:description" content="OpenAI-compatible chat completions billed per request in USDC or JPYC via x402. No signup, no API key.">
 <meta property="og:url" content="https://llm2api.exbridge.jp/">
+<meta property="og:image" content="https://llm2api.exbridge.jp/assets/ogp.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="LLM2API">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://llm2api.exbridge.jp/assets/ogp.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Product","name":"LLM2API",
+ "description":"OpenAI-compatible chat completions billed per request in USDC (Base) or JPYC (Polygon) over x402. $0.05 per request. Built for autonomous agents that cannot sign up for a subscription.",
+ "brand":{"@type":"Brand","name":"Kurage"},
+ "url":"https://llm2api.exbridge.jp/",
+ "image":"https://llm2api.exbridge.jp/assets/ogp.png",
+ "offers":{"@type":"Offer","price":"0.05","priceCurrency":"USD",
+   "url":"https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api",
+   "availability":"https://schema.org/InStock"}}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@700;900&family=Noto+Sans+JP:wght@400;600;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-BP0650KDFR"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-BP0650KDFR');
+</script>
+<script>
+(function () {
+    var s = document.createElement('script');
+    s.src = 'https://aiknowledgecms.exbridge.jp/simpletrack.php'
+        + '?url=' + encodeURIComponent(location.href)
+        + '&ref=' + encodeURIComponent(document.referrer);
+    document.head.appendChild(s);
+})();
+</script>
 </head>
 <body>
+<div class="bubbles" aria-hidden="true"><span style="left:6%;width:14px;height:14px;animation-duration:17s;animation-delay:0s"></span><span style="left:18%;width:9px;height:9px;animation-duration:21s;animation-delay:3s"></span><span style="left:31%;width:20px;height:20px;animation-duration:15s;animation-delay:6s"></span><span style="left:44%;width:11px;height:11px;animation-duration:24s;animation-delay:1s"></span><span style="left:57%;width:16px;height:16px;animation-duration:19s;animation-delay:8s"></span><span style="left:69%;width:8px;height:8px;animation-duration:26s;animation-delay:4s"></span><span style="left:81%;width:18px;height:18px;animation-duration:16s;animation-delay:2s"></span><span style="left:93%;width:12px;height:12px;animation-duration:22s;animation-delay:7s"></span></div>
 
-<header class="top">
-  <div class="wrap">
-    <div class="brand">LLM<span>2</span>API</div>
-    <div class="spacer"></div>
-    <a class="lang" href="llm2api.html">日本語</a>
+<header>
+  <div class="brand">
+    <img src="https://kurage.exbridge.jp/blog/kurage_avatar_face.webp" alt="Kurage">
+    <span>LLM<em>2</em>API</span>
   </div>
+  <div class="userbar"><a href="llm2api.html">日本語</a></div>
 </header>
 
-<div class="wrap">
-
-  <div class="hero">
-    <h1>LLM inference your agent can buy<br>one request at a time.</h1>
-    <p class="lead">
-      An OpenAI-compatible chat completions endpoint billed per call in stablecoins over the
-      x402 protocol. No account, no dashboard, no API key to provision — the payment
-      <em>is</em> the authorization.
-    </p>
-    <div class="badges">
-      <span class="badge on">OpenAI-compatible</span>
-      <span class="badge">x402 · USDC on Base</span>
-      <span class="badge">x402 · JPYC on Polygon</span>
-      <span class="badge">RapidAPI</span>
+<main>
+<section class="hero">
+  <div>
+    <span class="eyebrow"><span class="dot"></span>KURAGE ECOSYSTEM ・ INFERENCE LAYER</span>
+    <h1 class="disp">LLM inference your agent<br>can buy <em>one request</em> at a time.</h1>
+    <p class="lead">An OpenAI-compatible chat completions endpoint billed per call in stablecoins over the x402 protocol. No account, no dashboard, no API key to provision — <b>the payment is the authorization</b>.</p>
+    <div class="statrow">
+      <span class="pill"><b>$0.05</b> / request</span>
+      <span class="pill mode-live">OpenAI-compatible</span>
+      <span class="pill">DeepSeek v4 Flash</span>
     </div>
-    <div class="cta">
-      <a class="btn" href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api">Call the endpoint</a>
-      <a class="btn ghost" href="#quickstart">Quickstart</a>
+    <div class="cta-row">
+      <a class="btn gold" href="https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api">
+        🪼 Call the endpoint</a>
+      <a class="btn ghost" href="#quickstart">See the quickstart</a>
     </div>
   </div>
+  <div class="hero-kurage">
+    <div class="speech">No signup.<br>Just call it 🪼</div>
+    <div class="kfloat"><img class="kurage" src="https://kurage.exbridge.jp/images/kurage-ecosystem-avatar.png" alt="Kurage"></div>
+    <div class="coin3"><span class="a">$0.05</span><span class="b">/ req</span></div>
+  </div>
+</section>
 
-  <section>
-    <h2>Why this exists</h2>
-    <p class="sub">Every hosted LLM API assumes a human signs up first.</p>
-    <p>
-      An autonomous agent that needs one completion cannot create an account, confirm an email,
-      enter a card and provision a key. That signup flow is a structural barrier, not a
-      technical one. LLM2API removes it: send the request with an x402 payment header and you
-      get the completion back. There is nothing to register.
-    </p>
-  </section>
+<section>
+  <h2 class="sec disp">Why <em>no signup</em></h2>
+  <div class="vision"><p style="font-size:14.5px">Every hosted LLM API assumes a human signs up first. An autonomous agent that needs one completion cannot create an account, confirm an email, enter a card and provision a key. That signup flow is a <b>structural barrier, not a technical one</b>. LLM2API removes it.</p></div>
+</section>
 
-  <section id="quickstart">
-    <h2>Quickstart</h2>
-    <p class="sub">If your code already calls OpenAI, change the base URL.</p>
+<section id="quickstart">
+  <h2 class="sec disp">Quickstart</h2>
+  <p class="sec-sub">If your code already calls OpenAI, change the base URL.</p>
+  <pre class="code"><span class="c"># Call once, paying with x402 (Bankr CLI)</span>
+<span class="k">bankr</span> x402 call \
+  https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api/v1/chat/completions \
+  -X POST \
+  -d '{&quot;messages&quot;:[{&quot;role&quot;:&quot;user&quot;,&quot;content&quot;:&quot;Summarise this in one sentence.&quot;}]}'</pre>
+</section>
 
-<pre><code>curl -X POST https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api/v1/chat/completions \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "messages": [
-      { "role": "system", "content": "You are a helpful assistant." },
-      { "role": "user", "content": "Summarise this in one sentence." }
-    ]
-  }'</code></pre>
+<section>
+  <h2 class="sec disp">Pricing</h2>
+  <p class="sec-sub">Flat per request. No subscription, no minimum, no expiry.</p>
+  <div class="cards">
+    <div class="card2"><div class="big">$0.05</div><div class="unit">/ request</div><h3 style="margin-top:10px">Bankr x402 — USDC (Base)</h3><p>The default rail. Recommended for agents and MCP workflows.</p></div>
+    <div class="card2"><div class="big">7.5</div><div class="unit">JPYC / request</div><h3 style="margin-top:10px">JPYC x402 — Polygon</h3><p>For yen-denominated settlement.</p></div>
+    <div class="card2"><div class="big">RapidAPI</div><div class="unit"></div><h3 style="margin-top:10px">Conventional key-based access</h3><p>If you would rather use a normal API key and monthly plan.</p></div>
+  </div>
+</section>
 
-    <h3>Using the Bankr CLI</h3>
-<pre><code>bankr x402 call \
-  https://x402.bankr.bot/0x444fadbd6e1fed0cfbf7613b6c9f91b9021eecbd/llm2api \
-  -X POST -H 'content-type: application/json' \
-  -d '{"messages":[{"role":"user","content":"Hello"}]}'</code></pre>
-
-    <p class="note">
-      The response is the standard OpenAI chat completion object, including a
-      <code>usage</code> block with token counts.
-    </p>
-  </section>
-
-  <section>
-    <h2>Pricing</h2>
-    <p class="sub">Flat per request. No subscription, no minimum, no expiry.</p>
-    <div class="grid">
-      <div class="card">
-        <div class="price"><span class="n">$0.05</span><span class="u">/ request</span></div>
-        <h3>Bankr x402 — USDC on Base</h3>
-        <p>The default rail. Recommended for agents and MCP workflows.</p>
-      </div>
-      <div class="card">
-        <div class="price"><span class="n">7.5</span><span class="u">JPYC / request</span></div>
-        <h3>JPYC x402 — Polygon</h3>
-        <p>For yen-denominated settlement.</p>
-      </div>
-      <div class="card">
-        <div class="price"><span class="n">RapidAPI</span></div>
-        <h3>Conventional key-based access</h3>
-        <p>If you would rather use a normal API key and monthly plan.</p>
-      </div>
-    </div>
-  </section>
-
-  <section>
-    <h2>API</h2>
-    <p class="sub"><code>POST {base}/v1/chat/completions</code></p>
+<section>
+  <h2 class="sec disp">API</h2>
+  <p class="sec-sub"><code>POST {base}/v1/chat/completions</code></p>
+  <div class="vision">
     <div class="table-wrap">
-      <table>
-        <tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr>
-        <tr><td><code>messages</code></td><td>array</td><td>Yes</td><td><code>{role, content}</code> objects. Roles: <code>system</code>, <code>user</code>, <code>assistant</code>.</td></tr>
-        <tr><td><code>stream</code></td><td>boolean</td><td>No</td><td>SSE streaming. Default <code>false</code>.</td></tr>
-        <tr><td><code>temperature</code></td><td>number</td><td>No</td><td>0.0–2.0. Default <code>0.7</code>.</td></tr>
-        <tr><td><code>max_tokens</code></td><td>integer</td><td>No</td><td>Hard cap of 2,048 applies regardless of this value.</td></tr>
-      </table>
+    <table class="spec"><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr>
+      <tr><td><code>messages</code></td><td>array</td><td>Yes</td><td><code>{role, content}</code> objects. Roles: <code>system</code>, <code>user</code>, <code>assistant</code>.</td></tr>
+      <tr><td><code>stream</code></td><td>boolean</td><td>No</td><td>SSE streaming. Default <code>false</code>.</td></tr>
+      <tr><td><code>temperature</code></td><td>number</td><td>No</td><td>0.0–2.0. Default <code>0.7</code>.</td></tr>
+      <tr><td><code>max_tokens</code></td><td>integer</td><td>No</td><td>A hard cap of 2,048 applies regardless.</td></tr>
+    </table>
     </div>
-
-    <h3>Limits</h3>
-    <ul>
-      <li><strong>Input</strong> — 4,000 characters total across all messages, 20 messages maximum</li>
-      <li><strong>Output</strong> — hard cap of 2,048 tokens per request</li>
+    <ul class="limits" style="margin-top:18px">
+      <li><b>Input</b> — 4,000 characters total across all messages, 20 messages maximum</li>
+      <li><b>Output</b> — hard cap of 2,048 tokens per request</li>
+      <li><b>Model</b> — every paid rail is served by <code>deepseek-v4-flash</code></li>
     </ul>
-    <p class="note">
-      These caps are deliberate. They keep a single request from monopolising the backend and
-      keep the flat per-call price honest.
-    </p>
+    <p class="fine">These caps are deliberate. They keep a single request from monopolising the backend and keep the flat per-call price honest.</p>
+  </div>
+</section>
 
-    <h3>Other endpoints</h3>
-    <div class="table-wrap">
-      <table>
-        <tr><th>Endpoint</th><th>Description</th></tr>
-        <tr><td><code>GET /health</code></td><td>Liveness, active provider and model.</td></tr>
-        <tr><td><code>GET /v1/models</code></td><td>Active model, its tier (hosted or self-hosted) and the request limits.</td></tr>
-        <tr><td><code>POST /trade/risk-check</code></td><td>Scans recent news for hack, exploit, delisting, rug-pull and lawsuit events for a crypto symbol.</td></tr>
-        <tr><td><code>POST /trade/size-check</code></td><td>Liquidity and order-size diagnosis.</td></tr>
-      </table>
-    </div>
-  </section>
-
-  <section>
-    <h2>What backs it</h2>
-    <div class="grid">
-      <div class="card">
-        <h3>DeepSeek v4 Flash</h3>
-        <p>Paid x402 traffic is served by hosted <code>deepseek-v4-flash</code> for predictable latency.</p>
-      </div>
-      <div class="card">
-        <h3>Self-hosted Gemma</h3>
-        <p>A self-hosted Gemma 4 tier runs on our own GPUs. <code>/v1/models</code> reports which tier is active.</p>
-      </div>
-      <div class="card">
-        <h3>Per-call metering</h3>
-        <p>Token usage is recorded per caller, so pricing is grounded in measured consumption rather than guesswork.</p>
-      </div>
-    </div>
-  </section>
-
-  <section>
-    <h2>Honest limitations</h2>
-    <ul>
+<section>
+  <h2 class="sec disp">Honest limitations</h2>
+  <div class="vision">
+    <ul class="limits">
       <li>This is a small, self-operated service. It is not a hyperscaler and makes no uptime guarantee.</li>
       <li>The input and output caps above are hard limits. Long-document workloads are not a fit.</li>
       <li>Requests are proxied to an upstream provider. Do not send data you would not send to a third-party LLM API.</li>
     </ul>
-  </section>
-
-</div>
-
-<footer>
-  <div class="wrap">
-    <p>
-      LLM2API is part of the <a href="https://github.com/katsushi2441/url2ai">URL2AI</a> project by EXBRIDGE.
-      Unrelated to any similarly named third-party product.
-    </p>
-    <p><a href="llm2api.html">日本語版</a></p>
   </div>
-</footer>
+</section>
 
+<section id="ecosystem">
+  <h2 class="sec disp">The growing <em>Kurage series</em></h2>
+  <p class="sec-sub">LLM2API is the inference layer of the Kurage ecosystem. The same plumbing powers the products below.</p>
+  <div class="prods">
+    <a class="prod" href="https://kfreqai.exbridge.jp/" target="_blank" rel="noopener">
+      <div class="im"><img src="https://kfreqai.exbridge.jp/assets/ogp.png" alt="📈 Kurage FreqAI Trade" loading="lazy"></div>
+      <div class="tx"><div class="nm disp">📈 Kurage FreqAI Trade</div>
+        <div class="ds">Self-improving crypto AI trading that researches its own losses. The whole process is published on the blog.</div>
+        <div class="lk">kfreqai.exbridge.jp →</div></div>
+    </a>
+    <a class="prod" href="https://kurage.exbridge.jp/kfreqaihl.php" target="_blank" rel="noopener">
+      <div class="im"><img src="https://kurage.exbridge.jp/images/kfreqaihl_ogp.png" alt="🌊 Kurage FreqAI for Hyperliquid" loading="lazy"></div>
+      <div class="tx"><div class="nm disp">🌊 Kurage FreqAI for Hyperliquid</div>
+        <div class="ds">AI auto-trading with one wallet and no server. From crypto to FX, gold and equity indices.</div>
+        <div class="lk">kurage.exbridge.jp/kfreqaihl.php →</div></div>
+    </a>
+    <a class="prod" href="https://kfxai.exbridge.jp/" target="_blank" rel="noopener">
+      <div class="im"><img src="https://kfxai.exbridge.jp/assets/ogp.png" alt="💱 Kurage FX AI Trade" loading="lazy"></div>
+      <div class="tx"><div class="nm disp">💱 Kurage FX AI Trade</div>
+        <div class="ds">OANDA-API FX automation with a swappable AI judgment layer. Yen pairs are being validated on paper trading.</div>
+        <div class="lk">kfxai.exbridge.jp →</div></div>
+    </a>
+    <a class="prod" href="https://kgeo.exbridge.jp/" target="_blank" rel="noopener">
+      <div class="im"><img src="https://kgeo.exbridge.jp/assets/ogp.png" alt="🔎 Kurage GEO" loading="lazy"></div>
+      <div class="tx"><div class="nm disp">🔎 Kurage GEO</div>
+        <div class="ds">Audits how ready your site is for AI search (GEO) in Japanese: technical audit, AEO scoring and grounded answer simulation.</div>
+        <div class="lk">kgeo.exbridge.jp →</div></div>
+    </a>
+    <a class="prod" href="https://kvtuber.exbridge.jp/" target="_blank" rel="noopener">
+      <div class="im"><img src="https://kvtuber.exbridge.jp/assets/ogp.png" alt="🎙️ Kurage VTuber" loading="lazy"></div>
+      <div class="tx"><div class="nm disp">🎙️ Kurage VTuber</div>
+        <div class="ds">Kurage's real-time conversational AI VTuber. The core of streaming and dialogue.</div>
+        <div class="lk">kvtuber.exbridge.jp →</div></div>
+    </a>
+    <a class="prod" href="https://url2ai.exbridge.jp/" target="_blank" rel="noopener">
+      <div class="im"><img src="https://url2ai.exbridge.jp/assets/ogp.png" alt="📝 Kurage URL2AI Publisher" loading="lazy"></div>
+      <div class="tx"><div class="nm disp">📝 Kurage URL2AI Publisher</div>
+        <div class="ds">Give it a URL and Kurage reads the page, writes an announcement and a blog post, then publishes to five channels.</div>
+        <div class="lk">url2ai.exbridge.jp →</div></div>
+    </a>
+    <a class="prod" href="https://kmontage.exbridge.jp/" target="_blank" rel="noopener">
+      <div class="im"><img src="https://kmontage.exbridge.jp/assets/ogp.png" alt="🎬 kmontage" loading="lazy"></div>
+      <div class="tx"><div class="nm disp">🎬 kmontage</div>
+        <div class="ds">Kurage's video production system that generates montages automatically from a script.</div>
+        <div class="lk">kmontage.exbridge.jp →</div></div>
+    </a>
+    <a class="prod" href="https://github.com/katsushi2441/kargov" target="_blank" rel="noopener">
+      <div class="im"><img src="https://kurl2earn.exbridge.jp/assets/cards/kargov.png" alt="🖱️ Kurage Argo Video（kargov）" loading="lazy"></div>
+      <div class="tx"><div class="nm disp">🖱️ Kurage Argo Video（kargov）</div>
+        <div class="ds">A pipeline that turns recordings of AI browser operations into demo and manual videos.</div>
+        <div class="lk">github.com/katsushi2441/kargov →</div></div>
+    </a>
+    <a class="prod" href="https://kurage.exbridge.jp/" target="_blank" rel="noopener">
+      <div class="im"><img src="https://kurage.exbridge.jp/images/kurage_ogp.png" alt="🪼 Kurage（総合ポータル）" loading="lazy"></div>
+      <div class="tx"><div class="nm disp">🪼 Kurage（総合ポータル）</div>
+        <div class="ds">The entrance to the Kurage series. All products and intro videos in one place.</div>
+        <div class="lk">kurage.exbridge.jp →</div></div>
+    </a>
+  </div>
+</section>
+
+<section id="urlai">
+  <h2 class="sec disp">URLAI is the <em>ecosystem token</em></h2>
+  <div class="vision">
+    <p style="font-size:14.5px; margin-bottom:12px">URLAI is <b>the token for spreading the Kurage ecosystem</b>. Beyond <a href="https://kurl2earn.exbridge.jp/kurl2earn.php?lang=en" target="_blank" rel="noopener">URL2Earn</a>, it is also distributed to <b>kfreqai ambassadors</b>.</p>
+    <ul>
+      <li>Ambassadors trade crypto and FX with <b>kfreqai</b> and share their results.</li>
+      <li>That <b>improves kfreqai's profitability and spreads awareness</b>, aiming at <b>a project that eventually earns for many people</b>.</li>
+      <li>URLAI aims to be <b>part of the ecosystem's tokenomics</b>, distributed for that spreading and contribution.</li>
+    </ul>
+    <p class="fine">* URLAI is a token of the <a href="https://kfreqai.exbridge.jp/" target="_blank" rel="noopener">Kurage FreqAI</a> ecosystem. Its price and liquidity fluctuate with the market and no monetary value is guaranteed. Claiming is not investment advice.</p>
+  </div>
+</section>
+
+</main>
+<footer>LLM2API — <a href="https://exbridge.jp/">EXBRIDGE Inc.</a> The inference layer of the Kurage ecosystem 🪼</footer>
 </body>
 </html>
