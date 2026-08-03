@@ -88,9 +88,7 @@ TEXT = {
         "v_l1": 'アンバサダーは <b>kfreqai</b> を使って暗号資産・FXをトレードし、その成果を発信します。',
         "v_l2": 'それが kfreqai の<b>収益性を高め、認知を広め</b>、やがて<b>たくさんの人の収益につながるプロジェクト</b>を目指しています。',
         "v_l3": 'URLAIは、その拡散と貢献に対して配られる、<b>トークノミクスにおけるエコシステムの一部</b>になることを目指しています。',
-        "v_fine": '※URLAIは <a href="https://kfreqai.exbridge.jp/kfreqai.html" target="_blank" rel="noopener">Kurage FreqAI</a> '
-                  'エコシステムのトークンです。価格や流動性は市場により変動し、金銭的価値を保証するものではありません。'
-                  '受け取りは投資助言ではありません。',
+        "v_fine": '※URLAIは <b>Kurageエコシステム</b>のトークンです。特定のプロダクトに限定されるものではありません。考え方と数字は <a href="https://kurl2earn.exbridge.jp/tokenomics-vision.html" target="_blank" rel="noopener">🧭 思想編 — なぜ分かち合うのか</a>／<a href="https://kurl2earn.exbridge.jp/tokenomics.html" target="_blank" rel="noopener">📐 設計編 — 数字で見るトークノミクス</a> にまとめています。価格や流動性は市場により変動し、金銭的価値を保証するものではありません。受け取りは投資助言ではありません。',
     },
     "en": {
         "eco_h": 'The growing <em>Kurage series</em>',
@@ -103,9 +101,7 @@ TEXT = {
         "v_l2": 'That <b>improves kfreqai\'s profitability and spreads awareness</b>, aiming at '
                 '<b>a project that eventually earns for many people</b>.',
         "v_l3": 'URLAI aims to be <b>part of the ecosystem\'s tokenomics</b>, distributed for that spreading and contribution.',
-        "v_fine": '* URLAI is a token of the <a href="https://kfreqai.exbridge.jp/" target="_blank" rel="noopener">Kurage FreqAI</a> '
-                  'ecosystem. Its price and liquidity fluctuate with the market and no monetary value is guaranteed. '
-                  'Claiming is not investment advice.',
+        "v_fine": '* URLAI is a token of the <b>Kurage ecosystem</b> as a whole, not tied to any single product. See <a href="https://kurl2earn.exbridge.jp/tokenomics-vision.html" target="_blank" rel="noopener">🧭 Vision — why we share (JA)</a> / <a href="https://kurl2earn.exbridge.jp/tokenomics.html" target="_blank" rel="noopener">📐 Design — the tokenomics in numbers (JA)</a>. Its price and liquidity fluctuate with the market and no monetary value is guaranteed. Claiming is not investment advice.',
     },
 }
 
