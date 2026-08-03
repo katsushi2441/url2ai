@@ -1,0 +1,28 @@
+# LLM2API 本体(user unit)。
+# 以前は /etc/systemd/system の root unit で動いており、再起動に毎回sudoが要った。
+# nodeの実行にroot権限は不要なのでuser unitへ移した(ワークスペース規約)。
+# root時代の drop-in (deepseek.conf) が読んでいた .env.deepseek はここで直接読む。
+[Unit]
+Description=LLM2API (OpenAI-compatible inference, x402 Bankr) [user]
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/kojima/work/url2ai/apps/llm-gateway
+# root unit は /usr/bin/node (v12) だった。v12はオプショナルチェーン(?.)を
+# 解析できないため、コード側をv12互換に保つか、ここを新しいnodeにする。
+# 取り違えを避けるため明示的に v22 を指定する。
+ExecStart=/home/kojima/.local/node-v22.15.0/bin/node server.js
+Restart=always
+RestartSec=5
+Environment=PORT=8019
+Environment=OLLAMA_HOST=192.168.0.14
+Environment=OLLAMA_PORT=11434
+Environment=DEFAULT_MODEL=gemma4:12b-it-qat
+# LLM_PROVIDER / DEEPSEEK_API_KEY / DEEPSEEK_MODEL
+EnvironmentFile=-/home/kojima/work/url2ai/apps/llm-gateway/.env.deepseek
+# LLM2API_USAGE_TOKEN (GET /usage の閲覧トークン)
+EnvironmentFile=-/home/kojima/work/url2ai/apps/llm-gateway/.env.llm2api-usage
+
+[Install]
+WantedBy=default.target

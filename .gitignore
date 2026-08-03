@@ -33,3 +33,6 @@ apps/llm-gateway/landing/usage_config.php
 apps/llm-gateway/.env.llm2api-usage
 apps/llm-gateway/data/
 apps/llm-gateway/landing/_screenshots/
+apps/llm-gateway/.env.rapidapi
+apps/llm-gateway/.env.deepseek
+apps/llm-gateway/.env.jpyc

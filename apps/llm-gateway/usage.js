@@ -26,8 +26,9 @@ function monthFile(date = new Date()) {
 function payerFromPaymentHeader(raw) {
   try {
     const parsed = JSON.parse(Buffer.from(String(raw), "base64").toString("utf8"));
-    const auth = parsed?.paymentPayload?.authorization;
-    return auth?.from || auth?.payer || "";
+    const payload = parsed && parsed.paymentPayload;
+    const auth = payload && payload.authorization;
+    return (auth && (auth.from || auth.payer)) || "";
   } catch {
     return "";
   }
@@ -48,7 +49,7 @@ export function identify(req) {
   if (rapidUser) return { rail: "rapidapi", caller: String(rapidUser) };
   const forwarded = String(headers["x-forwarded-for"] || "").split(",")[0].trim();
   if (forwarded) return { rail: "direct", caller: forwarded };
-  return { rail: "direct", caller: req.socket?.remoteAddress || "unknown" };
+  return { rail: "direct", caller: (req.socket && req.socket.remoteAddress) || "unknown" };
 }
 
 /** 応答本文から OpenAI 互換の usage を取り出す。ストリーミング(SSE)にも対応する。 */
@@ -104,9 +105,9 @@ export function meter(proxyRes, res, meta) {
     record({
       ...meta,
       status: proxyRes.statusCode || 0,
-      prompt_tokens: usage?.prompt_tokens ?? null,
-      completion_tokens: usage?.completion_tokens ?? null,
-      total_tokens: usage?.total_tokens ?? null,
+      prompt_tokens: usage ? usage.prompt_tokens : null,
+      completion_tokens: usage ? usage.completion_tokens : null,
+      total_tokens: usage ? usage.total_tokens : null,
     });
   });
   proxyRes.pipe(res);
