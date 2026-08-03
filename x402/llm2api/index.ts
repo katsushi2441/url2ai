@@ -7,6 +7,9 @@
  */
 
 const UPSTREAM = process.env.LLM2API_URL || "http://127.0.0.1:8019";
+// 上流(8019)はBankrから到達するため外部公開が必要で、以前は誰でも無課金で
+// 推論できていた(2026-08-04 実測)。kcbrain等と同じくトークンを付けて呼ぶ。
+const TOKEN = process.env.LLM2API_TOKEN || "";
 
 function json(data: unknown, init?: ResponseInit): Response {
   return Response.json(data, init);
@@ -51,7 +54,7 @@ export default async function handler(req: Request): Promise<Response> {
     }
     const upstreamTrade = await fetch(`${UPSTREAM}/llm${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-LLM2API-Token": TOKEN },
       body: JSON.stringify(tradeBody),
     });
     const tradeBytes = await upstreamTrade.arrayBuffer();
@@ -77,7 +80,7 @@ export default async function handler(req: Request): Promise<Response> {
 
   const upstream = await fetch(`${UPSTREAM}/llm/v1/chat/completions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-LLM2API-Token": TOKEN },
     body: JSON.stringify(body),
   });
 

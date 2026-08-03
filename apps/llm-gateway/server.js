@@ -3,6 +3,7 @@ import https from "node:https";
 import { Buffer } from "node:buffer";
 import crypto from "node:crypto";
 import { identify, meter, record, summary } from "./usage.js";
+import { isAuthorized, parseAllowedIps } from "./access.js";
 
 const HOST          = process.env.HOST         || "0.0.0.0";
 const PORT          = Number.parseInt(process.env.PORT || "8019", 10);
@@ -25,6 +26,22 @@ const MAX_MESSAGES     = Number.parseInt(process.env.MAX_MESSAGES     || "20",  
 const MAX_OUTPUT_TOKENS = Number.parseInt(process.env.MAX_OUTPUT_TOKENS || "2048", 10); // forced cap
 // 使用量サマリ(GET /usage)の閲覧トークン。未設定なら /usage は 404 で塞ぐ。
 const USAGE_TOKEN = (process.env.LLM2API_USAGE_TOKEN || "").trim();
+
+// --- 無課金での直叩き対策 (判定は access.js) -------------------------------
+const API_TOKEN = (process.env.LLM2API_TOKEN || "").trim();
+const ALLOWED_IPS = parseAllowedIps(process.env.LLM2API_ALLOWED_CLIENT_IPS);
+// 既定は「記録するだけで遮断しない」。Bankr側のトークン設定が済んだのを
+// 確認してから LLM2API_ENFORCE=true にする。いきなり遮断して売上を止めないため。
+const ENFORCE = String(process.env.LLM2API_ENFORCE || "").toLowerCase() === "true";
+
+function clientIp(req) {
+  return (req.socket && req.socket.remoteAddress) || "";
+}
+
+function authorized(req) {
+  return isAuthorized({ headers: req.headers, ip: clientIp(req) },
+                      { token: API_TOKEN, allowedIps: ALLOWED_IPS });
+}
 
 function json(res, status, data) {
   const body = JSON.stringify(data);
@@ -143,6 +160,21 @@ function proxyToJudgment(res, path, bodyStr) {
 async function handle(req, res) {
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
   const skill = normalizeSkill(url.pathname);
+
+  // 推論を伴うPOSTだけ守る。/health や /v1/models は監視のため開けておく。
+  if (req.method === "POST" && (skill === "/v1/chat/completions" || skill === "/v1/completions")) {
+    if (!authorized(req)) {
+      const ip = clientIp(req);
+      if (ENFORCE) {
+        console.warn(`[block] unpaid direct call from ${ip} ${skill}`);
+        record({ rail: "blocked", caller: ip, endpoint: skill, model: ACTIVE_MODEL,
+                 provider: LLM_PROVIDER, status: 403 });
+        return json(res, 403, { error: "Use a payment rail. See https://llm2api.exbridge.jp/" });
+      }
+      // 監視のみの段階。遮断せず記録だけ残し、正規経路が塞がれていないか見る。
+      console.warn(`[would-block] unpaid direct call from ${ip} ${skill} (LLM2API_ENFORCE=false)`);
+    }
+  }
 
   // Health
   if (req.method === "GET" && ["/health", "/healthz"].includes(skill)) {

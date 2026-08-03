@@ -62,6 +62,30 @@ URL2AI プロジェクトの一部で、対外的な製品名は **LLM2API** で
 node --test test_usage.mjs      # 9件
 ```
 
+## 無課金の直叩き対策
+
+8019 は Bankr のハンドラから到達するため外部公開が必要で、**そのためホスト:ポートを
+知っていれば誰でも無課金で推論できていた**(2026-08-04 実測で確認)。
+kcbrain / kfxbrain / ksbrain / url2brain は Bankr の暗号化env に `*_TOKEN` を持ち、
+ハンドラがヘッダで付けて呼んでいたが、**LLM2API だけこれが無かった**。同じ型に揃えた。
+
+- `x402/llm2api/index.ts` が `X-LLM2API-Token` を付けて上流を呼ぶ
+- トークンは Bankr の暗号化env (`bankr x402 env set LLM2API_TOKEN=...`) と
+  ローカルの `.env.llm2api-usage` の両方に同じ値を置く
+- 判定は `access.js`。**ループバックは常に許可**(JPYC:8020 / RapidAPI:8018 の
+  自前ラッパーは 127.0.0.1 から来るため。ここを塞ぐと課金レールが死ぬ)
+- 守るのは推論を伴う POST だけ。`/health` と `/v1/models` は監視のため開けておく
+- `LLM2API_TOKEN` 未設定なら素通し。設定前に売上を止めないため
+- `LLM2API_ENFORCE=false`(既定) は遮断せず `[would-block]` を記録するだけ。
+  Bankr側の設定が済んだのを確認してから `true` にする二段構え
+
+Bankr ハンドラの送信元は `35.87.168.13` だった(2026-08-04 実測)。IPは変わりうるので
+許可IPではなくトークンで守っている。
+
+```bash
+node --test test_access.mjs test_usage.mjs   # 20件
+```
+
 ## 環境変数
 
 | 変数 | 既定 | 内容 |
@@ -72,6 +96,9 @@ node --test test_usage.mjs      # 9件
 | `OLLAMA_HOST` | 192.168.0.14 | Ollamaホスト |
 | `MAX_INPUT_CHARS` / `MAX_OUTPUT_TOKENS` | 4000 / 2048 | 入出力上限 |
 | `LLM2API_USAGE_TOKEN` | 空 | `/usage` の閲覧トークン。空なら `/usage` は404 |
+| `LLM2API_TOKEN` | 空 | 上流保護トークン。Bankrの暗号化envと同値。空なら素通し |
+| `LLM2API_ENFORCE` | `false` | `true` で無課金の直叩きを403にする |
+| `LLM2API_ALLOWED_CLIENT_IPS` | 空 | 追加の許可IP(カンマ区切り)。ループバックは常に許可 |
 | `LLM2API_USAGE_DIR` | `./data` | 計測ログの保存先 |
 
 トークンとパスワードの実値は `.env.llm2api-usage`（git管理外）にある。
@@ -84,10 +111,15 @@ LPと利用状況ページ:
 bash deploy_landing.sh          # llm2api.exbridge.jp へ配置
 ```
 
-サーバー本体は **root所有の system unit** で動いている（`llm-gateway.service`）。
-`systemctl --user` では触れず、反映には sudo が必要:
+サーバー本体は **user unit** へ移行済み(2026-08-04)。sudoは不要:
 
 ```bash
-sudo systemctl restart llm-gateway
+systemctl --user restart llm-gateway
 curl -s http://127.0.0.1:8019/health
+```
+
+Bankr ハンドラ(`x402/llm2api/index.ts`)を変えたときは、リポジトリルートで:
+
+```bash
+bankr x402 deploy llm2api
 ```
