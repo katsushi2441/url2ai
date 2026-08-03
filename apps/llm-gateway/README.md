@@ -123,6 +123,26 @@ node --test test_access.mjs test_usage.mjs   # 20件
 
 トークンとパスワードの実値は `.env.llm2api-usage`（git管理外）にある。
 
+## user unit 移行で踏んだ罠（2026-08-04）
+
+root の system unit から user unit へ移した際、**drop-in ディレクトリを見落として
+brainのトークン3本を落とした**。`llm-gateway.service.d/deepseek.conf` は見つけたが、
+`llm-gateway-rapidapi.service.d/brains.conf` を確認しておらず、
+KCBRAIN_TOKEN / FXBRAIN_TOKEN / URL2BRAIN_TOKEN が渡らなくなり、
+**RapidAPI経由の kcbrain / fxbrain / url2brain が401**になっていた。
+
+unit定義を移すときは、本体ファイルだけでなく必ず drop-in も見る:
+
+```bash
+for u in llm-gateway llm-gateway-rapidapi llm-gateway-jpyc; do
+  cat /etc/systemd/system/$u.service /etc/systemd/system/$u.service.d/*.conf 2>/dev/null \
+    | grep -E '^(Environment|EnvironmentFile)='
+done
+```
+
+移行後は、旧unitと新unitで環境変数のキー集合が一致するか突き合わせること。
+起動ログの `brains:` 行に4つ揃っているかでも確認できる。
+
 ## デプロイ
 
 LPと利用状況ページ:
