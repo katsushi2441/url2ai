@@ -1068,8 +1068,8 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
 }
 #copy-toast.show { opacity: 1; }
 </style>
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2528616930208188"
-     crossorigin="anonymous"></script>
+<!-- Google AdSense は外した（2026-08-05）。導入後にアクセス数が落ちたため。
+     再開する場合は、外した前後のアクセス推移を simpletrack で確認してから。 -->
 </head>
 <body>
 

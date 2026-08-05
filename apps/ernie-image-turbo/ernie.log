@@ -1,0 +1,297 @@
+nohup: 入力を無視します
+INFO:     Started server process [2519450]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8011 (Press CTRL+C to quit)
+Loading pipeline components...:   0%|          | 0/7 [00:00<?, ?it/s]
+Loading weights:   0%|          | 0/237 [00:00<?, ?it/s][A
+Loading weights:  44%|████▍     | 105/237 [00:00<00:00, 1029.82it/s][A
+Loading weights:  88%|████████▊ | 208/237 [00:00<00:00, 989.01it/s] [ALoading weights: 100%|██████████| 237/237 [00:00<00:00, 1038.90it/s]
+Loading pipeline components...:  14%|█▍        | 1/7 [00:03<00:18,  3.02s/it]Loading pipeline components...:  29%|██▊       | 2/7 [00:05<00:12,  2.56s/it]Loading pipeline components...:  43%|████▎     | 3/7 [00:05<00:05,  1.45s/it]The config attributes {'lora_rank': 4, 'use_lora': False} were passed to ErnieImageTransformer2DModel, but are not expected and will be ignored. Please verify your config.json configuration file.
+
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s][A
+Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00,  9.17it/s][ALoading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00,  9.16it/s]
+Loading pipeline components...:  57%|█████▋    | 4/7 [00:05<00:02,  1.02it/s]Unrecognized keys in `rope_parameters` for 'rope_type'='yarn': {'llama_4_scaling_beta'}
+
+Loading weights:   0%|          | 0/458 [00:00<?, ?it/s][A
+Loading weights:  24%|██▎       | 108/458 [00:00<00:00, 1048.21it/s][A
+Loading weights:  47%|████▋     | 213/458 [00:00<00:00, 1003.31it/s][A
+Loading weights:  69%|██████▊   | 314/458 [00:00<00:00, 990.16it/s] [A
+Loading weights:  92%|█████████▏| 423/458 [00:00<00:00, 1018.58it/s][ALoading weights: 100%|██████████| 458/458 [00:00<00:00, 1035.28it/s]
+Loading pipeline components...:  86%|████████▌ | 6/7 [00:06<00:00,  1.56it/s]Loading pipeline components...: 100%|██████████| 7/7 [00:08<00:00,  1.03s/it]Loading pipeline components...: 100%|██████████| 7/7 [00:08<00:00,  1.20s/it]
+Expected types for pe: (<class 'transformers.models.auto.modeling_auto.AutoModelForCausalLM'>, <class 'NoneType'>), got <class 'transformers.models.ministral3.modeling_ministral3.Ministral3ForCausalLM'>.
+Expected types for text_encoder: (<class 'transformers.models.auto.modeling_auto.AutoModel'>,), got <class 'transformers.models.mistral3.modeling_mistral3.Mistral3Model'>.
+INFO:     127.0.0.1:51730 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56940 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56852 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33376 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43672 - "POST /generate HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     66.132.195.83:5228 - "GET / HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     66.132.195.83:18924 - "POST /mcp HTTP/1.1" 404 Not Found
+INFO:     66.132.195.83:18940 - "POST /jsonrpc HTTP/1.1" 404 Not Found
+INFO:     66.132.195.83:18986 - "POST / HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     66.132.195.83:38980 - "GET /security.txt HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:40784 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37668 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44340 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54672 - "POST /generate HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [2519450]
+INFO:     Started server process [2551988]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8011 (Press CTRL+C to quit)
+Loading pipeline components...:   0%|          | 0/7 [00:00<?, ?it/s]
+Loading weights:   0%|          | 0/237 [00:00<?, ?it/s][A
+Loading weights:  26%|██▌       | 61/237 [00:00<00:00, 580.22it/s][A
+Loading weights:  51%|█████     | 120/237 [00:00<00:00, 364.95it/s][A
+Loading weights:  85%|████████▌ | 202/237 [00:00<00:00, 511.69it/s][ALoading weights: 100%|██████████| 237/237 [00:00<00:00, 525.53it/s]
+Loading pipeline components...:  14%|█▍        | 1/7 [00:04<00:26,  4.38s/it]Loading pipeline components...:  29%|██▊       | 2/7 [00:06<00:15,  3.12s/it]Loading pipeline components...:  57%|█████▋    | 4/7 [00:06<00:03,  1.20s/it]Unrecognized keys in `rope_parameters` for 'rope_type'='yarn': {'llama_4_scaling_beta'}
+
+Loading weights:   0%|          | 0/458 [00:00<?, ?it/s][A
+Loading weights:  22%|██▏       | 102/458 [00:00<00:00, 1003.29it/s][A
+Loading weights:  44%|████▍     | 203/458 [00:00<00:00, 878.73it/s] [A
+Loading weights:  64%|██████▍   | 292/458 [00:00<00:00, 838.45it/s][A
+Loading weights:  86%|████████▌ | 395/458 [00:00<00:00, 883.67it/s][ALoading weights: 100%|██████████| 458/458 [00:00<00:00, 915.37it/s]
+Loading pipeline components...:  71%|███████▏  | 5/7 [00:07<00:02,  1.06s/it]INFO:     127.0.0.1:48938 - "GET /healthz HTTP/1.1" 200 OK
+Loading pipeline components...:  86%|████████▌ | 6/7 [00:09<00:01,  1.30s/it]The config attributes {'lora_rank': 4, 'use_lora': False} were passed to ErnieImageTransformer2DModel, but are not expected and will be ignored. Please verify your config.json configuration file.
+
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s][A
+Loading checkpoint shards:  50%|█████     | 1/2 [00:00<00:00,  5.97it/s][ALoading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 10.39it/s]
+Loading pipeline components...: 100%|██████████| 7/7 [00:09<00:00,  1.02it/s]Loading pipeline components...: 100%|██████████| 7/7 [00:09<00:00,  1.37s/it]
+Expected types for pe: (<class 'transformers.models.auto.modeling_auto.AutoModelForCausalLM'>, <class 'NoneType'>), got <class 'transformers.models.ministral3.modeling_ministral3.Ministral3ForCausalLM'>.
+Expected types for text_encoder: (<class 'transformers.models.auto.modeling_auto.AutoModel'>,), got <class 'transformers.models.mistral3.modeling_mistral3.Mistral3Model'>.
+INFO:     127.0.0.1:52860 - "POST /generate HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:44110 - "POST /generate HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:36738 - "POST /generate HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:33218 - "POST /generate HTTP/1.1" 500 Internal Server Error
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [2551988]
+INFO:     Started server process [2555664]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8011 (Press CTRL+C to quit)
+Loading pipeline components...:   0%|          | 0/7 [00:00<?, ?it/s]The config attributes {'lora_rank': 4, 'use_lora': False} were passed to ErnieImageTransformer2DModel, but are not expected and will be ignored. Please verify your config.json configuration file.
+
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s][A
+Loading checkpoint shards:  50%|█████     | 1/2 [00:00<00:00,  1.48it/s][A
+Loading checkpoint shards: 100%|██████████| 2/2 [00:01<00:00,  2.07it/s][ALoading checkpoint shards: 100%|██████████| 2/2 [00:01<00:00,  1.95it/s]
+Loading pipeline components...:  14%|█▍        | 1/7 [00:01<00:07,  1.28s/it]
+Loading weights:   0%|          | 0/237 [00:00<?, ?it/s][A
+Loading weights:  31%|███       | 74/237 [00:00<00:00, 713.27it/s][A
+Loading weights:  62%|██████▏   | 146/237 [00:00<00:00, 610.98it/s][A
+Loading weights:  88%|████████▊ | 208/237 [00:00<00:00, 591.93it/s][ALoading weights: 100%|██████████| 237/237 [00:00<00:00, 641.15it/s]
+Loading pipeline components...:  29%|██▊       | 2/7 [00:05<00:16,  3.20s/it]Loading pipeline components...:  43%|████▎     | 3/7 [00:06<00:07,  1.82s/it]Loading pipeline components...:  71%|███████▏  | 5/7 [00:07<00:02,  1.33s/it]Loading pipeline components...:  86%|████████▌ | 6/7 [00:09<00:01,  1.49s/it]Unrecognized keys in `rope_parameters` for 'rope_type'='yarn': {'llama_4_scaling_beta'}
+
+Loading weights:   0%|          | 0/458 [00:00<?, ?it/s][A
+Loading weights:  26%|██▌       | 119/458 [00:00<00:00, 1174.09it/s][A
+Loading weights:  52%|█████▏    | 237/458 [00:00<00:00, 841.93it/s] [A
+Loading weights:  71%|███████▏  | 327/458 [00:00<00:00, 674.66it/s][A
+Loading weights:  97%|█████████▋| 446/458 [00:00<00:00, 820.13it/s][ALoading weights: 100%|██████████| 458/458 [00:00<00:00, 817.18it/s]
+Loading pipeline components...: 100%|██████████| 7/7 [00:10<00:00,  1.30s/it]Loading pipeline components...: 100%|██████████| 7/7 [00:10<00:00,  1.52s/it]
+Expected types for pe: (<class 'transformers.models.auto.modeling_auto.AutoModelForCausalLM'>, <class 'NoneType'>), got <class 'transformers.models.ministral3.modeling_ministral3.Ministral3ForCausalLM'>.
+Expected types for text_encoder: (<class 'transformers.models.auto.modeling_auto.AutoModel'>,), got <class 'transformers.models.mistral3.modeling_mistral3.Mistral3Model'>.
+INFO:     127.0.0.1:56964 - "POST /generate HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:45372 - "POST /generate HTTP/1.1" 500 Internal Server Error
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [2555664]
+INFO:     Started server process [2559524]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8011 (Press CTRL+C to quit)
+INFO:     127.0.0.1:49494 - "GET /healthz HTTP/1.1" 200 OK
+Loading pipeline components...:   0%|          | 0/7 [00:00<?, ?it/s]Loading pipeline components...:  14%|█▍        | 1/7 [00:00<00:01,  4.62it/s]Loading pipeline components...:  29%|██▊       | 2/7 [00:05<00:16,  3.31s/it]
+Loading weights:   0%|          | 0/237 [00:00<?, ?it/s][A
+Loading weights:  17%|█▋        | 41/237 [00:00<00:00, 405.67it/s][A
+Loading weights:  35%|███▌      | 84/237 [00:00<00:00, 349.31it/s][A
+Loading weights:  51%|█████     | 120/237 [00:00<00:00, 338.32it/s][A
+Loading weights:  70%|███████   | 167/237 [00:00<00:00, 368.31it/s][A
+Loading weights:  88%|████████▊ | 209/237 [00:00<00:00, 364.33it/s][ALoading weights: 100%|██████████| 237/237 [00:00<00:00, 391.31it/s]
+Loading pipeline components...:  43%|████▎     | 3/7 [00:28<00:48, 12.19s/it]The config attributes {'lora_rank': 4, 'use_lora': False} were passed to ErnieImageTransformer2DModel, but are not expected and will be ignored. Please verify your config.json configuration file.
+
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s][A
+Loading checkpoint shards:  50%|█████     | 1/2 [00:00<00:00,  1.82it/s][A
+Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00,  2.50it/s][ALoading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00,  2.37it/s]
+Loading pipeline components...:  57%|█████▋    | 4/7 [00:29<00:23,  7.75s/it]Loading pipeline components...:  71%|███████▏  | 5/7 [00:35<00:14,  7.09s/it]Loading pipeline components...:  86%|████████▌ | 6/7 [00:35<00:04,  4.82s/it]Unrecognized keys in `rope_parameters` for 'rope_type'='yarn': {'llama_4_scaling_beta'}
+
+Loading weights:   0%|          | 0/458 [00:00<?, ?it/s][A
+Loading weights:  12%|█▏        | 55/458 [00:00<00:01, 391.98it/s][A
+Loading weights:  21%|██        | 96/458 [00:00<00:00, 396.31it/s][A
+Loading weights:  30%|██▉       | 136/458 [00:00<00:00, 369.96it/s][A
+Loading weights:  38%|███▊      | 174/458 [00:00<00:00, 292.63it/s][A
+Loading weights:  47%|████▋     | 215/458 [00:00<00:00, 321.93it/s][A
+Loading weights:  54%|█████▍    | 249/458 [00:00<00:00, 319.82it/s][A
+Loading weights:  65%|██████▌   | 299/458 [00:00<00:00, 359.22it/s][A
+Loading weights:  73%|███████▎  | 336/458 [00:00<00:00, 339.87it/s][A
+Loading weights:  81%|████████  | 372/458 [00:01<00:00, 342.91it/s][A
+Loading weights:  93%|█████████▎| 425/458 [00:01<00:00, 393.66it/s][ALoading weights: 100%|██████████| 458/458 [00:01<00:00, 364.29it/s]
+Loading pipeline components...: 100%|██████████| 7/7 [00:37<00:00,  3.87s/it]Loading pipeline components...: 100%|██████████| 7/7 [00:37<00:00,  5.38s/it]
+Expected types for pe: (<class 'transformers.models.auto.modeling_auto.AutoModelForCausalLM'>, <class 'NoneType'>), got <class 'transformers.models.ministral3.modeling_ministral3.Ministral3ForCausalLM'>.
+Expected types for text_encoder: (<class 'transformers.models.auto.modeling_auto.AutoModel'>,), got <class 'transformers.models.mistral3.modeling_mistral3.Mistral3Model'>.
+INFO:     127.0.0.1:36946 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33912 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     Started server process [2657635]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+ERROR:    [Errno 98] error while attempting to bind on address ('0.0.0.0', 8011): address already in use
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     127.0.0.1:59958 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45704 - "POST /generate HTTP/1.1" 200 OK
+INFO:     87.249.133.230:15693 - "GET /v1/models HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     127.0.0.1:39874 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37208 - "POST /generate HTTP/1.1" 200 OK
+INFO:     87.249.133.230:24898 - "GET /v1/models HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     127.0.0.1:37022 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39604 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35132 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51318 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36206 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50552 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47102 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46244 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44052 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53760 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41050 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42886 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34990 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34004 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59534 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41464 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45850 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56506 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54346 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33214 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44800 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45500 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40396 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44180 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58834 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46566 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35368 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44828 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34598 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46610 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58440 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50404 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52266 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52148 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51922 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51732 - "POST /generate HTTP/1.1" 200 OK
+INFO:     16.58.56.214:40352 - "GET / HTTP/1.1" 404 Not Found
+INFO:     16.58.56.214:33224 - "GET / HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     127.0.0.1:40854 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34642 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33186 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37490 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41948 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56764 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45116 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55906 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55386 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45942 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51658 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52702 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54908 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57886 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44152 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52704 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37806 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53904 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32898 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44264 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53838 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42510 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49878 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40050 - "POST /generate HTTP/1.1" 200 OK
+INFO:     87.249.133.230:46698 - "GET /v1/models HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     127.0.0.1:33446 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50388 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53588 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53590 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48938 - "POST /generate HTTP/1.1" 200 OK
+INFO:     87.249.133.230:34928 - "GET /v1/models HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     185.247.137.180:49033 - "GET / HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     172.104.215.178:27022 - "GET / HTTP/1.1" 404 Not Found
+INFO:     45.79.211.97:35992 - "GET / HTTP/1.1" 404 Not Found
+INFO:     45.79.172.21:39318 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52176 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52184 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54278 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49488 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37614 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42120 - "POST /generate HTTP/1.1" 200 OK
+INFO:     173.255.221.189:43058 - "GET / HTTP/1.1" 404 Not Found
+INFO:     172.236.228.245:4362 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:47940 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58038 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41264 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47106 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60942 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33244 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44992 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48862 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46008 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47628 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53238 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36958 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56442 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44804 - "POST /generate HTTP/1.1" 200 OK
+INFO:     162.216.149.230:63760 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59370 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32930 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35838 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43208 - "POST /generate HTTP/1.1" 200 OK
+INFO:     87.249.133.230:44947 - "GET /v1/models HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     127.0.0.1:58578 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37076 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46156 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56370 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50854 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44878 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45292 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56422 - "POST /generate HTTP/1.1" 200 OK
+INFO:     87.249.133.230:15444 - "GET /v1/models HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     127.0.0.1:52690 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58362 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58856 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34598 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57038 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40760 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39018 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59666 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52508 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32930 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38378 - "POST /generate HTTP/1.1" 200 OK
+INFO:     35.203.210.123:61728 - "GET /metrics HTTP/1.1" 404 Not Found
+INFO:     162.216.149.208:64922 - "GET /v1/metadata HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:40836 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41284 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36412 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51252 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38946 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33644 - "POST /generate HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [2559524]
