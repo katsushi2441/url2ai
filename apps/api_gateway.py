@@ -51,6 +51,14 @@ async def queued_ernie_generate(request: Request) -> Response:
         raise HTTPException(status_code=400, detail=f"invalid JSON body: {exc}") from exc
     if not isinstance(payload, dict):
         raise HTTPException(status_code=400, detail="JSON object is required")
+    # 入力不備はキューに流さず、ここで 4xx を返す。流すとワーカーで失敗し、
+    # 下の failed 分岐が 502 で包む。外形監視が最小ボディでPOSTしたとき
+    # 「サービス停止(502)」と区別できなくなる実害が出た
+    # (2026-08-06: PayAPI Market がこの502を見て URL2AI リスティングを
+    # pending review に降格。実際はサービス正常・入力検証の位置の問題)。
+    # 判定は src/url2ai_ernie_jobs.py generate_image_job と同じ規則にする。
+    if not str(payload.get("prompt") or "").strip():
+        raise HTTPException(status_code=422, detail="prompt is required")
 
     enqueue_payload: dict[str, Any] = {
         "queue": RQDB4AI_ERNIE_QUEUE,
