@@ -91,6 +91,76 @@ BANKR_DISCOVER_URL = 'https://bankr.bot/discover/0xDaecDda6AD112f0E1E4097fB735dD
 DAILY_HOURS  = [0, 6, 12, 18]
 DAILY_TOP_N  = 1   # 1回あたり何件登録するか
 
+# ==========================
+# 検索の選定条件
+#
+# 以前は「pushed:>1日 stars:>50 をスター降順」だった。この条件だと
+# linux(24万★)や freeCodeCamp(45万★)のような巨大リポジトリが毎日
+# 条件を満たして上位を占め、「新しく出てきたOSS」がまったく拾えない。
+#
+# 変更点は3つ。
+#   1. stars に上限をつけて巨大リポジトリを外す
+#   2. pushed(最終更新) ではなく created(誕生日) で絞る
+#      → 「今日も更新された古豪」ではなく「最近生まれたもの」
+#   3. topic で Kurageシリーズと地続きの領域に寄せる
+#
+# sort は stars のまま。updated にするとプロキシリストやVPNノードの
+# 自動更新botばかりが並ぶ（実測済み）。
+STARS_MIN = int(os.environ.get('OSS_STARS_MIN', '50'))
+STARS_MAX = int(os.environ.get('OSS_STARS_MAX', '3000'))
+CREATED_WITHIN_DAYS = int(os.environ.get('OSS_CREATED_WITHIN_DAYS', str(365 * 3)))
+
+# 巡回するトピック。GitHub検索はトピックのOR指定ができないので、
+# 実行のたびに1つ選んで回す。件数は 2026-08-07 に実測した母数
+# (created:>2023-08-01 stars:50..3000)。
+SEARCH_TOPICS = [
+    # AI基盤・エージェント（母数が大きい）
+    'ai-agent',              # 1121
+    'llm',                   # 5141
+    'ollama',                # 700
+    'rag',                   # 1158
+    'mcp',                   # 2848
+    'agent',                 # 1567
+    'chatbot',               # 532
+    # セルフホスト・自動化（kappstore/kdeck系）
+    'self-hosted',           # 1314
+    'automation',            # 1186
+    'workflow',              # 290
+    'ai-tools',              # 584
+    # 金融AI（kfreqai/kfxai/kcbrain/ktajp/kfinanalyst系）
+    'trading-bot',           # 110
+    'algorithmic-trading',   # 105
+    'quantitative-finance',  # 113
+    'fintech',               # 91
+    # 音声（Audio8/kurage動画のTTS系）
+    'text-to-speech',        # 265
+    'tts',                   # 363
+    'voice-cloning',         # 80
+    'speech-synthesis',      # 71
+    # 映像・画像（kmontage/kcomic/kliveportrait系）
+    'video-generation',      # 362
+    'image-generation',      # 310
+    'comic',                 # 18
+    # キャラクター（kvtuber系。母数は少ないが日本語記事がほぼ無い領域）
+    'vtuber',                # 23
+    'live2d',                # 24
+    'avatar',                # 41
+    'digital-human',         # 22
+    'talking-head',          # 31
+    # 業務システム（kverp/kinvoice/kbilling/crm系。ここも母数が少ない）
+    'erp',                   # 37
+    'accounting',            # 26
+    'invoice',               # 15
+    'bookkeeping',           # 8
+    'crm',                   # 56
+    # その他（kzabbix/kgeo/url2ai系）
+    'monitoring',            # 320
+    'knowledge-base',
+    'seo',
+    'content-generation',
+]
+# ==========================
+
 # 週間トレンドの追加実行はデフォルト無効
 WEEKLY_ENABLED = False
 WEEKLY_DAY   = 0   # 0=月曜
@@ -239,18 +309,31 @@ def strip_hashtags_from_text(text):
 def extract_tags(post_text, github_url):
     return []
 
-def fetch_github_search(period='daily', language='', page=1, per_page=50):
-    today = datetime.date.today()
-    if period == 'daily':
-        since = today - datetime.timedelta(days=1)
-    elif period == 'weekly':
-        since = today - datetime.timedelta(days=7)
-    else:
-        since = today - datetime.timedelta(days=30)
+def pick_topic(offset=0):
+    """実行時刻からトピックを1つ選ぶ。状態ファイルを持たずに巡回させる。
 
-    q = 'pushed:>' + str(since) + '+stars:>50'
+    1日4回(0/6/12/18時)なので、日付とその日の何回目かで通し番号を作る。
+    トピック36本なら約9日で一周する。
+    """
+    now = datetime.datetime.now()
+    slot = now.timetuple().tm_yday * 4 + (now.hour // 6)
+    return SEARCH_TOPICS[(slot + offset) % len(SEARCH_TOPICS)]
+
+
+def fetch_github_search(period='daily', language='', page=1, per_page=50, topic=''):
+    # period は互換のため残すが、絞り込みは created(誕生日) で行う。
+    # pushed(最終更新)で絞ると、毎日更新される巨大リポジトリしか残らない。
+    since = datetime.date.today() - datetime.timedelta(days=CREATED_WITHIN_DAYS)
+
+    terms = [
+        'created:>' + str(since),
+        'stars:' + str(STARS_MIN) + '..' + str(STARS_MAX),
+    ]
+    if topic:
+        terms.append('topic:' + topic)
     if language:
-        q += '+language:' + language
+        terms.append('language:' + language)
+    q = '+'.join(terms)
 
     url = ('https://api.github.com/search/repositories'
            '?q=' + q + '&sort=stars&order=desc'
@@ -284,7 +367,8 @@ def fetch_github_search(period='daily', language='', page=1, per_page=50):
         snippet = repo.get('description', '') or ''
         items.append({'url': url, 'snippet': snippet})
 
-    log.info('GitHub Search API (%s): %d件取得', period, len(items))
+    log.info('GitHub Search API (topic=%s, page=%d): %d件取得',
+             topic or '指定なし', page, len(items))
     return items
 
 def fetch_github_trending(period='daily', language=''):
@@ -648,22 +732,34 @@ def fetch_registered_urls():
         return set()
 
 def _candidate_generator(period):
-    """Trending全件 → Search API page=1,2,3... の順に候補を1件ずつ yield する"""
+    """Trending全件 → トピックを巡回しながら Search API の順に候補を yield する。
+
+    トピックは実行時刻から選び、そのトピックが尽きたら次のトピックへ送る。
+    vtuber(23件)やbookkeeping(8件)のような小さいトピックはすぐ在庫切れに
+    なるので、1トピックに固執せず回すこと自体が要件。
+    """
     seen = set()
     for r in fetch_github_trending(period=period):
         if r['url'] not in seen:
             seen.add(r['url'])
             yield r
-    page = 1
-    while page <= 20:
-        results = fetch_github_search(period=period, page=page, per_page=50)
-        if not results:
-            break
-        for r in results:
-            if r['url'] not in seen:
-                seen.add(r['url'])
-                yield r
-        page += 1
+
+    # 全トピックを1周する。開始位置だけ実行時刻でずらす。
+    for offset in range(len(SEARCH_TOPICS)):
+        topic = pick_topic(offset)
+        log.info('--- トピック: %s ---', topic)
+        page = 1
+        while page <= 5:   # 1トピックあたり最大250件みれば十分
+            results = fetch_github_search(page=page, per_page=50, topic=topic)
+            if not results:
+                break
+            for r in results:
+                if r['url'] not in seen:
+                    seen.add(r['url'])
+                    yield r
+            if len(results) < 50:
+                break      # 最終ページ
+            page += 1
 
 def run_job(period='daily', top_n=3):
     log.info('===== JOB START: %s top=%d =====', period, top_n)
