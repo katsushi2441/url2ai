@@ -102,7 +102,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #cbd5e1;
     <?php endif; ?>
   </div>
 
-  <h1>UReply</h1>
+  <h1><a href="ureply.php" style="text-decoration:none;color:inherit;">UReply</a></h1>
   <p class="sub">X投稿URLを入れてAI返信を生成 → そのままXへ返信・引用RT</p>
 
 <?php if ($is_admin): ?>

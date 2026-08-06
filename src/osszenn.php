@@ -1114,7 +1114,7 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
     <span class="badge-zenn">Zenn</span>
     <a class="back-btn" href="osszenn.php">← 一覧</a>
     <?php else: ?>
-    <h1>OSS Zenn</h1>
+    <h1><a href="osszenn.php" style="text-decoration:none;color:inherit;">OSS Zenn</a></h1>
     <span class="badge">URL2AI</span>
     <?php endif; ?>
     <div class="userbar">

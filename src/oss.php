@@ -1084,7 +1084,9 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
     <span class="badge">#<?php echo htmlspecialchars($filter_tag); ?></span>
     <a class="back-btn" href="oss.php">← 一覧</a>
     <?php else: ?>
-    <h1>OSS</h1>
+    <!-- 左上のタイトルは常に自分自身へのリンク。初期表示でもリンクにする
+         （絞り込み・検索の結果からワンクリックで初期表示へ戻れるようにするため） -->
+    <h1><a href="oss.php" style="text-decoration:none;color:inherit;">OSS</a></h1>
     <span class="badge">URL2AI</span>
     <?php endif; ?>
     <div class="userbar">
