@@ -1614,6 +1614,10 @@ function showToast(msg) {
 
 <?php endif; ?>
 
+<?php /* 最新AI解説記事ウィジェット(aiknowledgecms Loopが毎tick生成。/articles/への内部リンク導線 2026-08-14。
+         OfficeCLI等の検索流入をwhat-is解説記事へ回す=aiknowledgecms.phpと同方式) */
+@include __DIR__ . '/media_articles.html'; ?>
+
 <div id="copy-toast">コピーしました</div>
 </body>
 </html>
