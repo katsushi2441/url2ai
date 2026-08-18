@@ -302,13 +302,31 @@ def handle_job(job: dict, state: dict) -> None:
     log("no actionable phase (observe only)", {"job_id": jid, "phase": phase})
 
 
+LISTENER_ERR = BASE / "listener.stderr.log"
+
+
 def start_listener() -> subprocess.Popen:
     """`acp events listen` を子プロセスで起動し、エージェントをオンライン維持する。
-    受注イベントは EVENTS_FILE に追記され、メインループが drain で消化する。"""
+    受注イベントは EVENTS_FILE に追記され、メインループが drain で消化する。
+    stdout/stderr は LISTENER_ERR に残す(DEVNULLに捨てると死因が誰にも見えない。
+    2026-08-18: Privy承認ゲート5分タイムアウト死が7/23から7.9万回無診断だった教訓)。"""
+    errf = LISTENER_ERR.open("w", encoding="utf-8")  # 起動ごとに上書き=直近の死因だけ残す
     p = subprocess.Popen([ACP, "events", "listen", "--all", "--output", str(EVENTS_FILE)],
-                         stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+                         stdout=errf, stderr=subprocess.STDOUT)
+    errf.close()
     log("listener started (agent online)", {"pid": p.pid})
     return p
+
+
+def listener_death_report() -> str:
+    """直近のlistener出力から死因の要点(承認URL・例外行)を1行に要約する。"""
+    try:
+        txt = LISTENER_ERR.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return ""
+    keys = [ln.strip() for ln in txt.splitlines()
+            if any(k in ln for k in ("Approve at:", "Error", "error:", "Reason:"))]
+    return " | ".join(keys[-3:])[:500]
 
 
 def fetch_job_detail(jid: str):
@@ -338,13 +356,19 @@ def main() -> None:
                     for k, v in BRAINS.items()}})
     state = load_state()
     listener = start_listener()
+    listener_born = time.time()
     poll = int(os.environ.get("ACP_POLL_SEC", "6"))
     try:
         while True:
-            # listener 落ちてたら再起動(オンライン維持が最優先)
+            # listener 落ちてたら再起動(オンライン維持が最優先)。死因の要点を必ずログに残す。
             if listener.poll() is not None:
-                log("listener died — restarting")
+                lived = int(time.time() - listener_born)
+                log("listener died — restarting",
+                    {"lived_sec": lived, "cause": listener_death_report()})
+                if lived < 60:  # 即死ループはRestartSecに任せず自前で少し待つ(承認ゲート等)
+                    time.sleep(30)
                 listener = start_listener()
+                listener_born = time.time()
             # listener が書いたイベントを消化。各イベントの job を full context で取り直して処理。
             for ev in drain_events():
                 if not isinstance(ev, dict):
