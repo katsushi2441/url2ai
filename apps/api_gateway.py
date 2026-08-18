@@ -11,7 +11,7 @@ from fastapi import FastAPI, HTTPException, Request, Response
 
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8010"))
-ERNIE_BASE_URL = os.getenv("ERNIE_BASE_URL", "http://127.0.0.1:8011").rstrip("/")
+ERNIE_BASE_URL = os.getenv("ERNIE_BASE_URL", "http://192.168.0.11:18300").rstrip("/")
 ERNIE_REQUEST_TIMEOUT = float(os.getenv("ERNIE_REQUEST_TIMEOUT", "900"))
 RQDB4AI_URL = os.getenv("RQDB4AI_URL", "http://192.168.0.3:18300").rstrip("/")
 RQDB4AI_TOKEN = os.getenv("RQDB4AI_TOKEN", "").strip()
