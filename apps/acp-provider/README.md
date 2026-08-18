@@ -39,3 +39,15 @@ systemctl --user restart acp-provider
 tail -f provider.log            # 稼働ログ(gitignore)
 ```
 runtime生成物(state.json / events.jsonl / provider.log)は `.gitignore` 済み。
+
+## Event listener
+
+通常運用はACP V2のみをlistenする。`acp events listen --all`は旧legacy接続も開始し、legacy側の
+Privy署名が`ACP_ONLY`ポリシーに拒否されると、5分間の手動承認待ち後にlistenerが終了する。
+V2 offeringの受注にはlegacy接続は不要なので、既定では`--all`を付けない。
+
+旧legacyジョブも必要な場合に限り、影響を理解した上で明示的に有効化する。
+
+```bash
+ACP_INCLUDE_LEGACY=1 systemctl --user restart acp-provider
+```

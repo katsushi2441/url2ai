@@ -305,16 +305,31 @@ def handle_job(job: dict, state: dict) -> None:
 LISTENER_ERR = BASE / "listener.stderr.log"
 
 
+def listener_command() -> list[str]:
+    """Build the event listener command.
+
+    ACP v2 connects without a wallet approval. The legacy listener performs an
+    additional Privy wallet signature that ACP_ONLY rejects, leaving the CLI in
+    a five-minute approval wait. Keep legacy opt-in so the production provider
+    cannot silently return to that restart loop.
+    """
+    cmd = [ACP, "events", "listen"]
+    if os.environ.get("ACP_INCLUDE_LEGACY", "").strip().lower() in {"1", "true", "yes"}:
+        cmd.append("--all")
+    cmd.extend(["--output", str(EVENTS_FILE)])
+    return cmd
+
+
 def start_listener() -> subprocess.Popen:
     """`acp events listen` を子プロセスで起動し、エージェントをオンライン維持する。
     受注イベントは EVENTS_FILE に追記され、メインループが drain で消化する。
     stdout/stderr は LISTENER_ERR に残す(DEVNULLに捨てると死因が誰にも見えない。
-    2026-08-18: Privy承認ゲート5分タイムアウト死が7/23から7.9万回無診断だった教訓)。"""
+    legacyを含む--allはPrivy承認待ちになるため、既定はV2専用)。"""
     errf = LISTENER_ERR.open("w", encoding="utf-8")  # 起動ごとに上書き=直近の死因だけ残す
-    p = subprocess.Popen([ACP, "events", "listen", "--all", "--output", str(EVENTS_FILE)],
-                         stdout=errf, stderr=subprocess.STDOUT)
+    cmd = listener_command()
+    p = subprocess.Popen(cmd, stdout=errf, stderr=subprocess.STDOUT)
     errf.close()
-    log("listener started (agent online)", {"pid": p.pid})
+    log("listener process started", {"pid": p.pid, "legacy": "--all" in cmd})
     return p
 
 
