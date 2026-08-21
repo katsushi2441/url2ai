@@ -612,6 +612,84 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
 .btn-login-sm { border: 1px solid #6c63ff; padding: 4px 12px; border-radius: 4px; color: #6c63ff; text-decoration: none; font-size: .75rem; }
 .btn-login-sm:hover { background: #f0eeff; }
 
+/* Kurage OSS catalog / customization cross-site banners */
+.kurage-oss-banners {
+    width: 100%;
+    max-width: 1000px;
+    margin: 18px auto;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+.kurage-oss-banner {
+    position: relative;
+    min-height: 158px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    border: 1px solid #cfe7e4;
+    border-radius: 18px;
+    background-color: #f7fffd;
+    background-image: linear-gradient(90deg, rgba(255,255,255,.99) 0%, rgba(255,255,255,.96) 42%, rgba(255,255,255,.35) 72%, rgba(255,255,255,.05) 100%), var(--banner-image);
+    background-size: cover;
+    background-position: center;
+    color: #15343b;
+    text-decoration: none;
+    box-shadow: 0 10px 28px rgba(30, 99, 103, .09);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.kurage-oss-banner:hover {
+    transform: translateY(-2px);
+    border-color: #65cfc1;
+    box-shadow: 0 16px 34px rgba(30, 99, 103, .15);
+}
+.kurage-oss-banner:focus {
+    outline: 3px solid rgba(13, 148, 136, .22);
+    outline-offset: 2px;
+}
+.kurage-oss-banner.catalog {
+    --banner-image: url('images/kurage-oss-catalog-banner.jpg');
+}
+.kurage-oss-banner.customize {
+    --banner-image: url('images/kurage-vibe-oss-banner.jpg');
+    border-color: #eadfc3;
+}
+.kurage-oss-banner-copy {
+    position: relative;
+    z-index: 1;
+    width: 69%;
+    padding: 18px 0 18px 20px;
+}
+.kurage-oss-banner-kicker {
+    display: block;
+    margin-bottom: 6px;
+    color: #087e79;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .12em;
+}
+.kurage-oss-banner strong {
+    display: block;
+    margin-bottom: 6px;
+    color: #12323b;
+    font-size: 18px;
+    line-height: 1.42;
+}
+.kurage-oss-banner-desc {
+    display: block;
+    color: #526a70;
+    font-size: 11px;
+    line-height: 1.55;
+}
+.kurage-oss-banner-cta {
+    display: inline-block;
+    margin-top: 8px;
+    color: #087e79;
+    font-size: 11px;
+    font-weight: 800;
+}
+
 /* 管理者フォーム */
 .admin-form {
     background: #f7f6ff;
@@ -826,6 +904,21 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
     color: #555;
 }
 @media (max-width: 900px) {
+    .kurage-oss-banners {
+        max-width: 640px;
+        grid-template-columns: 1fr;
+        margin: 14px auto;
+    }
+    .kurage-oss-banner {
+        min-height: 136px;
+    }
+    .kurage-oss-banner-copy {
+        width: 72%;
+        padding: 15px 0 15px 16px;
+    }
+    .kurage-oss-banner strong {
+        font-size: 16px;
+    }
     .page-shell {
         display: block;
         padding: 0 0 80px;
@@ -1108,6 +1201,25 @@ body { background: #fff; color: #222; font-family: -apple-system, 'Helvetica Neu
     <span class="admin-status" id="admin-status"></span>
 </div>
 <?php endif; ?>
+
+<nav class="kurage-oss-banners" aria-label="Kurage OSS関連サービス">
+    <a class="kurage-oss-banner catalog" href="https://kurage.exbridge.jp/oss/?ref=aiknowledgecms-oss">
+        <span class="kurage-oss-banner-copy">
+            <span class="kurage-oss-banner-kicker">KURAGE OSS CATALOG</span>
+            <strong>業務で使えるOSSを、<br>日本語の導入情報から選ぶ。</strong>
+            <span class="kurage-oss-banner-desc">用途・ライセンス・日本語対応から比較</span>
+            <span class="kurage-oss-banner-cta">OSS一覧を見る →</span>
+        </span>
+    </a>
+    <a class="kurage-oss-banner customize" href="https://kurage.exbridge.jp/vibe-oss.html?ref=aiknowledgecms-oss">
+        <span class="kurage-oss-banner-copy">
+            <span class="kurage-oss-banner-kicker">VIBE OSS CUSTOMIZATION</span>
+            <strong>OSSを、御社で<br>使える状態へ。</strong>
+            <span class="kurage-oss-banner-desc">日本語化・カスタマイズ・サーバー導入</span>
+            <span class="kurage-oss-banner-cta">サービスを見る →</span>
+        </span>
+    </a>
+</nav>
 
 <?php if ($detail_post): ?>
 <!-- ========== 詳細ページ ========== -->
