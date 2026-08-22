@@ -204,19 +204,43 @@ function oss_is_generic_title($title) {
  * READMEの1行目をそのまま持ってくるとMarkdownのバッジ記法が混ざる。
  * 例: 「Thunderbolt ![CI](https://github.com/.../ci.yml)」がそのまま
  * <title> に出ていた。表示・検索結果・OGPすべてに効くのでここで落とす。
+ *
+ * 【重要】trim() の第2引数（文字リスト）にマルチバイト文字を入れてはいけない。
+ * trimはバイト単位で剥がすため、例えば「—」(E2 80 94) を指定すると
+ * 「✨」(E2 9C A8) の先頭バイトE2まで剥がれ、UTF-8として壊れた文字列になる。
+ * 壊れた文字列が1件でも混ざると json_encode() が配列ごと false を返し、
+ * 一覧の var posts が空になってページが真っ白になる（2026-08-21に実際に発生）。
+ * 前後の記号落としも preg_replace の /u で行うこと。
  */
 function oss_clean_title($title) {
     $title = (string)$title;
-    $title = preg_replace('/!\[[^\]]*\]\([^)]*\)/u', ' ', $title);   // ![alt](url) バッジ画像
-    $title = preg_replace('/\[[^\]]*\]\([^)]*\)/u', ' ', $title);    // [text](url) リンク
+    if (!mb_check_encoding($title, 'UTF-8')) {
+        return '';
+    }
+    // [![alt](img)](link) のようにバッジがリンクで包まれる形が多いので繰り返し落とす。
+    // 参照形式 [![alt][ref]][ref] も実在する（Video.js・Mattermost等）。
+    for ($__i = 0; $__i < 6; $__i++) {
+        $__before = $title;
+        $title = preg_replace('/!?\[[^\]\[]*\]\([^)]*\)/u', ' ', $title);
+        if ($title === null) { return ''; }
+        $title = preg_replace('/!?\[[^\]\[]*\]\[[^\]]*\]/u', ' ', $title);
+        if ($title === null || $title === $__before) { break; }
+    }
+    $title = preg_replace('/[\[\]]/u', ' ', $title);   // 取り残した角括弧
     $title = preg_replace('/<[^>]*>/u', ' ', $title);                    // 生HTML
     $title = preg_replace('/[#*`_~]+/u', ' ', $title);                   // 見出し・強調記号
     $title = preg_replace('/\s+/u', ' ', $title);
-    return trim($title, " \t\n\r\0\x0B-—|·:");
+    if ($title === null) { return ''; }
+    $title = preg_replace('/^[\s\-\|:\x{2014}\x{00B7}]+|[\s\-\|:\x{2014}\x{00B7}]+$/u', '', $title);
+    if ($title === null || !mb_check_encoding($title, 'UTF-8')) { return ''; }
+    return $title;
 }
 
 function oss_display_title($post) {
     $title = isset($post['title']) ? trim((string)$post['title']) : '';
+    // クリーンした結果が空になる（タイトルがバッジだけ、等）場合も、
+    // 元のMarkdownへ戻さずそのまま渡す。oss_is_generic_title('') は true を返すので
+    // 下のリポジトリ名フォールバックに落ちる。
     $title = oss_clean_title($title);
     if (!oss_is_generic_title($title)) {
         return $title;
