@@ -200,8 +200,24 @@ function oss_is_generic_title($title) {
     return preg_match('/^(special thanks|special thanks to|thanks|thank you|acknowledg(?:e)?ments?|contributors?|contributing|sponsors?|support|table of contents)$/i', $normalized) === 1;
 }
 
+/**
+ * READMEの1行目をそのまま持ってくるとMarkdownのバッジ記法が混ざる。
+ * 例: 「Thunderbolt ![CI](https://github.com/.../ci.yml)」がそのまま
+ * <title> に出ていた。表示・検索結果・OGPすべてに効くのでここで落とす。
+ */
+function oss_clean_title($title) {
+    $title = (string)$title;
+    $title = preg_replace('/!\[[^\]]*\]\([^)]*\)/u', ' ', $title);   // ![alt](url) バッジ画像
+    $title = preg_replace('/\[[^\]]*\]\([^)]*\)/u', ' ', $title);    // [text](url) リンク
+    $title = preg_replace('/<[^>]*>/u', ' ', $title);                    // 生HTML
+    $title = preg_replace('/[#*`_~]+/u', ' ', $title);                   // 見出し・強調記号
+    $title = preg_replace('/\s+/u', ' ', $title);
+    return trim($title, " \t\n\r\0\x0B-—|·:");
+}
+
 function oss_display_title($post) {
     $title = isset($post['title']) ? trim((string)$post['title']) : '';
+    $title = oss_clean_title($title);
     if (!oss_is_generic_title($title)) {
         return $title;
     }
