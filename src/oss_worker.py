@@ -249,47 +249,62 @@ def is_valid_github_repo(path):
             return False
     return True
 
+def repo_name_from_url(url):
+    """GitHubのURLからリポジトリ名を取る。これが唯一確実な名前。"""
+    part = (url or '').replace('https://github.com/', '').strip('/')
+    return part.split('/')[-1] if part else ''
+
+
+# 名前として認めない形。READMEの1行目には、画像・バッジ・HTML属性・宣伝文が
+# 平気で入っている。ここを通ったものだけを製品名として採用する。
+_TITLE_REJECT = re.compile(r'://|[<>"\'=|]|\{\{|\[!|shields\.io|badge', re.I)
+
+
+def looks_like_project_name(text, repo):
+    """READMEから拾った文字列を、製品名として採用してよいか。
+
+    採用条件は「リポジトリ名を含むこと」。これが効く理由は、製品名は
+    ほぼ必ずリポジトリ名を含むから(checkstyle → "Checkstyle - Java Code
+    Quality Tool")。含まないものは、宣伝文か別物である可能性が高い。
+
+    以前はREADMEの体裁を場合分けして弾いていたが、READMEの書き方は無限に
+    あるため収束しなかった。実際に登録された壊れ方:
+      media="(prefers-color-scheme: dark)"   ← <picture>の属性
+      https://github.com/user-attachments/... ← 画像URLの行
+      Get an immersive, multi-agent learning… ← 宣伝文
+    弾く形を数えるのをやめ、通す条件を1つに絞る。
+    """
+    if not text or not repo:
+        return False
+    text = text.strip()
+    if len(text) < 2 or len(text) > 40:
+        return False
+    if _TITLE_REJECT.search(text):
+        return False
+    norm = lambda v: re.sub(r'[^a-z0-9]', '', (v or '').lower())
+    return norm(repo) != '' and norm(repo) in norm(text)
+
+
 def extract_title_from_readme(readme, fallback):
-    generic_titles = {
-        'about', 'overview', 'readme', 'introduction',
-        'getting started', 'home', 'docs', 'documentation',
-        'special thanks', 'special thanks to', 'thanks', 'thank you',
-        'acknowledgements', 'acknowledgments', 'contributors',
-        'contributing', 'sponsors', 'support', 'table of contents'
-    }
-    for line in readme.splitlines():
+    """タイトルを決める。**リポジトリ名が正**で、READMEは補助にしか使わない。
+
+    リポジトリ名は必ず正しく、短く、検索もされる。READMEから推測した名前が
+    それより良いと確認できたときだけ差し替える。
+    """
+    repo = repo_name_from_url(fallback) or fallback
+    if not readme:
+        return repo
+
+    for line in readme.splitlines()[:40]:
         line = line.strip()
-        if not line:
+        if not line.startswith('#'):
             continue
-        line = re.sub(r'<[^>]+>', '', line).strip()
-        if not line:
-            continue
-        line = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', line)
-        line = line.strip()
-        if not line:
-            continue
-        if 'shields.io' in line or 'badge' in line.lower():
-            continue
-        if '|' in line:
-            continue
-        if line.startswith('!') or line.startswith('>'):
-            continue
-        if line.startswith('-') or line.startswith('*'):
-            continue
-        if len(line) < 4 or len(line) > 120:
-            continue
-        if line.startswith('#'):
-            title = line.lstrip('#').strip()
-            if title.lower().strip(' \t\r\n:-') in generic_titles:
-                continue
-            if title and len(title) > 2:
-                return title
-        if not line.startswith('<') and not line.startswith('|'):
-            cleaned = line.lower().strip(' \t\r\n:-')
-            if cleaned in generic_titles:
-                continue
-            return line
-    return fallback
+        cand = line.lstrip('#').strip()
+        cand = re.sub(r'\[([^\]]+)\]\([^\)]*\)', r'\1', cand).strip()
+        if looks_like_project_name(cand, repo):
+            return cand
+    return repo
+
 
 def strip_hashtags_from_text(text):
     clean = []
