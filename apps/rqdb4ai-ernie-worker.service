@@ -1,6 +1,7 @@
 [Unit]
-Description=RQDB4AI single ERNIE image worker for RTX 3080
-After=default.target rqdb4ai-api.service
+Description=RQDB4AI single ERNIE image worker for RTX 3080 host 192.168.0.11
+After=network-online.target rqdb4ai-api.service
+Wants=network-online.target
 
 [Service]
 Type=simple

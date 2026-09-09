@@ -21,6 +21,10 @@ class ApiGatewayRQDB4AITest(unittest.TestCase):
             headers = api_gateway.rqdb4ai_headers()
         self.assertEqual(headers["Authorization"], "Bearer secret")
 
+    def test_ernie_resource_metadata_follows_configured_base_url(self):
+        self.assertEqual(api_gateway.ERNIE_RESOURCE_HOST, "192.168.0.11")
+        self.assertEqual(api_gateway.ERNIE_RESOURCE_PORT, 18300)
+
 
 if __name__ == "__main__":
     unittest.main()

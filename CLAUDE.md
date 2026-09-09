@@ -51,7 +51,7 @@ cd src && python3 ftpphp.py
 
 | Port | Service | Stack | Notes |
 |------|---------|-------|-------|
-| 8010 | **api_gateway** | Python (ernie venv) | Public gateway on `192.168.0.11`: `/image/*` → local `:18300`, `/pdf/*` → `192.168.0.3:8010/pdf`. user systemd: `url2ai-api-gateway.service` |
+| 8010 | **api_gateway** | Python (ernie venv) | Public gateway on `192.168.0.11`: `/image/*` → RQDB4AI → local `:18300`, `/pdf/*` → `192.168.0.3:8010/pdf`. user systemd: `url2ai-api-gateway.service` |
 | 8011 | **retired public ERNIE port** | — | Do not forward publicly. Clients use `:8010/image/generate`. The old 3090 worker may remain localhost-only until its root unit is disabled. |
 | 8012 | **Smithery / nginx SSL proxy** | nginx | Smithery MCP用。`/mcp` → 127.0.0.1:8013 など |
 | 8013 | **url2ai-mcp** | Python (FastMCP) | MCP server, localhost only。`apps/url2ai-mcp/`。systemd: `url2ai-mcp.service` |
@@ -67,9 +67,9 @@ cd src && python3 ftpphp.py
 
 ※ 8000番台は満杯。以降の新規サービスはワークスペース規約どおり**18300番台の空き最若番号**を使う（例: fxbrain-jpyc=18327、`apps/llm-gateway/server-jpyc-fxbrain.js`、systemd: `fxbrain-jpyc.service`）。
 
-### ERNIE / api_gateway (RTX 3080 host) の再起動方法
+### ERNIE / api_gateway の再起動方法
 
-ERNIE本体は`192.168.0.11:18300`、公開ゲートウェイは同ホストの`:8010`で起動する。外部8010を`192.168.0.11:8010`へ転送し、外部8011は閉じる。
+ERNIE本体と公開ゲートウェイはRTX 3080ホスト`192.168.0.11`、RQDB4AIは`192.168.0.3`で起動する。画像生成は必ずRQDB4AIの`.11`専用キューを通し、単一workerで直列化する。外部8011は使用しない。
 
 ```bash
 ssh -p 2222 192.168.0.11

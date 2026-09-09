@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -22,6 +23,9 @@ RQDB4AI_WAIT_TIMEOUT = max(30.0, float(os.getenv("RQDB4AI_WAIT_TIMEOUT", "1200")
 PDF_BASE_URL = os.getenv("PDF_BASE_URL", "").rstrip("/")
 PDF_REQUEST_TIMEOUT = float(os.getenv("PDF_REQUEST_TIMEOUT", "900"))
 BASE_DIR = Path(__file__).resolve().parent
+_ernie_url = urlparse(ERNIE_BASE_URL)
+ERNIE_RESOURCE_HOST = _ernie_url.hostname or "unknown"
+ERNIE_RESOURCE_PORT = _ernie_url.port or (443 if _ernie_url.scheme == "https" else 80)
 
 
 def load_module(name: str, relative_path: str):
@@ -74,8 +78,8 @@ async def queued_ernie_generate(request: Request) -> Response:
             "app": "url2ai-api-gateway",
             "kind": "image_generation",
             "resource": "ernie",
-            "resource_key": "ernie:192.168.0.11:18300",
-            "resource_host": "192.168.0.11",
+            "resource_key": f"ernie:{ERNIE_RESOURCE_HOST}:{ERNIE_RESOURCE_PORT}",
+            "resource_host": ERNIE_RESOURCE_HOST,
             "source": "web_online",
             "queue_class": "web",
             "priority_class": "interactive",
