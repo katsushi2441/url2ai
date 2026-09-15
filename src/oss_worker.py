@@ -12,6 +12,7 @@ import sys
 import os
 import re
 import subprocess
+import glob
 import json
 import time
 import datetime
@@ -450,8 +451,10 @@ def ollama_request(prompt):
     return ''
 
 def _ollama_request_once(endpoint, model, prompt):
+    # gemma4 は思考型。think:false を指定しないと隠れ推論がnum_predictを食い潰し
+    # response が空で返る（CLAUDE.md「ローカルAI基盤の要点」）。
     payload = json.dumps({
-        'model': model, 'prompt': prompt, 'stream': False
+        'model': model, 'prompt': prompt, 'stream': False, 'think': False
     }, ensure_ascii=False)
     cmd = [
         'curl', '-sS', '--max-time', str(OLLAMA_TIMEOUT),
@@ -520,11 +523,14 @@ def _resolve_claude_bin():
     found = shutil.which('claude')
     if found:
         candidates.append(found)
-    candidates.extend([
-        '/home/kojima/.vscode-server/extensions/anthropic.claude-code-2.1.169-linux-x64/resources/native-binary/claude',
-        '/home/kojima/.vscode-server/extensions/anthropic.claude-code-2.1.168-linux-x64/resources/native-binary/claude',
-        '/home/kojima/.vscode-server/extensions/anthropic.claude-code-2.1.167-linux-x64/resources/native-binary/claude',
-    ])
+    candidates.append('/home/kojima/.local/bin/claude')
+    # VS Code 拡張のパスはバージョンを含むので、更新されると固定パスは消える。
+    # 2026-09-09 に 2.1.169 が消えて claude が見つからなくなり、OSS登録が
+    # Ollama へフォールバック→エンドポイント無応答→1800秒タイムアウトで全滅した。
+    # 固定で書かず、新しいものから順に拾う。
+    candidates.extend(sorted(
+        glob.glob('/home/kojima/.vscode-server/extensions/anthropic.claude-code-*/resources/native-binary/claude'),
+        reverse=True))
     for path in candidates:
         if path and os.path.exists(path) and os.access(path, os.X_OK):
             return path
