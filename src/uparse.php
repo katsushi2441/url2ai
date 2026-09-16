@@ -38,7 +38,7 @@ $x_client_id     = isset($x_keys['X_API_KEY'])    ? $x_keys['X_API_KEY']    : ''
 $x_client_secret = isset($x_keys['X_API_SECRET']) ? $x_keys['X_API_SECRET'] : '';
 $x_redirect_uri  = 'https://aiknowledgecms.exbridge.jp/uparse.php';
 
-define('OLLAMA_API',   'https://exbridge.ddns.net/api/generate');
+define('OLLAMA_API',   'https://exbridge.ddns.net:8012/api/generate');
 define('OLLAMA_MODEL', 'gemma4:e4b');
 
 /* =========================================================
@@ -330,6 +330,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_admin) {
             'model'  => OLLAMA_MODEL,
             'prompt' => $prompt,
             'stream' => false,
+            // gemma4 は思考型。think:false が無いと隠れ推論で遅くなり、
+            // num_predict を絞ると応答が空になる。
+            'think' => false,
             'options' => array(
                 'num_ctx'     => 2048,
                 'temperature' => 0.4,

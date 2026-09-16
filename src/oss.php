@@ -344,7 +344,7 @@ function oss_rqdb_api($method, $path, $payload) {
 }
 
 function oss_enqueue_register_job($github_url, $source) {
-    $ollama_endpoint = defined('OLLAMA_API') ? OLLAMA_API : 'https://exbridge.ddns.net/api/generate';
+    $ollama_endpoint = defined('OLLAMA_API') ? OLLAMA_API : 'https://exbridge.ddns.net:8012/api/generate';
     $ai_provider = defined('OSS_REGISTER_AI_PROVIDER') ? strtolower(trim((string)OSS_REGISTER_AI_PROVIDER)) : 'ollama';
     if (!in_array($ai_provider, array('ollama', 'claude', 'codex'), true)) {
         $ai_provider = 'ollama';

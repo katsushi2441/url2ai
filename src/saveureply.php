@@ -4,7 +4,7 @@ date_default_timezone_set('Asia/Tokyo');
 header('Content-Type: application/json; charset=UTF-8');
 
 if (!defined('OLLAMA_API')) {
-    define('OLLAMA_API', 'https://exbridge.ddns.net/api/generate');
+    define('OLLAMA_API', 'https://exbridge.ddns.net:8012/api/generate');
 }
 if (!defined('OLLAMA_MODEL')) {
     define('OLLAMA_MODEL', 'gemma4:e4b');
@@ -65,6 +65,9 @@ if ($action === 'generate') {
         'model'  => OLLAMA_MODEL,
         'prompt' => $prompt,
         'stream' => false,
+        // gemma4 は思考型。think:false が無いと隠れ推論で遅くなり、
+        // num_predict を絞ると応答が空になる。
+        'think' => false,
     ), JSON_UNESCAPED_UNICODE);
     $ollama_opts = array('http' => array(
         'method'  => 'POST',

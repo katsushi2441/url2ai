@@ -6,7 +6,7 @@ header('Content-Type: application/json; charset=UTF-8');
 @ignore_user_abort(true);
 
 if (!defined('OLLAMA_API')) {
-    define('OLLAMA_API', 'https://exbridge.ddns.net/api/generate');
+    define('OLLAMA_API', 'https://exbridge.ddns.net:8012/api/generate');
 }
 if (!defined('OLLAMA_MODEL')) {
     define('OLLAMA_MODEL', 'gemma4:e4b');
@@ -363,6 +363,9 @@ $payload = json_encode(array(
     'model'   => OLLAMA_MODEL,
     'prompt'  => $prompt,
     'stream'  => false,
+    // gemma4 は思考型。think:false が無いと隠れ推論で遅くなり、
+    // num_predict を絞ると応答が空になる。
+    'think' => false,
     'options' => array(
         'num_ctx'     => 4096,
         'temperature' => 0.5,
@@ -422,6 +425,9 @@ if (count($tags) < 2) {
         'model'   => OLLAMA_MODEL,
         'prompt'  => $fallback_tag_prompt,
         'stream'  => false,
+        // gemma4 は思考型。think:false が無いと隠れ推論で遅くなり、
+        // num_predict を絞ると応答が空になる。
+        'think' => false,
         'options' => array(
             'num_ctx'     => 2048,
             'temperature' => 0.2,
