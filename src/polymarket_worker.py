@@ -86,7 +86,7 @@ POLYMARKET_SAVE_URL = os.environ.get(
 POLYMARKET_REGISTER_REMOTE = os.environ.get("POLYMARKET_REGISTER_REMOTE", "1").lower() in {"1", "true", "yes"}
 OLLAMA_API = os.environ.get(
     "OLLAMA_API",
-    CONF.get("ollama", {}).get("api_url", "https://exbridge.ddns.net/api/generate"),
+    CONF.get("ollama", {}).get("api_url", "http://192.168.0.14:11434/api/generate"),
 )
 OLLAMA_MODEL = os.environ.get(
     "OLLAMA_MODEL",
@@ -331,7 +331,9 @@ def register_saved_remote(saved_path: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def call_ollama(prompt: str, timeout: int = 300) -> str:
-    payload = {"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
+    # gemma4 は思考型。think:false が無いと隠れ推論が num_predict を食い潰し
+    # response が空で返る（CLAUDE.md「ローカルAI基盤の要点」）。
+    payload = {"model": OLLAMA_MODEL, "prompt": prompt, "stream": False, "think": False}
     res = http_json(OLLAMA_API, payload=payload, timeout=timeout)
     return (res.get("response") or "").strip()
 

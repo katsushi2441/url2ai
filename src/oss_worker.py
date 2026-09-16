@@ -81,7 +81,7 @@ CODEX_MODEL = os.environ.get(
     'OSS_REGISTER_CODEX_MODEL',
     _conf.get('oss_register', {}).get('codex_model', 'gpt-5.5')
 )
-AI_TIMEOUT = int(os.environ.get('OSS_REGISTER_AI_TIMEOUT', '180'))
+AI_TIMEOUT = int(os.environ.get('OSS_REGISTER_AI_TIMEOUT', '300'))
 
 _pg_env = os.environ.get('PARAGRAPH_API_KEY')
 PARAGRAPH_API_KEY = _pg_env if _pg_env is not None else _conf.get('paragraph', {}).get('api_key', '')
@@ -537,6 +537,24 @@ def _resolve_claude_bin():
     return ''
 
 
+def _resolve_codex_bin():
+    """codex の実体を探す。拡張のパスはバージョンを含むので固定で書かない。"""
+    candidates = []
+    found = shutil.which('codex')
+    if found:
+        candidates.append(found)
+    candidates.extend(sorted(
+        glob.glob('/home/kojima/.vscode-server/extensions/openai.chatgpt-*/bin/linux-x86_64/codex'),
+        reverse=True))
+    candidates.extend(sorted(
+        glob.glob('/home/kojima/.nvm/versions/node/*/bin/codex'), reverse=True))
+    candidates.append('/home/kojima/.local/bin/codex')
+    for path in candidates:
+        if path and os.path.exists(path) and os.access(path, os.X_OK):
+            return path
+    return ''
+
+
 def claude_request(prompt):
     claude_bin = _resolve_claude_bin()
     if not claude_bin:
@@ -550,7 +568,14 @@ def claude_request(prompt):
         '--model', CLAUDE_MODEL,
         prompt,
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=AI_TIMEOUT)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True,
+                                timeout=AI_TIMEOUT, stdin=subprocess.DEVNULL)
+    except subprocess.TimeoutExpired:
+        # 1回遅かっただけでジョブ全体を落とさない。空を返せば ai_request が
+        # Ollama へフォールバックする（2026-09-16 にこれで自動サイクルが1本落ちた）。
+        log.warning('Claude応答タイムアウト: %s秒', AI_TIMEOUT)
+        return ''
     if result.returncode != 0:
         detail = (result.stderr or result.stdout or '').strip()
         log.warning('Claude応答エラー: returncode=%s detail=%s', result.returncode, detail[:300])
@@ -559,8 +584,8 @@ def claude_request(prompt):
 
 
 def codex_request(prompt):
-    codex_bin = shutil.which('codex') or '/home/kojima/.vscode-server/extensions/openai.chatgpt-26.513.21555-linux-x64/bin/linux-x86_64/codex'
-    if not os.path.exists(codex_bin) and not shutil.which('codex'):
+    codex_bin = _resolve_codex_bin()
+    if not codex_bin:
         log.warning('Codex binary not found')
         return ''
     cmd = [
@@ -572,7 +597,12 @@ def codex_request(prompt):
         '--cd', os.path.dirname(__file__),
         prompt,
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=AI_TIMEOUT)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True,
+                                timeout=AI_TIMEOUT, stdin=subprocess.DEVNULL)
+    except subprocess.TimeoutExpired:
+        log.warning('Codex応答タイムアウト: %s秒', AI_TIMEOUT)
+        return ''
     if result.returncode != 0:
         log.warning('Codex応答エラー: returncode=%s stderr=%s', result.returncode, result.stderr.strip()[:300])
         return ''
