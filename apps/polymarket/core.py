@@ -5,7 +5,7 @@ from datetime import datetime
 import httpx
 
 
-OLLAMA_API   = os.getenv("OLLAMA_API",   "https://exbridge.ddns.net/api/generate")
+OLLAMA_API   = os.getenv("OLLAMA_API",   "http://192.168.0.14:11434/api/generate")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma4:e4b")
 TODAY        = datetime.now().strftime("%Y年%m月%d日")
 GAMMA_API    = "https://gamma-api.polymarket.com/markets"
@@ -63,6 +63,7 @@ async def ollama_generate(prompt: str, timeout: int = 240) -> str:
         "model": OLLAMA_MODEL,
         "prompt": prompt,
         "stream": False,
+        "think": False,  # gemma4/qwen3 は思考型。無いと response が空になる
         "options": {
             "num_ctx": 8192,
             "temperature": 0.3,

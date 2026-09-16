@@ -57,7 +57,7 @@ _conf = _load_config()
 
 OLLAMA = os.environ.get(
     'OLLAMA_API',
-    _conf.get('ollama', {}).get('api_url', 'https://exbridge.ddns.net/api/generate')
+    _conf.get('ollama', {}).get('api_url', 'http://192.168.0.14:11434/api/generate')
 )
 MODEL = os.environ.get(
     'OLLAMA_MODEL',

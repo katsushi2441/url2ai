@@ -10,7 +10,7 @@ from fastmcp import FastMCP
 
 DEFAULT_UPDF2MD_API_URL = "http://exbridge.ddns.net:8010/pdf/convert"
 DEFAULT_IMAGE_API_URL = "http://exbridge.ddns.net:8010/image/generate"
-DEFAULT_TEXT_API_URL = "https://exbridge.ddns.net/api/generate"
+DEFAULT_TEXT_API_URL = "http://192.168.0.14:11434/api/generate"
 DEFAULT_TEXT_MODEL = "gemma4:e4b"
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8012
@@ -152,6 +152,7 @@ async def build_image_prompt(source_text: str) -> str:
                 "model": get_text_model(),
                 "prompt": prompt,
                 "stream": False,
+                "think": False,  # gemma4/qwen3 は思考型。無いと response が空になる
                 "options": {
                     "num_ctx": 2048,
                     "temperature": 0.7,
