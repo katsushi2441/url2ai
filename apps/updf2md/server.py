@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Annotated
 from uuid import uuid4
 
-import fitz  # pymupdf
+import pypdfium2 as pdfium  # PDF→画像。PyMuPDF（AGPL／有償の商用ライセンス）は使わない（2026-11-25）
 import pdf_inspector
 import pytesseract
 from fastapi import APIRouter, FastAPI, File, Form, HTTPException, UploadFile
@@ -112,24 +112,23 @@ def detect_rotation(img: "Image.Image") -> int:
 
 
 def ocr_pdf_bytes(data: bytes, selected_pages: list[int] | None = None) -> tuple[str, dict[int, int]]:
-    doc = fitz.open(stream=data, filetype="pdf")
+    doc = pdfium.PdfDocument(data)
     texts = []
     rotations: dict[int, int] = {}
-    total = doc.page_count
-    page_indices = [p - 1 for p in selected_pages if 1 <= p <= total] if selected_pages else list(range(total))
-    mat = fitz.Matrix(OCR_DPI / 72, OCR_DPI / 72)
-    for i in page_indices:
-        page = doc.load_page(i)
-        pix = page.get_pixmap(matrix=mat)
-        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-        rotate = detect_rotation(img)
-        if rotate:
-            # PIL の rotate は反時計回りなので符号を反転する
-            img = img.rotate(-rotate, expand=True)
-            rotations[i + 1] = rotate
-        text = pytesseract.image_to_string(img, lang=OCR_LANG)
-        texts.append(f"## Page {i + 1}\n\n{text.strip()}")
-    doc.close()
+    try:
+        total = len(doc)
+        page_indices = [p - 1 for p in selected_pages if 1 <= p <= total] if selected_pages else list(range(total))
+        for i in page_indices:
+            img = doc[i].render(scale=OCR_DPI / 72).to_pil().convert("RGB")
+            rotate = detect_rotation(img)
+            if rotate:
+                # PIL の rotate は反時計回りなので符号を反転する
+                img = img.rotate(-rotate, expand=True)
+                rotations[i + 1] = rotate
+            text = pytesseract.image_to_string(img, lang=OCR_LANG)
+            texts.append(f"## Page {i + 1}\n\n{text.strip()}")
+    finally:
+        doc.close()
     return "\n\n".join(texts), rotations
 
 
