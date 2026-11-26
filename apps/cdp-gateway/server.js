@@ -549,7 +549,18 @@ const routes = {
   "POST /llm2api/trade/risk-check": tradeRiskRoute(),
   "GET /llm2api/trade/size-check": tradeSizeRoute(),
   "POST /llm2api/trade/size-check": tradeSizeRoute(),
+  // PayAPI Market に登録した URL（2026-11-26 に 404 で掲載停止）。OpenAI 互換の標準パスでも受ける。
+  "GET /v1/chat/completions": llmRoute(),
+  "POST /v1/chat/completions": llmRoute(),
 };
+
+// PayAPI Market の Kurage FX Brain は https://bittensorman.xyz/fxbrain で登録している。
+// 裸の /fxbrain は BUY/SELL/HOLD の判断（decide/trade）として受ける。GET は 402 で値段と入力を示すだけ。
+{
+  const [, price, description, schema, maxTimeoutSeconds] = FXBRAIN_ENDPOINTS["decide/trade"];
+  routes["GET /fxbrain"] = fxbrainRoute(price, description, schema, maxTimeoutSeconds);
+  routes["POST /fxbrain"] = fxbrainRoute(price, description, schema, maxTimeoutSeconds);
+}
 
 for (const [suffix, [, price, description, schema, maxTimeoutSeconds]] of Object.entries(FXBRAIN_ENDPOINTS)) {
   routes[`POST /fxbrain/${suffix}`] = fxbrainRoute(price, description, schema, maxTimeoutSeconds);
@@ -756,6 +767,7 @@ app.post("/llm2api/v1/chat/completions",     (req, res) => proxyTo(`${LLM_URL}/v
 app.post("/llm/v1/chat/completions",         (req, res) => proxyTo(`${LLM_URL}/v1/chat/completions`, req, res));
 app.post("/llm2api/trade/risk-check",        (req, res) => proxyTo(`${LLM_URL}/trade/risk-check`, req, res));
 app.post("/llm2api/trade/size-check",        (req, res) => proxyTo(`${LLM_URL}/trade/size-check`, req, res));
+app.post("/v1/chat/completions",              (req, res) => proxyTo(`${LLM_URL}/v1/chat/completions`, req, res));
 
 // kfxbrain proxy: node:httpで長タイムアウト(TradingAgentsフルグラフは実測5.5分、
 // fetch/undiciの既定headersTimeout 300秒では途中で切れる)。認証トークンを注入。
@@ -813,6 +825,7 @@ function proxyToFxbrain(upstreamPath, req, res) {
 for (const [suffix, [upstreamPath]] of Object.entries(FXBRAIN_ENDPOINTS)) {
   app.post(`/fxbrain/${suffix}`, (req, res) => proxyToFxbrain(upstreamPath, req, res));
 }
+app.post("/fxbrain", (req, res) => proxyToFxbrain(FXBRAIN_ENDPOINTS["decide/trade"][0], req, res));
 
 // kcbrain proxy: DeepSeek(hosted API)はkfxbrainと同じDeepSeek(hosted)で高速
 // (単発判断は実測2.5秒)。多段連鎖(3-5コール)でも数十秒想定のため締切は60秒で十分。
