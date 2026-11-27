@@ -562,7 +562,10 @@ const routes = {
   routes["POST /fxbrain"] = fxbrainRoute(price, description, schema, maxTimeoutSeconds);
 }
 
+// PayAPI Market の確認は GET で叩く（2026-11-27: /fxbrain/analyze/sentiment 等が GET で 404 と指摘）。
+// GET も 402 で値段と入力を示す。実行は POST だけ。
 for (const [suffix, [, price, description, schema, maxTimeoutSeconds]] of Object.entries(FXBRAIN_ENDPOINTS)) {
+  routes[`GET /fxbrain/${suffix}`] = fxbrainRoute(price, description, schema, maxTimeoutSeconds);
   routes[`POST /fxbrain/${suffix}`] = fxbrainRoute(price, description, schema, maxTimeoutSeconds);
 }
 for (const [suffix, [, price, description, schema]] of Object.entries(KCBRAIN_ENDPOINTS)) {
